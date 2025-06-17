@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+
+usage() {
+	printf >&2 'Usage: ./configure [OPTION]...\n\n'
+	printf >&2 'Defaults for the options are specified in brackets.\n'
+	printf >&2 '\nSystem:\n'
+	printf >&2 '  --arch=ARCH             build a kernel for the given architecture [%s]\n' "$arch"
+	printf >&2 '\nInstallation directories:\n'
+	printf >&2 '  --prefix=PREFIX         install to this directory [%s]\n' "$prefix"
+	printf >&2 '\nDefaults:\n'
+	printf >&2 '  --no-default-cflags     disables default CFLAGS\n'
+	printf >&2 '  --no-default-ldflags    disables default LDFLAGS\n'
+	exit 100
+}
+
+known_arches=(riscv64)
+# shellcheck disable=SC2034 # Only accessed indirectly.
+tool_prefixes_riscv64=(riscv64-none-elf- riscv-none-elf-)
+
+args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,prefix:' -- "$@")
+eval set -- "$args"
+unset args
+
+arch=riscv64
+default_cflags=1
+default_ldflags=1
+help=0
+prefix=/
+while true; do
+	case "$1" in
+	-h|--help)
+		help=1
+		;;
+	--arch)
+		arch="$2"
+		shift 2
+
+		found=0
+		for known_arch in "${known_arches[@]}"; do
+			if [[ "$arch" = "$known_arch" ]]; then
+				found=1
+				break
+			fi
+		done
+		if [[ "$found" = 0 ]]; then
+			printf >&2 './configure: unrecognized --arch: %q\n' "$arch"
+			usage
+		fi
+		;;
+	--no-default-cflags)
+		default_cflags=0
+		shift
+		;;
+	--no-default-ldflags)
+		default_ldflags=0
+		shift
+		;;
+	--prefix)
+		prefix="$2"
+		shift 2
+		;;
+	--)
+		shift
+		break
+		;;
+	*)
+		printf >&2 './configure: getopt returned an invalid argument: %q\n' "$1"
+		exit 1
+	esac
+done
+if [[ "$#" != 0 ]]; then
+	printf >&2 './configure: unrecognized argument: %q\n' "$1"
+	usage
+fi
+if [[ "$help" != 0 ]]; then
+	usage
+fi
+
+if [[ -e Makefile ]]; then
+	if [[ "$(realpath Makefile)" != "$(realpath "$repo/Makefile")" ]]; then
+		printf >&2 './configure: a different Makefile already exists\n'
+		exit 1
+	fi
+else
+	ln -s "$repo/Makefile" Makefile
+fi
+
+# Add default CFLAGS and LDFLAGS.
+if [[ "$default_cflags" = 1 ]]; then
+	CFLAGS="-g -O3 -Wall -Werror ${CFLAGS:-}"
+fi
+if [[ "$default_ldflags" = 1 ]]; then
+	LDFLAGS="-z max-page-size=4096 ${LDFLAGS:-}"
+fi
+
+tool_prefixes_var="tool_prefixes_${arch}[@]"
+find_tool() {
+	# Intentionally using -z, since it's not rare for people to e.g. set
+	# CC= instead of unsetting it.
+	if [[ -z "${!1:-}" ]]; then
+		for tool_prefix in "${!tool_prefixes_var}"; do
+			if command -v "$tool_prefix$2" >/dev/null 2>/dev/null; then
+				printf -v "$1" '%s%s' "$tool_prefix" "$2"
+				break
+			fi
+		done
+	fi
+}
+
+# Detect tools. Since we're expecting a freestanding compiler, we _don't_
+# assume that e.g. the default gcc is a reasonable compiler to use.
+find_tool CC gcc
+find_tool STRIP strip
+
+# If we failed to find a CC so far, see if we can use clang.
+if [[ -z "$CC" ]] && command -v clang >/dev/null 2>/dev/null; then
+	CC=clang
+	CFLAGS="-target $arch ${CFLAGS:-}"
+fi
+
+# Generate the config.mak.
+cat >config.mak <<EOF
+arch = $(printf %q "$arch")
+prefix = $(printf %q "$prefix")
+srcdir = $(printf %q "$repo")
+
+CC = $(printf %q "$CC")
+STRIP = $(printf %q "$STRIP")
+CFLAGS = $(printf %s "${CFLAGS:-}")
+LDFLAGS = $(printf %s "${LDFLAGS:-}")
+EOF

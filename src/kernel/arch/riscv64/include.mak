@@ -1,0 +1,79 @@
+kernel-cflags += -mabi=lp64 -march=rv64imac -mcmodel=medany -misa-spec=2.2
+
+all:: src/kernel/kernel.elf src/kernel/kernel.sym
+install:: src/kernel/kernel.elf src/kernel/kernel.sym
+	install -DT src/kernel/kernel.elf $(DESTDIR)$(prefix)/sys/kernel.elf
+	install -DT src/kernel/kernel.sym $(DESTDIR)$(prefix)/sys/kernel.sym
+
+$(call defcleanable, \
+	src/kernel/arch/riscv64/bootstub.d \
+	src/kernel/arch/riscv64/bootstub.o \
+	src/kernel/arch/riscv64/bootstub_generated.o \
+	src/kernel/arch/riscv64/bootstub_generated.S \
+	src/kernel/arch/riscv64/kernel-unstripped.elf \
+	src/kernel/arch/riscv64/kernel.elf \
+	src/kernel/kernel.elf \
+	src/kernel/kernel.sym)
+
+# gdb: src/kernel/kernel.sym
+# 	gdb src/kernel/kernel.sym \
+# 		-ex "layout src" \
+# 		-ex "focus cmd" \
+# 		-ex "target remote :1234" \
+# 		-ex "break *0x80080000" \
+# 		-ex "break _panic" \
+# 		-ex "continue"
+# qemu: src/kernel/kernel.elf
+# 	qemu-system-riscv64 \
+# 		--machine virt \
+# 		--cpu rva22s64 \
+# 		--smp 1 \
+# 		-m 8G \
+# 		-nographic \
+# 		-kernel src/kernel/kernel.elf \
+# 		$(QEMUFLAGS)
+# .PHONY: gdb qemu
+
+# Link the kernel. This kernel will have debug symbols, and not actually be
+# bootable -- it depends on being loaded by and having the boot environment set
+# up by the bootstub.
+src/kernel/arch/riscv64/kernel-unstripped.elf: $(srcdir)/src/kernel/arch/riscv64/kernel.ld $(kernel-objs)
+	@mkdir -p $(dir $@)
+	@echo "LD      $(basename $@)" && \
+	$(CC) $(kernel-cflags) $(kernel-ldflags) \
+		-T $(srcdir)/src/kernel/arch/riscv64/kernel.ld -o $@ \
+		$(kernel-objs) -lgcc
+
+# Split the kernel into the actual binary we want to load and its debug
+# symbols. Using these does mean we won't get debug symbols for the bootstub,
+# but since it gets loaded to lomem anyways... maybe we don't care about that.
+src/kernel/arch/riscv64/kernel.elf: src/kernel/arch/riscv64/kernel-unstripped.elf
+	@mkdir -p $(dir $@)
+	@echo "STRIP   $(basename $@)" && \
+	$(STRIP) -o $@ $<
+src/kernel/kernel.sym: src/kernel/arch/riscv64/kernel-unstripped.elf
+	@mkdir -p $(dir $@)
+	@echo "STRIP   $(basename $@)" && \
+	$(STRIP) --only-keep-debug -o $@ $<
+
+# Generate the bootstub.
+src/kernel/arch/riscv64/bootstub_generated.S: $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel.elf
+	@mkdir -p $(dir $@)
+	@echo "GEN     $(basename $@)" && \
+	python3 $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel-unstripped.elf $@
+
+# Compile the bootstub.
+src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_generated.S
+	@mkdir -p $(dir $@)
+	@echo "AS      $(basename $@)" && \
+	$(CC) -c -o $@ $(kernel-cflags) $<
+
+# Link the bootstub to produce the bootable ELF. The bootstub includes the
+# kernel, so we don't need to somehow include it.
+src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub.o src/kernel/arch/riscv64/bootstub_generated.o
+	@mkdir -p $(dir $@)
+	@echo "LD      $(basename $@)" && \
+	$(CC) $(kernel-cflags) $(kernel-ldflags) \
+		-T $(srcdir)/src/kernel/arch/riscv64/bootstub.ld -o $@ -Wl,--no-warn-rwx-segments \
+		src/kernel/arch/riscv64/bootstub.o \
+		src/kernel/arch/riscv64/bootstub_generated.o
