@@ -21,7 +21,7 @@
 
         packages.default = pkgs.stdenvNoCC.mkDerivation {
           pname = "ukoos";
-          version = "git";
+          version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
 
           src = ./.;
           nativeBuildInputs = [
