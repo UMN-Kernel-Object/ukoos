@@ -1,6 +1,11 @@
 *.d
 *.o
+
+.direnv/
+config.mak
+result
+result-*
+
 /build/
 /compile_commands.json
 /src/kernel/arch/riscv64/bootstub_generated.S
-config.mak
