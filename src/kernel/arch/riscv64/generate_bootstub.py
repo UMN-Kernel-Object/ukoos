@@ -155,8 +155,16 @@ def main():
     next_paddr += args.kernel.stat().st_size  # length of .kernel
     next_paddr = (next_paddr + 4095) & ~4095  # align up
 
+    # Map the stack page.
+    pgtbls.map(
+        next_paddr,
+        0xFFFFFFFFFFFFC000,
+        0xC7,  # PTE.D | PTE.A | PTE.W | PTE.R | PTE.V
+    )
+    next_paddr += 4096
+
     # Map the root page table to a known address. This relies on the root page
-    # table being the first one we write out to the .kernel section.
+    # table being the first one we write out to the .pgtbls section.
     # Pgtbls.all_pgtbls() ensures this.
     pgtbls.map(
         next_paddr,

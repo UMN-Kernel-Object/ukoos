@@ -35,6 +35,16 @@ SECTIONS
 	}
 
 	/**
+	 * An initial stack page, to use in early boot (i.e., before the allocator is up).
+	 */
+	.stack ALIGN(0x1000) :
+	{
+		PROVIDE(_stack_start_phys = .);
+		. += 0x1000;
+		PROVIDE(_stack_end_phys = .);
+	}
+
+	/**
 	 * The page tables get appended as well.
 	 */
 	.pgtbls ALIGN(0x1000) :

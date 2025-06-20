@@ -10,6 +10,9 @@
 .global _start
 .type _start, @function
 _start:
+	# Set up the initial stack.
+	la sp, 0xffffffffffffd000
+
 	# Get the ELF header.
 	la t0, _kernel_start_phys
 
