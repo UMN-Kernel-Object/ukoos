@@ -1,4 +1,4 @@
-kernel-cflags += -mabi=lp64 -march=rv64imac_zicsr -mcmodel=medany
+kernel-cflags += -mabi=lp64 -march=rv64imac_zicsr_zicntr_zihpm_zba_zbb_zbs_zihintpause_zicbom_zicbop_zicboz -mcmodel=medany
 kernel-cflags += -Wconversion
 kernel-objs-c += arch/riscv64/halt arch/riscv64/paging arch/riscv64/sbi
 
