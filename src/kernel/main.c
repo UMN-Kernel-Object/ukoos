@@ -1,9 +1,8 @@
-typedef unsigned char u8;
+#include <physical.h>
 
-static void put_byte(u8 byte) {
-  volatile u8 *UART0 = (volatile u8 *)0x10000000;
-  *UART0 = byte;
-}
+constexpr paddr UART0 = {.bits = 0x10000000};
+
+static void put_byte(u8 byte) { physical_write_u8(UART0, byte); }
 
 static void puts(const char *s) {
   char ch;

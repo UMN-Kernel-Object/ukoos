@@ -130,20 +130,19 @@ def main():
     # Map the kernel. Note that since we don't know how much memory we need up
     # front, we can't actually support .bss...
     #
-    # If somebody wanted to add .bss support, they could probably do one of two
-    # things:
-    #
-    # 1. Make sure the .bss ends up at the
+    # If somebody wanted to add .bss support, they could probably compute how
+    # many pages of .bss we need, put those at the end of the final ELF, and
+    # use them as the backing pages.
     pgtbls = Pgtbls()
     for phdr in read_phdrs(args.kernel):
         if phdr.type == 1:  # PT_LOAD
-            flags = 0xC1
-            if phdr.flags & (1 << 0):
-                flags |= 0x08
-            if phdr.flags & (1 << 1):
-                flags |= 0x04
-            if phdr.flags & (1 << 2):
-                flags |= 0x02
+            flags = 0xC1  # PTE.D | PTE.A | PTE.V
+            if phdr.flags & (1 << 0):  # PF_X
+                flags |= 0x08  # PTE.X
+            if phdr.flags & (1 << 1):  # PF_W
+                flags |= 0x04  # PTE.W
+            if phdr.flags & (1 << 2):  # PF_R
+                flags |= 0x02  # PTE.R
             if phdr.filesz != phdr.memsz:
                 raise Exception("generate_bootstub.py does not yet support .bss")
             for offset in range(0, phdr.filesz, 4096):
@@ -151,11 +150,21 @@ def main():
                     kernel_start + phdr.offset + offset, phdr.vaddr + offset, flags
                 )
 
-    # Compute the addresses of the page tables. We can compute the starting
-    # address by noting that bootstub.ld ensures that the bootstub is a single
-    # page, and we know the length of the kernel.
+    # Advance past the kernel, so next_paddr is pointing at the start of the
+    # page tables.
     next_paddr += args.kernel.stat().st_size  # length of .kernel
     next_paddr = (next_paddr + 4095) & ~4095  # align up
+
+    # Map the root page table to a known address. This relies on the root page
+    # table being the first one we write out to the .kernel section.
+    # Pgtbls.all_pgtbls() ensures this.
+    pgtbls.map(
+        next_paddr,
+        0xFFFFFFFFFFFFD000,
+        0xC7,  # PTE.D | PTE.A | PTE.W | PTE.R | PTE.V
+    )
+
+    # Compute the addresses of the page tables.
     pgtbl_paddrs = {}
     for addr, pgtbl in pgtbls.all_pgtbls():
         name = f"boot_pgtbl_{pgtbl.level}_{addr:016x}"
