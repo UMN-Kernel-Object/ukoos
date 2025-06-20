@@ -10,7 +10,28 @@
  * allocator is configured.
  */
 
+#include <panic.h>
 #include <types.h>
+
+static inline paddr paddr_of_bits(unsigned long bits) {
+  union {
+    unsigned long bits;
+    paddr paddr;
+  } u;
+  u.bits = bits;
+  assert(u.paddr.rsvd == 0);
+  return u.paddr;
+}
+
+static inline unsigned long paddr_to_bits(paddr addr) {
+  union {
+    unsigned long bits;
+    paddr paddr;
+  } u;
+  assert(addr.rsvd == 0);
+  u.paddr = addr;
+  return u.bits;
+}
 
 u8 physical_read_u8(paddr);
 u16 physical_read_u16le(paddr);

@@ -1,8 +1,8 @@
 #include <physical.h>
 
-constexpr paddr UART0 = {.bits = 0x10000000};
-
-static void put_byte(u8 byte) { physical_write_u8(UART0, byte); }
+static void put_byte(u8 byte) {
+  physical_write_u8(paddr_of_bits(0x10000000), byte);
+}
 
 static void puts(const char *s) {
   char ch;
@@ -11,6 +11,6 @@ static void puts(const char *s) {
 }
 
 void main(void) {
-  for (;;)
-    puts("Hello, world!\n");
+  puts("Hello, world!\n");
+  panic();
 }

@@ -6,17 +6,17 @@
  * An Sv39 page table entry.
  */
 struct pte {
-  u64 rsrvd0 : 10;
-  u64 ppn : 44;
-  u64 rsvd1 : 2;
-  bool dirty : 1;
-  bool accessed : 1;
-  bool global : 1;
-  bool user : 1;
-  bool executable : 1;
-  bool writable : 1;
-  bool readable : 1;
   bool valid : 1;
+  bool readable : 1;
+  bool writable : 1;
+  bool executable : 1;
+  bool user : 1;
+  bool global : 1;
+  bool accessed : 1;
+  bool dirty : 1;
+  u64 rsvd1 : 2;
+  u64 ppn : 44;
+  u64 rsrvd0 : 10;
 };
 
 /**
@@ -82,7 +82,7 @@ enum walk_flags {
 };
 
 /**
- * Returns a pointer to the PTE the maps the given address.
+ * Returns a pointer to the PTE that maps the given address.
  *
  * If the page table containing the PTE does not exist:
  * - if `walk_flags` includes `WALK_ALLOC`, tries to allocate new page tables
@@ -103,6 +103,32 @@ struct pte *walk(uptr vaddr, enum walk_flags flags) {
  */
 static constexpr uptr physical_tmp_page = 0xffffffff80000000;
 
+struct superpage_paddr {
+  unsigned long offset : 30;
+  unsigned long hi_ppn : 26;
+  unsigned long rsvd : 8;
+};
+
+static volatile void *physical_map(paddr paddr) {
+  assert(!paddr.rsvd);
+
+  unsigned long offset = ((paddr.ppn & ((1 << 18) - 1)) << 12) + paddr.offset;
+  kernel_pgtbl2.ptes[510] = (struct pte){
+      .ppn = paddr.ppn & 0xfffc0000,
+      .dirty = true,
+      .accessed = true,
+      .global = false,
+      .user = false,
+      .executable = false,
+      .writable = true,
+      .readable = true,
+      .valid = true,
+  };
+  sfence_vma();
+
+  return (volatile void *)(physical_tmp_page + offset);
+}
+
 u8 physical_read_u8(paddr paddr);
 u16 physical_read_u16le(paddr);
 u32 physical_read_u32le(paddr);
@@ -111,11 +137,8 @@ u16 physical_read_u16be(paddr);
 u32 physical_read_u32be(paddr);
 u64 physical_read_u64be(paddr);
 
-void physical_write_u8(paddr, u8) {
-  struct pte *pte = walk(physical_tmp_page, 0);
-  assert(pte);
-
-  todo();
+void physical_write_u8(paddr paddr, u8 value) {
+  *(volatile u8 *)physical_map(paddr) = value;
 }
 
 void physical_write_u16le(paddr, u16);

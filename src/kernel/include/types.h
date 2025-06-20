@@ -62,7 +62,9 @@ typedef unsigned long uaddr;
  * A physical address.
  */
 typedef struct {
-  unsigned long bits;
+  unsigned long offset : 12;
+  unsigned long ppn : 44;
+  unsigned long rsvd : 8;
 } paddr;
 
 static_assert(sizeof(iaddr) == __SIZEOF_PTRDIFF_T__,
