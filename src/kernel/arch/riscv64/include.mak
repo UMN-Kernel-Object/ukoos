@@ -1,4 +1,4 @@
-kernel-cflags += -mabi=lp64 -march=rv64imac -mcmodel=medany -misa-spec=2.2
+kernel-cflags += -mabi=lp64 -march=rv64imac_zicsr -mcmodel=medany
 
 all:: src/kernel/kernel.elf src/kernel/kernel.sym
 install:: src/kernel/kernel.elf src/kernel/kernel.sym
@@ -15,24 +15,33 @@ $(call defcleanable, \
 	src/kernel/kernel.elf \
 	src/kernel/kernel.sym)
 
-# gdb: src/kernel/kernel.sym
-# 	gdb src/kernel/kernel.sym \
-# 		-ex "layout src" \
-# 		-ex "focus cmd" \
-# 		-ex "target remote :1234" \
-# 		-ex "break *0x80080000" \
-# 		-ex "break _panic" \
-# 		-ex "continue"
-# qemu: src/kernel/kernel.elf
-# 	qemu-system-riscv64 \
-# 		--machine virt \
-# 		--cpu rva22s64 \
-# 		--smp 1 \
-# 		-m 8G \
-# 		-nographic \
-# 		-kernel src/kernel/kernel.elf \
-# 		$(QEMUFLAGS)
-# .PHONY: gdb qemu
+# Targets for booting and debugging the kernel.
+gdb: src/kernel/kernel.sym
+	gdb src/kernel/kernel.sym \
+		-ex "layout src" \
+		-ex "focus cmd" \
+		-ex "target remote :1234" \
+		-ex "break main" \
+		-ex "break _panic" \
+		-ex "continue"
+gdb_bootstub: src/kernel/kernel.sym
+	gdb src/kernel/kernel.sym \
+		-ex "layout asm" \
+		-ex "layout regs" \
+		-ex "focus cmd" \
+		-ex "target remote :1234" \
+		-ex "break *0x80080000" \
+		-ex "continue"
+qemu: src/kernel/kernel.elf
+	qemu-system-riscv64 \
+		--machine virt \
+		--cpu rva22s64 \
+		--smp 1 \
+		-m 1G \
+		-nographic \
+		-kernel src/kernel/kernel.elf \
+		$(QEMUFLAGS)
+.PHONY: gdb qemu
 
 # Link the kernel. This kernel will have debug symbols, and not actually be
 # bootable -- it depends on being loaded by and having the boot environment set

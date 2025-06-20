@@ -36,23 +36,16 @@ SECTIONS
 		PROVIDE(_kernel_end_rodata = .);
 	}
 
+	/**
+	 * We mix up .data and .bss because the generate_bootstub.py doesn't
+	 * currently support .bss.
+	 */
 	.data ALIGN(0x1000) :
 	{
 		PROVIDE(_kernel_start_data = .);
 		*(.data .data.*)
-		PROVIDE(_kernel_end_data = .);
-	}
-
-	/**
-	 * As usual, .bss doesn't need to be aligned, since it shares the same
-	 * permissions as .data.
-	 */
-	.bss :
-	{
-		PROVIDE(_kernel_start_bss = .);
-		*(.sbss .sbss.*)
 		*(.bss .bss.*)
-		PROVIDE(_kernel_end_bss = .);
+		PROVIDE(_kernel_end_data = .);
 	}
 
 	PROVIDE(_kernel_end = .);

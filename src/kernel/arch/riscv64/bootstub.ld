@@ -16,16 +16,31 @@ SECTIONS
 		*(.rodata)
 		*(.data)
 		*(.bss)
+		. = ALIGN(0x1000);
 		PROVIDE(_bootstub_end_phys = .);
+		ASSERT(
+			_bootstub_end_phys == _bootstub_start_phys + 4096,
+			".bootstub page was too large; fix it or change generate_bootstub.py"
+		);
 	}
 
 	/**
-	 * The kernel then gets appended as a blob.
+	 * The kernel gets appended as a blob.
 	 */
 	.kernel ALIGN(0x1000) :
 	{
 		PROVIDE(_kernel_start_phys = .);
 		*(.kernel)
 		PROVIDE(_kernel_end_phys = .);
+	}
+
+	/**
+	 * The page tables get appended as well.
+	 */
+	.pgtbls ALIGN(0x1000) :
+	{
+		PROVIDE(_pgtbls_start_phys = .);
+		*(.pgtbls)
+		PROVIDE(_pgtbls_end_phys = .);
 	}
 }

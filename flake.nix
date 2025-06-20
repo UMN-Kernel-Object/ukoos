@@ -15,8 +15,13 @@
           inputsFrom = builtins.attrValues packages;
           nativeBuildInputs = [
             pkgs.bear
+            pkgs.dtc
             pkgs.qemu
           ];
+          shellHook = ''
+            export CC=riscv64-none-elf-gcc
+            export STRIP=riscv64-none-elf-strip
+          '';
         };
 
         packages.default = pkgs.stdenvNoCC.mkDerivation {
