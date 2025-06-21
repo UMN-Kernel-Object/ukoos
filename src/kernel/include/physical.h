@@ -11,7 +11,6 @@
  */
 
 #include <panic.h>
-#include <types.h>
 
 static inline paddr paddr_of_bits(unsigned long bits) {
   union {

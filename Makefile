@@ -48,7 +48,7 @@ kernel-cflags = $(CFLAGS) \
 	-std=c2x
 kernel-dir = src/kernel
 kernel-objs-asm =
-kernel-objs-c = main panic
+kernel-objs-c = builtins/memcmp builtins/strlen main panic print
 include $(srcdir)/src/kernel/arch/$(arch)/include.mak
 
 # Common rules.

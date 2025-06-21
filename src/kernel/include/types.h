@@ -58,6 +58,13 @@ static_assert(alignof(uptr) == alignof(void *), "incorrect alignment for uptr");
 typedef signed long iaddr;
 typedef unsigned long uaddr;
 
+static_assert(sizeof(iaddr) == __SIZEOF_SIZE_T__, "incorrect size for iaddr");
+static_assert(alignof(iaddr) == __SIZEOF_SIZE_T__,
+              "incorrect alignment for iaddr");
+static_assert(sizeof(uaddr) == __SIZEOF_SIZE_T__, "incorrect size for uaddr");
+static_assert(alignof(uaddr) == __SIZEOF_SIZE_T__,
+              "incorrect alignment for uaddr");
+
 /**
  * A physical address.
  */
@@ -79,5 +86,19 @@ static_assert(sizeof(paddr) == __SIZEOF_PTRDIFF_T__,
               "incorrect size for paddr");
 static_assert(alignof(paddr) == __SIZEOF_PTRDIFF_T__,
               "incorrect alignment for paddr");
+
+/**
+ * Size types.
+ */
+
+typedef signed long isize;
+typedef unsigned long usize;
+
+static_assert(sizeof(isize) == __SIZEOF_SIZE_T__, "incorrect size for isize");
+static_assert(alignof(isize) == __SIZEOF_SIZE_T__,
+              "incorrect alignment for isize");
+static_assert(sizeof(usize) == __SIZEOF_SIZE_T__, "incorrect size for usize");
+static_assert(alignof(usize) == __SIZEOF_SIZE_T__,
+              "incorrect alignment for usize");
 
 #endif // UKO_OS_KERNEL__TYPES_H

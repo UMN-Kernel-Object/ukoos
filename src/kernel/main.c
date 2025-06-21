@@ -1,16 +1,7 @@
-#include <physical.h>
-
-static void put_byte(u8 byte) {
-  physical_write_u8(paddr_of_bits(0x10000000), byte);
-}
-
-static void puts(const char *s) {
-  char ch;
-  while ((ch = *s++))
-    put_byte(ch);
-}
+#include <panic.h>
+#include <print.h>
 
 void main(void) {
-  puts("Hello, world!\n");
-  panic();
+  print("Hello, world!\n");
+  TODO();
 }

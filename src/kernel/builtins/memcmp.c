@@ -1,0 +1,15 @@
+#include <types.h>
+
+__attribute__((nonnull(1, 2), pure)) int memcmp(const void *s1, const void *s2,
+                                                usize n) {
+  const u8 *p1 = s1, *p2 = s2;
+  while (n--) {
+    if (*p1 < *p2)
+      return -1;
+    if (*p1 > *p2)
+      return 1;
+    p1++;
+    p2++;
+  }
+  return 0;
+}
