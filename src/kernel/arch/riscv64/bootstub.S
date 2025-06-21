@@ -18,7 +18,6 @@ _start:
 
 	# Get the entrypoint address out of it.
 	ld t1, 24(t0)
-	add t1, t0, t1
 
 	# Load the address of the root page table.
 	la t0, boot_pgtbl_2_0000000000000000
@@ -31,8 +30,7 @@ _start:
 	or t0, t0, t3
 
 	# Prepare to fault to the entrypoint.
-	sll t2, t2, 30
-	csrw stvec, t2
+	csrw stvec, t1
 
 	# Load the new page tables, which unmap the current code.
 	sfence.vma

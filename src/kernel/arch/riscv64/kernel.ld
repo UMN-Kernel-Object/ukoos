@@ -1,9 +1,4 @@
-/**
- * Since we're not getting booted by the bootloader, but instead by our own
- * bootstub, we can use a high-level C function as our entrypoint and assume
- * the environment will be properly set up.
- */
-ENTRY(main)
+ENTRY(_start)
 OUTPUT_FORMAT(elf64-littleriscv)
 
 SECTIONS
