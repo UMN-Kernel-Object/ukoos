@@ -69,12 +69,12 @@ watch:
 define common_rules_for_dir
 $(2)%.o: $(srcdir)/$(2)%.c
 	@mkdir -p $$(dir $$@)
-	@echo "CC      $$(basename $$@)"
+	@echo "CC      $$@"
 	$(Q)$(CC) -c -o $$@ $$($(1)-cflags) $$<
 
 $(2)%.o: $(srcdir)/$(2)%.S
 	@mkdir -p $$(dir $$@)
-	@echo "AS      $$(basename $$@)"
+	@echo "AS      $$@"
 	$(Q)$(CC) -c -o $$@ $$($(1)-cflags) $$<
 
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
