@@ -37,10 +37,9 @@ void __panic(const char *file, usize line, const char *func, const char *msg,
   print("  in {cstr} at {cstr}:{usize}", func, file, line);
 
   uptr backtrace = _backtrace_begin();
-  while (backtrace) {
-    uaddr pc = _backtrace_pc(backtrace);
+  uaddr pc;
+  while ((pc = _backtrace_pc(backtrace))) {
     print("{uaddr}", pc);
-
     backtrace = _backtrace_next(backtrace);
   }
   _panic_halt();

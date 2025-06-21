@@ -1,7 +1,11 @@
 #include <panic.h>
 #include <print.h>
 
+void foo(void) { TODO(); }
+
+[[noreturn]]
 void main(void) {
-  print("Hello, world!\n");
-  TODO();
+  print("Starting to boot ukoOS...\n");
+  for (;;)
+    foo();
 }

@@ -8,4 +8,6 @@
 .global _start
 .type _start, @function
 _start:
+	mv ra, zero
+	mv s0, zero
 	tail main
