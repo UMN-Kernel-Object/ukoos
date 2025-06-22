@@ -29,7 +29,6 @@ enum Elf64_Sym_Bind : u8 {
 };
 
 static inline enum Elf64_Sym_Type st_type(u8 st_info) { return st_info & 0xf; }
-static inline enum Elf64_Sym_Bind st_bind(u8 st_info) { return st_info >> 4; }
 
 static const struct Elf64_Sym *symtab_start = nullptr, *symtab_end = nullptr;
 static const char *strtab = nullptr;

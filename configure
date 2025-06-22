@@ -132,4 +132,6 @@ CC = $(printf %q "$CC")
 STRIP = $(printf %q "$STRIP")
 CFLAGS = $(printf %s "${CFLAGS:-}")
 LDFLAGS = $(printf %s "${LDFLAGS:-}")
+
+config_mak_present = 1
 EOF

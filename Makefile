@@ -1,14 +1,6 @@
-# Build options, configurable with config.mak.
-CC = riscv64-none-elf-gcc
-STRIP = riscv64-none-elf-strip
-CFLAGS = -g -O3 -Wall -Werror
-LDFLAGS =
-prefix = /
+# Include config.mak, and make sure that it is present.
 -include config.mak
-ifndef arch
-$(error The build was not configured; run ./configure)
-endif
-ifndef srcdir
+ifndef config_mak_present
 $(error The build was not configured; run ./configure)
 endif
 
