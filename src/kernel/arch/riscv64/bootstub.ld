@@ -41,6 +41,10 @@ SECTIONS
 	{
 		PROVIDE(_kernel_start_phys = .);
 		*(.kernel)
+	}
+	.kernel_bss :
+	{
+		*(.kernel_bss)
 		PROVIDE(_kernel_end_phys = .);
 	}
 

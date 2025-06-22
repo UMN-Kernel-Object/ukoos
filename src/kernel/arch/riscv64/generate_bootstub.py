@@ -165,8 +165,7 @@ def main():
 
     # Figure out the layout of everything in physical memory.
     next_paddr = 0x80080000  # start address
-    bootstub_start = next_paddr
-    next_paddr += 4096
+    next_paddr += 4096  # skip the bootstub
     pgtbls_start = next_paddr
     next_paddr += sum(4096 for _ in pgtbls.all_pgtbls())
     kernel_start = next_paddr
@@ -174,11 +173,23 @@ def main():
     stack_start = next_paddr
     del next_paddr
 
+    # Count how many trailing pages are purely zeroes.
+    trailing_zero_pages = 0
+    for _, file_len, _ in reversed(kernel_ptes):
+        if file_len == 0:
+            trailing_zero_pages += 1
+        else:
+            break
+
     # Start assigning addresses to kernel pages.
-    kernel_section = ""
+    kernel_section = f'.section .kernel, "a", @progbits\n'
     for i, (offset, file_len, pte) in enumerate(kernel_ptes):
+        if i >= len(kernel_ptes) - trailing_zero_pages:
+            assert file_len == 0
         if file_len > 0:
             kernel_section += f'.incbin "{args.kernel}", {offset}, {file_len}\n'
+        if i == len(kernel_ptes) - trailing_zero_pages - 1:
+            kernel_section += f'.section .kernel_bss, "a", @nobits\n'
         if file_len < 4096:
             kernel_section += f".zero {4096 - file_len}\n"
         pte.ppn = (kernel_start + 4096 * i) >> 12
