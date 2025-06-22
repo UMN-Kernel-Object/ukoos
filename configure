@@ -33,6 +33,7 @@ while true; do
 	case "$1" in
 	-h|--help)
 		help=1
+		shift
 		;;
 	--arch)
 		arch="$2"
