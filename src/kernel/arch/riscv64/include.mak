@@ -36,6 +36,7 @@ gdb_bootstub: src/kernel/kernel.sym
 		-ex "focus cmd" \
 		-ex "target remote :1234" \
 		-ex "break *0x80080000" \
+		-ex "break main" \
 		-ex "continue"
 qemu: src/kernel/kernel.elf
 	qemu-system-riscv64 \

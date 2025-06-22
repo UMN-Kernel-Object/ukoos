@@ -61,7 +61,7 @@ class Pgtbls:
 
         return loop(0, self.pgtbl2)
 
-    def map(self, paddr: int, vaddr: int, flags: int):
+    def map(self, paddr: int, vaddr: int, flags: int) -> Pte:
         assert (paddr & 0xFFF) == 0
         ppn = paddr >> 12
 
@@ -71,7 +71,9 @@ class Pgtbls:
         pgtbl0 = self.walk(vaddr)
         assert pgtbl0.level == 0
         assert pgtbl0.children[vpn0] == None
-        pgtbl0.children[vpn0] = Pte(ppn, vaddr, flags)
+        pte = Pte(ppn, vaddr, flags)
+        pgtbl0.children[vpn0] = pte
+        return pte
 
     def walk(self, vaddr: int) -> Pgtbl:
         assert (vaddr & 0xFFF) == 0
@@ -103,11 +105,18 @@ class ProgramHeader:
     align: int
 
 
+def read_entrypoint(elf_path: Path) -> int:
+    with elf_path.open("rb") as f:
+        f.seek(24)
+        (e_entry,) = struct.unpack("<Q", f.read(8))
+        return e_entry
+
+
 def read_phdrs(elf_path: Path) -> Iterator[ProgramHeader]:
     with elf_path.open("rb") as f:
-        f.seek(32, 0)
+        f.seek(32)
         (e_phoff,) = struct.unpack("<Q", f.read(8))
-        f.seek(56, 0)
+        f.seek(56)
         (e_phnum,) = struct.unpack("<H", f.read(2))
 
         f.seek(e_phoff)
@@ -121,19 +130,11 @@ def main():
     arg_parser.add_argument("bootstub", type=Path)
     args = arg_parser.parse_args()
 
-    # Compute the kernel start address in physical memory. We can do so,
-    # because bootstub.ld ensures the bootstub is a single page.
-    next_paddr = 0x80080000  # base address
-    next_paddr += 4096  # length of .bootstub
-    kernel_start = next_paddr
-
-    # Map the kernel. Note that since we don't know how much memory we need up
-    # front, we can't actually support .bss...
-    #
-    # If somebody wanted to add .bss support, they could probably compute how
-    # many pages of .bss we need, put those at the end of the final ELF, and
-    # use them as the backing pages.
+    # Create PTEs for all the mappings we want to make, so we can measure the
+    # size of the page tables. This is the kernel, the stack page, and the root
+    # page table.
     pgtbls = Pgtbls()
+    kernel_ptes: list[tuple[int, int, Pte]] = []
     for phdr in read_phdrs(args.kernel):
         if phdr.type == 1:  # PT_LOAD
             flags = 0xC1  # PTE.D | PTE.A | PTE.V
@@ -143,55 +144,67 @@ def main():
                 flags |= 0x04  # PTE.W
             if phdr.flags & (1 << 2):  # PF_R
                 flags |= 0x02  # PTE.R
-            if phdr.filesz != phdr.memsz:
-                raise Exception("generate_bootstub.py does not yet support .bss")
-            for offset in range(0, phdr.filesz, 4096):
-                pgtbls.map(
-                    kernel_start + phdr.offset + offset, phdr.vaddr + offset, flags
+            for offset in range(0, phdr.memsz, 4096):
+                kernel_ptes.append(
+                    (
+                        phdr.offset + offset,
+                        max(0, min(4096, phdr.filesz - offset)),
+                        pgtbls.map(0, phdr.vaddr + offset, flags),
+                    )
                 )
-
-    # Advance past the kernel, so next_paddr is pointing at the start of the
-    # page tables.
-    next_paddr += args.kernel.stat().st_size  # length of .kernel
-    next_paddr = (next_paddr + 4095) & ~4095  # align up
-
-    # Map the stack page.
-    pgtbls.map(
-        next_paddr,
-        0xFFFFFFFFFFFFC000,
+    stack_page_pte = pgtbls.map(
+        0,
+        0xFFFFFFFFFFFFC000,  # stack page
         0xC7,  # PTE.D | PTE.A | PTE.W | PTE.R | PTE.V
     )
+    root_pgtbl_pte = pgtbls.map(
+        0,
+        0xFFFFFFFFFFFFD000,  # root page table
+        0xC7,  # PTE.D | PTE.A | PTE.W | PTE.R | PTE.V
+    )
+
+    # Figure out the layout of everything in physical memory.
+    next_paddr = 0x80080000  # start address
+    bootstub_start = next_paddr
     next_paddr += 4096
+    pgtbls_start = next_paddr
+    next_paddr += sum(4096 for _ in pgtbls.all_pgtbls())
+    kernel_start = next_paddr
+    next_paddr += 4096 * len(kernel_ptes)
+    stack_start = next_paddr
+    del next_paddr
 
-    # Map the root page table to a known address. This relies on the root page
-    # table being the first one we write out to the .pgtbls section.
-    # Pgtbls.all_pgtbls() ensures this.
-    pgtbls.map(
-        next_paddr,
-        0xFFFFFFFFFFFFD000,
-        0xC7,  # PTE.D | PTE.A | PTE.W | PTE.R | PTE.V
-    )
+    # Start assigning addresses to kernel pages.
+    kernel_section = ""
+    for i, (offset, file_len, pte) in enumerate(kernel_ptes):
+        if file_len > 0:
+            kernel_section += f'.incbin "{args.kernel}", {offset}, {file_len}\n'
+        if file_len < 4096:
+            kernel_section += f".zero {4096 - file_len}\n"
+        pte.ppn = (kernel_start + 4096 * i) >> 12
+
+    # Assign addresses to the other pages.
+    stack_page_pte.ppn = stack_start >> 12
+    root_pgtbl_pte.ppn = pgtbls_start >> 12
 
     # Compute the addresses of the page tables.
     pgtbl_paddrs = {}
     for addr, pgtbl in pgtbls.all_pgtbls():
         name = f"boot_pgtbl_{pgtbl.level}_{addr:016x}"
-        pgtbl_paddrs[name] = next_paddr
-        next_paddr += 4096
+        pgtbl_paddrs[name] = pgtbls_start + 4096 * len(pgtbl_paddrs)
 
     # Write to a temporary file, so that a crash partway through doesn't
-    # confuse Make into thinking we successfully completed next run.
+    # confuse make into thinking we successfully completed next run.
     with NamedTemporaryFile("w") as tmp:
-        # Embed the kernel.
-        print(
-            f"""
-            .section .kernel, "a", @progbits
-            .incbin "{args.kernel}"
-            """,
-            file=tmp,
-        )
+        # Write the address of the entrypoint.
+        print(".section .data", file=tmp)
+        print(".global entrypoint", file=tmp)
+        print(".p2align 3", file=tmp)
+        print(".type entrypoint, @object", file=tmp)
+        print(".size entrypoint, 8", file=tmp)
+        print(f"entrypoint: .8byte {hex(read_entrypoint(args.kernel))}\n", file=tmp)
 
-        # Embed the page tables.
+        # Write the page tables.
         print('.section .pgtbls, "a", @progbits', file=tmp)
         print(f".global boot_pgtbl_2_0000000000000000", file=tmp)
         for addr, pgtbl in pgtbls.all_pgtbls():
@@ -207,6 +220,7 @@ def main():
                 elif pgtbl.level == 0:
                     assert isinstance(child, Pte)
                     assert child_addr == child.vaddr
+                    assert child.ppn != 0
                     entry = hex((child.ppn << 10) | child.flags)
                 else:
                     assert isinstance(child, Pgtbl)
@@ -215,6 +229,9 @@ def main():
                     entry = hex((pgtbl_paddrs[child_name] >> 2) | 0x01)
                 entries.append(entry)
             print(f"    .8byte {', '.join(entries)}", file=tmp)
+
+        # Write the kernel section.
+        print(f'.section .kernel, "a", @progbits\n{kernel_section}', file=tmp)
 
         # Copy the temporary file to the output file.
         tmp.flush()

@@ -13,21 +13,18 @@ _start:
 	# Set up the initial stack.
 	la sp, 0xffffffffffffd000
 
-	# Get the ELF header.
-	la t0, _kernel_start_phys
-
-	# Get the entrypoint address out of it.
-	ld t1, 24(t0)
-
-	# Load the address of the root page table.
+	# Get the (physical) address of the root page table.
 	la t0, boot_pgtbl_2_0000000000000000
 
 	# Transform the address of the root page table to a value we can use
 	# with the SATP register to enable Sv39 paging.
 	srl t0, t0, 12
-	li t2, -1
-	sll t3, t2, 63
-	or t0, t0, t3
+	li t1, -1
+	sll t2, t1, 63
+	or t0, t0, t2
+
+	# Get the (virtual) address of the higher-half entrypoint.
+	ld t1, (entrypoint)
 
 	# Prepare to fault to the entrypoint.
 	csrw stvec, t1

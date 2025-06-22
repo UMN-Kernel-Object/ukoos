@@ -31,16 +31,17 @@ SECTIONS
 		PROVIDE(_kernel_end_rodata = .);
 	}
 
-	/**
-	 * We mix up .data and .bss because the generate_bootstub.py doesn't
-	 * currently support .bss.
-	 */
 	.data ALIGN(0x1000) :
 	{
 		PROVIDE(_kernel_start_data = .);
 		*(.data .data.*)
-		*(.bss .bss.*)
 		PROVIDE(_kernel_end_data = .);
+	}
+	.bss :
+	{
+		PROVIDE(_kernel_start_bss = .);
+		*(.bss .bss.*)
+		PROVIDE(_kernel_end_bss = .);
 	}
 
 	PROVIDE(_kernel_end = .);

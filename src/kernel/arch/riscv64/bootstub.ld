@@ -25,6 +25,16 @@ SECTIONS
 	}
 
 	/**
+	 * The page tables get appended as well.
+	 */
+	.pgtbls ALIGN(0x1000) :
+	{
+		PROVIDE(_pgtbls_start_phys = .);
+		*(.pgtbls)
+		PROVIDE(_pgtbls_end_phys = .);
+	}
+
+	/**
 	 * The kernel gets appended as a blob.
 	 */
 	.kernel ALIGN(0x1000) :
@@ -42,15 +52,5 @@ SECTIONS
 		PROVIDE(_stack_start_phys = .);
 		. += 0x1000;
 		PROVIDE(_stack_end_phys = .);
-	}
-
-	/**
-	 * The page tables get appended as well.
-	 */
-	.pgtbls ALIGN(0x1000) :
-	{
-		PROVIDE(_pgtbls_start_phys = .);
-		*(.pgtbls)
-		PROVIDE(_pgtbls_end_phys = .);
 	}
 }
