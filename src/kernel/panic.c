@@ -1,5 +1,6 @@
 #include <panic.h>
 #include <print.h>
+#include <symbolicate.h>
 
 /**
  * Performs architecture-specific operations to ensure the system stops if we
@@ -39,7 +40,12 @@ void __panic(const char *file, usize line, const char *func, const char *msg,
   uptr backtrace = _backtrace_begin();
   uaddr pc;
   while ((pc = _backtrace_pc(backtrace))) {
-    print("{uaddr}", pc);
+    struct symbolicated symbolicated;
+    if (symbolicate(&symbolicated, pc))
+      print("{uaddr} <{cstr}+{usize}>", pc, symbolicated.name,
+            symbolicated.offset);
+    else
+      print("{uaddr} ???", pc);
     backtrace = _backtrace_next(backtrace);
   }
   _panic_halt();
