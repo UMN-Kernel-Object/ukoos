@@ -26,6 +26,12 @@ _start:
 	# Get the (virtual) address of the higher-half entrypoint.
 	ld t1, (entrypoint)
 
+	# Load the symbol table and string tables' addresses and lengths.
+	ld a2, (symtab_va)
+	ld a3, (symtab_len)
+	ld a4, (strtab_va)
+	ld a5, (strtab_len)
+
 	# Prepare to fault to the entrypoint.
 	csrw stvec, t1
 

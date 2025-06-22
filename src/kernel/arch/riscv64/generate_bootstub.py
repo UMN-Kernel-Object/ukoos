@@ -105,6 +105,20 @@ class ProgramHeader:
     align: int
 
 
+@dataclass
+class SectionHeader:
+    name: int
+    type: int
+    flags: int
+    addr: int
+    offset: int
+    size: int
+    link: int
+    info: int
+    addralign: int
+    entsize: int
+
+
 def read_entrypoint(elf_path: Path) -> int:
     with elf_path.open("rb") as f:
         f.seek(24)
@@ -124,17 +138,47 @@ def read_phdrs(elf_path: Path) -> Iterator[ProgramHeader]:
             yield ProgramHeader(*struct.unpack("<LLQQQQQQ", f.read(56)))
 
 
+def read_shdrs(elf_path: Path) -> Iterator[SectionHeader]:
+    with elf_path.open("rb") as f:
+        f.seek(40)
+        (e_shoff,) = struct.unpack("<Q", f.read(8))
+        f.seek(60)
+        (e_shnum,) = struct.unpack("<H", f.read(2))
+
+        f.seek(e_shoff)
+        for _ in range(e_shnum):
+            yield SectionHeader(*struct.unpack("<LLQQQQLLQQ", f.read(64)))
+
+
 def main():
     arg_parser = ArgumentParser()
     arg_parser.add_argument("kernel", type=Path)
     arg_parser.add_argument("bootstub", type=Path)
     args = arg_parser.parse_args()
 
+    # Find the kernel's symbol table and string table.
+    shdrs = list(read_shdrs(args.kernel))
+    symtab = None
+    for shdr in shdrs:
+        if shdr.type == 2:  # SHT_SYMTAB
+            if symtab != None:
+                raise Exception("Kernel had multiple SHT_SYMTAB sections")
+            symtab = shdr
+    if symtab == None:
+        raise Exception("Kernel had no SHT_SYMTAB sections")
+    strtab = shdrs[symtab.link]
+    if strtab.type != 3:  # SHT_STRTAB
+        raise Exception(
+            "Symbol table's link field didn't refer to a SHT_STRTAB section"
+        )
+
     # Create PTEs for all the mappings we want to make, so we can measure the
     # size of the page tables. This is the kernel, the stack page, and the root
     # page table.
     pgtbls = Pgtbls()
     kernel_ptes: list[tuple[int, int, Pte]] = []
+    kernel_tables_ptes: list[Pte] = []
+    max_kernel_va = 0
     for phdr in read_phdrs(args.kernel):
         if phdr.type == 1:  # PT_LOAD
             flags = 0xC1  # PTE.D | PTE.A | PTE.V
@@ -152,6 +196,18 @@ def main():
                         pgtbls.map(0, phdr.vaddr + offset, flags),
                     )
                 )
+            max_kernel_va = max(max_kernel_va, (phdr.vaddr + phdr.memsz + 4095) & ~4095)
+    if max_kernel_va == 0:
+        raise Exception("Kernel mapped no memory")
+    symtab_va = max_kernel_va
+    for offset in range(0, symtab.size + strtab.size, 4096):
+        kernel_tables_ptes.append(
+            pgtbls.map(
+                0,
+                symtab_va + offset,
+                0xC3,  # PTE.D | PTE.A | PTE.R | PTE.V
+            )
+        )
     stack_page_pte = pgtbls.map(
         0,
         0xFFFFFFFFFFFFC000,  # stack page
@@ -168,12 +224,15 @@ def main():
     next_paddr += 4096  # skip the bootstub
     pgtbls_start = next_paddr
     next_paddr += sum(4096 for _ in pgtbls.all_pgtbls())
+    kernel_tables_start = next_paddr
+    next_paddr += symtab.size + strtab.size
+    next_paddr = (next_paddr + 4095) & ~4095
     kernel_start = next_paddr
     next_paddr += 4096 * len(kernel_ptes)
     stack_start = next_paddr
     del next_paddr
 
-    # Count how many trailing pages are purely zeroes.
+    # Count how many trailing kernel pages are purely zeroes.
     trailing_zero_pages = 0
     for _, file_len, _ in reversed(kernel_ptes):
         if file_len == 0:
@@ -181,7 +240,12 @@ def main():
         else:
             break
 
-    # Start assigning addresses to kernel pages.
+    # Assign addresses to kernel table pages.
+    kernel_section = f'.section .kernel_tables, "a", @progbits\n'
+    for i, pte in enumerate(kernel_tables_ptes):
+        pte.ppn = (kernel_tables_start + 4096 * i) >> 12
+
+    # Assign addresses to kernel pages.
     kernel_section = f'.section .kernel, "a", @progbits\n'
     for i, (offset, file_len, pte) in enumerate(kernel_ptes):
         if i >= len(kernel_ptes) - trailing_zero_pages:
@@ -207,13 +271,21 @@ def main():
     # Write to a temporary file, so that a crash partway through doesn't
     # confuse make into thinking we successfully completed next run.
     with NamedTemporaryFile("w") as tmp:
-        # Write the address of the entrypoint.
+        # Write the addresses of the entrypoint and tables.
         print(".section .data", file=tmp)
-        print(".global entrypoint", file=tmp)
-        print(".p2align 3", file=tmp)
-        print(".type entrypoint, @object", file=tmp)
-        print(".size entrypoint, 8", file=tmp)
-        print(f"entrypoint: .8byte {hex(read_entrypoint(args.kernel))}\n", file=tmp)
+        data_constants = {
+            "entrypoint": read_entrypoint(args.kernel),
+            "symtab_va": symtab_va,
+            "symtab_len": symtab.size,
+            "strtab_va": symtab_va + symtab.size,
+            "strtab_len": strtab.size,
+        }
+        for name, value in data_constants.items():
+            print(f".global {name}", file=tmp)
+            print(f".p2align 3", file=tmp)
+            print(f".type {name}, @object", file=tmp)
+            print(f".size {name}, 8", file=tmp)
+            print(f"{name}: .8byte {hex(value)}\n", file=tmp)
 
         # Write the page tables.
         print('.section .pgtbls, "a", @progbits', file=tmp)
@@ -241,8 +313,22 @@ def main():
                 entries.append(entry)
             print(f"    .8byte {', '.join(entries)}", file=tmp)
 
+        # Write the kernel tables section.
+        print(f'.section .kernel_tables, "a", @progbits', file=tmp)
+        print(f".p2align 3", file=tmp)
+        print(f".type symtab, @object", file=tmp)
+        print(f".size symtab, {symtab.size}", file=tmp)
+        print(
+            f'symtab: .incbin "{args.kernel}", {symtab.offset}, {symtab.size}', file=tmp
+        )
+        print(f".type strtab, @object", file=tmp)
+        print(f".size strtab, {strtab.size}", file=tmp)
+        print(
+            f'strtab: .incbin "{args.kernel}", {strtab.offset}, {strtab.size}', file=tmp
+        )
+
         # Write the kernel section.
-        print(f'.section .kernel, "a", @progbits\n{kernel_section}', file=tmp)
+        print(kernel_section, file=tmp)
 
         # Copy the temporary file to the output file.
         tmp.flush()

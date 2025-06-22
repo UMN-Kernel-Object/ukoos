@@ -11,13 +11,13 @@ SECTIONS
 	 */
 	.bootstub :
 	{
-		PROVIDE(_bootstub_start_phys = .);
+		_bootstub_start_phys = .;
 		*(.text)
 		*(.rodata)
 		*(.data)
 		*(.bss)
 		. = ALIGN(0x1000);
-		PROVIDE(_bootstub_end_phys = .);
+		_bootstub_end_phys = .;
 		ASSERT(
 			_bootstub_end_phys == _bootstub_start_phys + 4096,
 			".bootstub page was too large; fix it or change generate_bootstub.py"
@@ -29,9 +29,19 @@ SECTIONS
 	 */
 	.pgtbls ALIGN(0x1000) :
 	{
-		PROVIDE(_pgtbls_start_phys = .);
+		_pgtbls_start_phys = .;
 		*(.pgtbls)
-		PROVIDE(_pgtbls_end_phys = .);
+		_pgtbls_end_phys = .;
+	}
+
+	/**
+	 * The kernel's string and symbol table sections get appended.
+	 */
+	.kernel_tables ALIGN(0x1000) :
+	{
+		_kernel_tables_start_phys = .;
+		*(.kernel_tables)
+		_kernel_tables_end_phys = .;
 	}
 
 	/**
@@ -39,13 +49,13 @@ SECTIONS
 	 */
 	.kernel ALIGN(0x1000) :
 	{
-		PROVIDE(_kernel_start_phys = .);
+		_kernel_start_phys = .;
 		*(.kernel)
 	}
 	.kernel_bss :
 	{
 		*(.kernel_bss)
-		PROVIDE(_kernel_end_phys = .);
+		_kernel_end_phys = .;
 	}
 
 	/**
@@ -53,8 +63,8 @@ SECTIONS
 	 */
 	.stack ALIGN(0x1000) :
 	{
-		PROVIDE(_stack_start_phys = .);
+		_stack_start_phys = .;
 		. += 0x1000;
-		PROVIDE(_stack_end_phys = .);
+		_stack_end_phys = .;
 	}
 }
