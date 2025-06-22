@@ -23,6 +23,7 @@ $(call defcleanable, \
 # Targets for booting and debugging the kernel.
 gdb: src/kernel/kernel.sym
 	gdb src/kernel/kernel.sym \
+		-ex "set substitute-path / $(srcdir)/" \
 		-ex "layout src" \
 		-ex "focus cmd" \
 		-ex "target remote :1234" \
@@ -31,6 +32,7 @@ gdb: src/kernel/kernel.sym
 		-ex "continue"
 gdb_bootstub: src/kernel/kernel.sym
 	gdb src/kernel/kernel.sym \
+		-ex "set substitute-path / $(srcdir)/" \
 		-ex "layout asm" \
 		-ex "layout regs" \
 		-ex "focus cmd" \
@@ -89,6 +91,7 @@ src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/
 	@mkdir -p $(dir $@)
 	@echo "LD      $@"
 	$(Q)$(CC) $(kernel-cflags) $(kernel-ldflags) \
-		-T $(srcdir)/src/kernel/arch/riscv64/bootstub.ld -o $@ -Wl,--no-warn-rwx-segments \
+		-T $(srcdir)/src/kernel/arch/riscv64/bootstub.ld -o $@ \
+		-s -Wl,--no-warn-rwx-segments \
 		src/kernel/arch/riscv64/bootstub.o \
 		src/kernel/arch/riscv64/bootstub_generated.o

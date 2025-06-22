@@ -41,7 +41,7 @@ components = kernel
 kernel-cflags = $(CFLAGS) \
 	-ffreestanding \
 	-fno-builtin-main \
-	-fmacro-prefix-map=$(srcdir)/src/kernel/= \
+	-ffile-prefix-map=$(srcdir)= \
 	-isystem $(srcdir)/src/kernel/include \
 	-isystem $(srcdir)/src/kernel/arch/$(arch)/include \
 	-nostdlib \
