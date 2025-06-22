@@ -46,6 +46,8 @@ kernel-cflags = $(CFLAGS) \
 	-isystem $(srcdir)/src/kernel/arch/$(arch)/include \
 	-nostdlib \
 	-std=c2x
+kernel-cflags += -fdata-sections -ffunction-sections
+kernel-ldflags += -Wl,--gc-sections
 kernel-dir = src/kernel
 kernel-objs-asm =
 kernel-objs-c = builtins/memcmp builtins/strlen main panic print

@@ -92,6 +92,6 @@ src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/
 	@echo "LD      $@"
 	$(Q)$(CC) $(kernel-cflags) $(kernel-ldflags) \
 		-T $(srcdir)/src/kernel/arch/riscv64/bootstub.ld -o $@ \
-		-s -Wl,--no-warn-rwx-segments \
+		-s -Wl,--no-gc-sections -Wl,--no-warn-rwx-segments \
 		src/kernel/arch/riscv64/bootstub.o \
 		src/kernel/arch/riscv64/bootstub_generated.o
