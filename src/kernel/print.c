@@ -177,6 +177,36 @@ static void format_cstr(struct formatter *fmt, const char *args_start,
   write_str(fmt, va_arg(*ap, const char *));
 }
 
+static void format_paddr(struct formatter *fmt, const char *args_start,
+                         const char *args_end, va_list *ap) {
+  if (args_start == args_end) {
+    args_start = "#018x";
+    args_end = args_start + strlen(args_start);
+  }
+  format_number(fmt, args_start, args_end, false,
+                (u64)paddr_to_bits(va_arg(*ap, paddr)));
+}
+
+static void format_u8(struct formatter *fmt, const char *args_start,
+                      const char *args_end, va_list *ap) {
+  format_number(fmt, args_start, args_end, false, (u64)(u8)va_arg(*ap, u32));
+}
+
+static void format_u16(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  format_number(fmt, args_start, args_end, false, (u64)(u16)va_arg(*ap, u32));
+}
+
+static void format_u32(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  format_number(fmt, args_start, args_end, false, (u64)va_arg(*ap, u32));
+}
+
+static void format_u64(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  format_number(fmt, args_start, args_end, false, (u64)va_arg(*ap, u64));
+}
+
 static void format_uaddr(struct formatter *fmt, const char *args_start,
                          const char *args_end, va_list *ap) {
   if (args_start == args_end) {
@@ -218,9 +248,18 @@ static format_func find_format_func(const char *type_name_ptr,
                                     usize type_name_len) {
   switch (type_name_len) {
   case 2:
+    if (!memcmp(type_name_ptr, "u8", 2))
+      return format_u8;
     if (!memcmp(type_name_ptr, "va", 2))
       return format_va;
     break;
+  case 3:
+    if (!memcmp(type_name_ptr, "u16", 3))
+      return format_u16;
+    if (!memcmp(type_name_ptr, "u32", 3))
+      return format_u32;
+    if (!memcmp(type_name_ptr, "u64", 3))
+      return format_u64;
   case 4:
     if (!memcmp(type_name_ptr, "cstr", 4))
       return format_cstr;
@@ -228,6 +267,8 @@ static format_func find_format_func(const char *type_name_ptr,
       return format_uptr;
     break;
   case 5:
+    if (!memcmp(type_name_ptr, "paddr", 5))
+      return format_paddr;
     if (!memcmp(type_name_ptr, "uaddr", 5))
       return format_uaddr;
     if (!memcmp(type_name_ptr, "usize", 5))
@@ -305,7 +346,20 @@ static void vfprint(struct formatter *fmt, const char *format, va_list ap) {
   while ((ch = *format++)) {
     switch (ch) {
     case '{':
-      format = print_specifier(fmt, format, &ap);
+      if (*format == '{') {
+        format++;
+        write_byte(fmt, '{');
+      } else {
+        format = print_specifier(fmt, format, &ap);
+      }
+      break;
+    case '}':
+      if (*format == '}') {
+        format++;
+        write_byte(fmt, '}');
+      } else {
+        write_str(fmt, "{{unexpected close brace}}");
+      }
       break;
     default:
       write_byte(fmt, ch);
