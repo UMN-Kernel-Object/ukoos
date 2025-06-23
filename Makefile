@@ -42,7 +42,7 @@ kernel-cflags += -fdata-sections -ffunction-sections
 kernel-ldflags += -Wl,--gc-sections
 kernel-dir = src/kernel
 kernel-objs-asm =
-kernel-objs-c = builtins/memcmp builtins/strlen main panic print symbolicate
+kernel-objs-c = builtins/memcpy builtins/memcmp builtins/strlen main panic print symbolicate
 include $(srcdir)/src/kernel/arch/$(arch)/include.mak
 
 # Common rules.
