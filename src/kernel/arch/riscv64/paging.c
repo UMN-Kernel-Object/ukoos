@@ -1,4 +1,5 @@
 #include <arch/riscv64/insns.h>
+#include <endian.h>
 #include <panic.h>
 #include <physical.h>
 
@@ -91,7 +92,7 @@ enum walk_flags {
  * - otherwise, returns `nullptr`
  */
 struct pte *walk(uptr vaddr, enum walk_flags flags) {
-  assert((vaddr & 0xfff) == 0);
+  assert((vaddr & 0xfff) == 0, "vaddr={uptr}", vaddr);
 
   // TODO
   return nullptr;
@@ -109,8 +110,8 @@ struct superpage_paddr {
   unsigned long rsvd : 8;
 };
 
-static volatile void *physical_map(paddr paddr) {
-  assert(!paddr.rsvd);
+static void *physical_map(paddr paddr) {
+  assert(!paddr.rsvd, "paddr={paddr}", paddr);
 
   unsigned long offset = ((paddr.ppn & ((1 << 18) - 1)) << 12) + paddr.offset;
   kernel_pgtbl2.ptes[510] = (struct pte){
@@ -126,19 +127,43 @@ static volatile void *physical_map(paddr paddr) {
   };
   sfence_vma();
 
-  return (volatile void *)(physical_tmp_page + offset);
+  return (void *)(physical_tmp_page + offset);
 }
 
-u8 physical_read_u8(paddr paddr);
-u16 physical_read_u16le(paddr);
-u32 physical_read_u32le(paddr);
-u64 physical_read_u64le(paddr);
-u16 physical_read_u16be(paddr);
-u32 physical_read_u32be(paddr);
-u64 physical_read_u64be(paddr);
+u8 physical_read_u8(paddr paddr) { return *(u8 *)physical_map(paddr); }
+
+u16 physical_read_u16le(paddr paddr) {
+  assert(!(paddr.offset & 0x1), "paddr={paddr}", paddr);
+  return little_to_native(*(u16 *)physical_map(paddr));
+}
+
+u32 physical_read_u32le(paddr paddr) {
+  assert(!(paddr.offset & 0x3), "paddr={paddr}", paddr);
+  return little_to_native(*(u32 *)physical_map(paddr));
+}
+
+u64 physical_read_u64le(paddr paddr) {
+  assert(!(paddr.offset & 0x7), "paddr={paddr}", paddr);
+  return little_to_native(*(u64 *)physical_map(paddr));
+}
+
+u16 physical_read_u16be(paddr paddr) {
+  assert(!(paddr.offset & 0x1), "paddr={paddr}", paddr);
+  return big_to_native(*(u16 *)physical_map(paddr));
+}
+
+u32 physical_read_u32be(paddr paddr) {
+  assert(!(paddr.offset & 0x3), "paddr={paddr}", paddr);
+  return big_to_native(*(u32 *)physical_map(paddr));
+}
+
+u64 physical_read_u64be(paddr paddr) {
+  assert(!(paddr.offset & 0x7), "paddr={paddr}", paddr);
+  return big_to_native(*(u64 *)physical_map(paddr));
+}
 
 void physical_write_u8(paddr paddr, u8 value) {
-  *(volatile u8 *)physical_map(paddr) = value;
+  *(u8 *)physical_map(paddr) = value;
 }
 
 void physical_write_u16le(paddr, u16);
@@ -147,3 +172,18 @@ void physical_write_u64le(paddr, u64);
 void physical_write_u16be(paddr, u16);
 void physical_write_u32be(paddr, u32);
 void physical_write_u64be(paddr, u64);
+
+void copy_from_physical(void *dst, paddr src, usize len) {
+  while (len) {
+    const void *chunk = physical_map(src);
+    usize chunk_len = 4096 - src.offset;
+    if (chunk_len > len)
+      chunk_len = len;
+    memcpy(dst, chunk, chunk_len);
+    src = paddr_offset(src, chunk_len);
+    dst += chunk_len;
+    len -= chunk_len;
+  }
+}
+
+void copy_to_physical(paddr dst, const void *src, usize len);

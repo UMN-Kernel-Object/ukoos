@@ -7,7 +7,7 @@
  *
  * These functions are very inefficiently implemented -- drivers should map the
  * memory they needs to access instead. However, they do work before the memory
- * allocator is configured.
+ * allocator is configured, which is needed to e.g. parse the DeviceTree.
  */
 
 #include <panic.h>
@@ -32,6 +32,19 @@ static inline unsigned long paddr_to_bits(paddr addr) {
   return u.bits;
 }
 
+static inline paddr paddr_offset(paddr paddr, usize offset) {
+  return paddr_of_bits(paddr_to_bits(paddr) + offset);
+}
+
+static inline paddr paddr_align_down(paddr paddr, usize bits) {
+  usize low_mask = (1 << bits) - 1;
+  return paddr_of_bits(paddr_to_bits(paddr) & ~low_mask);
+}
+
+static inline paddr paddr_align_up(paddr paddr, usize bits) {
+  return paddr_align_down(paddr_offset(paddr, (1 << bits) - 1), bits);
+}
+
 u8 physical_read_u8(paddr);
 u16 physical_read_u16le(paddr);
 u32 physical_read_u32le(paddr);
@@ -47,5 +60,8 @@ void physical_write_u64le(paddr, u64);
 void physical_write_u16be(paddr, u16);
 void physical_write_u32be(paddr, u32);
 void physical_write_u64be(paddr, u64);
+
+void copy_from_physical(void *dst, paddr src, usize len);
+void copy_to_physical(paddr dst, const void *src, usize len);
 
 #endif // UKO_OS_KERNEL__PHYSICAL_H
