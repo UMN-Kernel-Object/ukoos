@@ -18,7 +18,7 @@ usage() {
 
 known_arches=(riscv64)
 # shellcheck disable=SC2034 # Only accessed indirectly.
-tool_prefixes_riscv64=(riscv64-none-elf- riscv-none-elf-)
+tool_prefixes_riscv64=(riscv64-none-elf- riscv-none-elf- riscv64-unknown-elf-)
 
 args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,prefix:' -- "$@")
 eval set -- "$args"
@@ -109,18 +109,16 @@ find_tool() {
 			fi
 		done
 	fi
+	if [[ -z "${!1:-}" ]]; then
+		printf >&2 './configure: could not find a tool for $%s\n' "$1"
+		exit 1
+	fi
 }
 
 # Detect tools. Since we're expecting a freestanding compiler, we _don't_
 # assume that e.g. the default gcc is a reasonable compiler to use.
 find_tool CC gcc
 find_tool STRIP strip
-
-# If we failed to find a CC so far, see if we can use clang.
-if [[ -z "$CC" ]] && command -v clang >/dev/null 2>/dev/null; then
-	CC=clang
-	CFLAGS="-target $arch ${CFLAGS:-}"
-fi
 
 # Generate the config.mak.
 cat >config.mak <<EOF
