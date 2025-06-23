@@ -8,7 +8,13 @@ struct Elf64_Sym {
   u8 st_other;
   u16 st_sndx;
   u64 st_value;
+  u64 st_size;
 };
+
+static_assert(sizeof(struct Elf64_Sym) == 24,
+              "incorrect size for struct Elf64_Sym");
+static_assert(alignof(struct Elf64_Sym) == 8,
+              "incorrect alignment for struct Elf64_Sym");
 
 enum Elf64_Sym_Type : u8 {
   STT_NOTYPE,
@@ -37,7 +43,9 @@ static usize strtab_len = 0;
 void symbolicate_init(const struct Elf64_Sym *symtab, usize symtab_len,
                       const char *strtab_, usize strtab_len_) {
   assert(symtab);
-  assert((symtab_len % sizeof(struct Elf64_Sym)) == 0);
+  assert((symtab_len % sizeof(struct Elf64_Sym)) == 0,
+         "symtab (len={usize}) could not contain an integer number of symbols",
+         symtab_len);
   assert(strtab_);
 
   symtab_start = symtab;
