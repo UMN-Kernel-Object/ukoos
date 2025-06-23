@@ -34,6 +34,8 @@ void __panic(const char *file, usize line, const char *func, const char *msg,
              va_list ap) {
 
   _panic_begin();
+  print("--------------------------[ K E R N E L   P A N I C "
+        "]--------------------------");
   print("Kernel panic: {va}", msg, ap);
   print("  in {cstr} at {cstr}:{usize}", func, file, line);
 

@@ -7,14 +7,6 @@
 void __panic(const char *file, usize line, const char *func, const char *msg,
              va_list ap);
 
-static inline void _assert(const char *file, usize line, const char *func,
-                           bool cond, const char *msg, ...) {
-  va_list ap;
-  va_start(ap);
-  if (!cond)
-    __panic(file, line, func, msg, ap);
-}
-
 [[noreturn]]
 static inline void _panic(const char *file, usize line, const char *func,
                           const char *msg, ...) {
@@ -23,8 +15,17 @@ static inline void _panic(const char *file, usize line, const char *func,
   __panic(file, line, func, msg, ap);
 }
 
+static inline void _assert(const char *file, usize line, const char *func,
+                           bool cond, const char *cond_str, const char *msg,
+                           ...) {
+  va_list ap;
+  va_start(ap);
+  if (!cond)
+    _panic(file, line, func, "{va}: {cstr}", msg, ap, cond_str);
+}
+
 #define assert(cond, ...)                                                      \
-  _assert(__FILE__, __LINE__, __func__, cond,                                  \
+  _assert(__FILE__, __LINE__, __func__, cond, #cond,                           \
           "assertion failed" __VA_OPT__(": ") __VA_ARGS__)
 #define panic(...) _panic(__FILE__, __LINE__, __func__, "" __VA_ARGS__)
 #define TODO(...)                                                              \
