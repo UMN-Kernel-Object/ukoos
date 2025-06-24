@@ -31,9 +31,10 @@ endef
 # Information about the build to perform.
 components = kernel
 kernel-cflags = $(CFLAGS) \
+	-ffile-prefix-map=$(srcdir)= \
 	-ffreestanding \
 	-fno-builtin-main \
-	-ffile-prefix-map=$(srcdir)= \
+	-fwrapv \
 	-isystem $(srcdir)/src/kernel/include \
 	-isystem $(srcdir)/src/kernel/arch/$(arch)/include \
 	-nostdlib \
