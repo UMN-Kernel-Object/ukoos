@@ -64,6 +64,7 @@ SECTIONS
 	.stack ALIGN(0x1000) :
 	{
 		. += 0x1000;
+		_stack_end_phys = .;
 	}
 
 	_kernel_end_phys = .;

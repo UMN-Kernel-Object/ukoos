@@ -11,20 +11,18 @@
 .type _start, @function
 _start:
 	# Set up the initial stack.
-	la sp, 0xffffffffffffd000
+	la sp, 0xffffffffffffd000 - 16
+	la t0, _stack_end_phys - 16
 
 	# Get the (physical) address of the root page table.
-	la t0, boot_pgtbl_2_0000000000000000
+	la t1, boot_pgtbl_2_0000000000000000
 
 	# Transform the address of the root page table to a value we can use
 	# with the SATP register to enable Sv39 paging.
-	srl t0, t0, 12
-	li t1, -1
-	sll t2, t1, 63
-	or t0, t0, t2
-
-	# Get the (virtual) address of the higher-half entrypoint.
-	ld t1, (entrypoint)
+	srl t1, t1, 12
+	li t2, -1
+	sll t3, t2, 63
+	or t1, t1, t3
 
 	# Load the kernel's start and end physical addresses, and the symbol
 	# table and string table's address and length.
@@ -34,14 +32,21 @@ _start:
 	ld a5, (symtab_len)
 	ld a6, (strtab_va)
 	ld a7, (strtab_len)
+	ld t3, (free_va_start)
+	ld t4, (free_va_end)
+	sd t3, (t0)
+	sd t4, 8(t0)
+
+	# Get the (virtual) address of the higher-half entrypoint.
+	ld t0, (entrypoint)
 
 	# Prepare to fault to the entrypoint.
-	csrw stvec, t1
+	csrw stvec, t0
 
 	# Load the new page tables, which unmap the current code.
 	sfence.vma
-	csrw satp, t0
+	csrw satp, t1
 	sfence.vma
 
 	# Jump to the entrypoint, in case we didn't fault.
-	jr t1
+	jr t0

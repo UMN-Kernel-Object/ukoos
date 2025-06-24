@@ -279,6 +279,8 @@ def main():
             "symtab_len": symtab.size,
             "strtab_va": symtab_va + symtab.size,
             "strtab_len": strtab.size,
+            "free_va_start": symtab_va + symtab.size + strtab.size,
+            "free_va_end": 0xFFFFFFFFFFFFC000,
         }
         for name, value in data_constants.items():
             print(f".global {name}", file=tmp)
