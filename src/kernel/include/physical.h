@@ -42,7 +42,7 @@ static inline paddr paddr_align_down(paddr paddr, usize bits) {
 }
 
 static inline paddr paddr_align_up(paddr paddr, usize bits) {
-  return paddr_align_down(paddr_offset(paddr, (1 << bits) - 1), bits);
+  return paddr_align_down(paddr_offset(paddr, ((usize)1 << bits) - 1), bits);
 }
 
 u8 physical_read_u8(paddr);

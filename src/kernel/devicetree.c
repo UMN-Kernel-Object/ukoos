@@ -1,4 +1,5 @@
 #include <devicetree.h>
+#include <mm/physical_alloc.h>
 #include <physical.h>
 #include <print.h>
 
@@ -28,7 +29,7 @@ enum fdt_struct_token_type : u32 {
   FDT_END = 9,
 };
 
-static paddr devicetree_start = {0};
+static paddr devicetree_start = {0}, devicetree_end = {0};
 static struct fdt_header devicetree_header = {0};
 
 static struct fdt_header physical_read_fdt_header(paddr paddr) {
@@ -46,6 +47,13 @@ static struct fdt_header physical_read_fdt_header(paddr paddr) {
   };
 }
 
+static struct fdt_reserve_entry physical_read_fdt_reserve_entry(paddr paddr) {
+  return (struct fdt_reserve_entry){
+      .address = physical_read_u64be(paddr_offset(paddr, 0)),
+      .size = physical_read_u64be(paddr_offset(paddr, 8)),
+  };
+}
+
 void devicetree_init(paddr start) {
   assert(!paddr_to_bits(devicetree_start), "DeviceTree already initialized");
 
@@ -58,20 +66,188 @@ void devicetree_init(paddr start) {
          "DeviceTree was not compatible with our parser");
 
   devicetree_start = start;
+  devicetree_end = paddr_offset(devicetree_start, header.totalsize);
   devicetree_header = header;
+}
+
+/**
+ * Returns whether the point `x` is inside the half-open range `[start, end)`.
+ */
+static bool point_in_range(paddr start, paddr end, paddr x) {
+  return (paddr_to_bits(start) <= paddr_to_bits(x) &&
+          paddr_to_bits(x) < paddr_to_bits(end));
+}
+
+/**
+ * Returns whether any point is inside both of the half-open ranges
+ * `[start1, end1)` and `[start2, end2)`.
+ */
+static bool ranges_overlap(paddr start1, paddr end1, paddr start2, paddr end2) {
+  if (paddr_to_bits(start1) >= paddr_to_bits(end1) ||
+      paddr_to_bits(start2) >= paddr_to_bits(end2))
+    return false;
+  return (paddr_to_bits(start1) < paddr_to_bits(end2) &&
+          paddr_to_bits(start2) < paddr_to_bits(end1));
 }
 
 /**
  * A function that gets called for each discovered memory range. It finds the
  * subranges that are actually available for use by allocation, and gives them
  * to the allocator.
+ *
+ * The areas that it skips are:
+ *
+ * - Any memory reservations from the DeviceTree.
+ * - The DeviceTree itself.
+ * - The kernel, including the initial page tables, the symbol and string
+ *   tables, and the initial stack.
+ *
+ * The asymptotics of this function are somewhat horrifying, but we don't expect
+ * to run it over large inputs (i.e., large numbers of reservations) and can't
+ * allocate at this point (so can't sort).
  */
-static void devicetree_mm_init_on_mem_range(paddr start, usize len) {
-  print("Found memory range: {paddr}-{paddr}", start, paddr_offset(start, len));
+static void devicetree_mm_init_on_mem_range(paddr kernel_start,
+                                            paddr kernel_end, paddr start,
+                                            usize len) {
+  paddr end = paddr_offset(start, len);
+  print("  {paddr}-{paddr}", start, end);
+
+  // We break up the whole range [start, end) into a number of chunks,
+  // maximizing the size of chunks while ensuring no chunk intersects with an
+  // "area to skip."
+  //
+  // We create them from the "bottom up," so we stop looping when we reach the
+  // top of the range (and have no possible bytes left to add).
+  while (paddr_to_bits(start) < paddr_to_bits(end)) {
+    paddr chunk_start = start, chunk_end = end;
+    paddr next_reservation;
+
+    // Move the start of the chunk up to avoid it being inside any area to skip.
+    // If we find that it is, we have to re-search previous ones, because
+    // they're unsorted -- after bumping the start point up higher, we might now
+    // be overlapping an interval we missed before.
+  try_to_bump_up_start:
+    next_reservation =
+        paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
+    for (;;) {
+      struct fdt_reserve_entry reservation =
+          physical_read_fdt_reserve_entry(next_reservation);
+      next_reservation =
+          paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
+      if (reservation.address == 0 && reservation.size == 0)
+        break;
+
+      paddr reservation_start = paddr_of_bits(reservation.address),
+            reservation_end =
+                paddr_of_bits(reservation.address + reservation.size);
+      if (point_in_range(reservation_start, reservation_end, chunk_start)) {
+        chunk_start = reservation_end;
+        goto try_to_bump_up_start;
+      }
+    }
+    if (point_in_range(devicetree_start, devicetree_end, chunk_start)) {
+      chunk_start = devicetree_end;
+      goto try_to_bump_up_start;
+    }
+    if (point_in_range(kernel_start, kernel_end, chunk_start)) {
+      chunk_start = kernel_end;
+      goto try_to_bump_up_start;
+    }
+
+    // Move the end of the chunk below the start of any reservation that starts
+    // inside the chunk. Since we're just tracking a minimum, we don't have the
+    // "start over the scan" behavior here.
+    next_reservation =
+        paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
+    for (;;) {
+      struct fdt_reserve_entry reservation =
+          physical_read_fdt_reserve_entry(next_reservation);
+      next_reservation =
+          paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
+      if (reservation.address == 0 && reservation.size == 0)
+        break;
+
+      paddr reservation_start = paddr_of_bits(reservation.address);
+      if (point_in_range(chunk_start, chunk_end, reservation_start)) {
+        chunk_end = reservation_start;
+      }
+    }
+    if (point_in_range(chunk_start, chunk_end, devicetree_start)) {
+      chunk_end = devicetree_start;
+    }
+    if (point_in_range(chunk_start, chunk_end, kernel_start)) {
+      chunk_end = kernel_start;
+    }
+
+    // Check that we actually didn't overlap.
+    if (ASSERTIONS_ENABLED) {
+      next_reservation =
+          paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
+      for (;;) {
+        struct fdt_reserve_entry reservation =
+            physical_read_fdt_reserve_entry(next_reservation);
+        next_reservation =
+            paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
+        if (reservation.address == 0 && reservation.size == 0)
+          break;
+
+        paddr reservation_start = paddr_of_bits(reservation.address),
+              reservation_end =
+                  paddr_of_bits(reservation.address + reservation.size);
+        assert(!ranges_overlap(chunk_start, chunk_end, reservation_start,
+                               reservation_end));
+      }
+      assert(!ranges_overlap(chunk_start, chunk_end, kernel_start, kernel_end));
+      assert(!ranges_overlap(chunk_start, chunk_end, devicetree_start,
+                             devicetree_end));
+    }
+
+    // Shrink the range to be aligned to page boundaries.
+    chunk_start = paddr_align_up(chunk_start, 12);
+    chunk_end = paddr_align_down(chunk_end, 12);
+
+    // Check that the chunk is non-empty.
+    if (paddr_to_bits(chunk_start) < paddr_to_bits(chunk_end)) {
+      assert(!chunk_start.offset);
+      assert(!chunk_end.offset);
+
+      // Put it in the init-time allocator.
+      mm_init_add_physical_chunk(chunk_start, chunk_end);
+    }
+
+    // Do it all again, starting at the sub-range starting immediately after
+    // this chunk.
+    start = chunk_end;
+  }
 }
 
-void devicetree_mm_init(void) {
+void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
   assert(paddr_to_bits(devicetree_start), "DeviceTree not initialized");
+  assert(!kernel_start.offset, "Kernel starting address not aligned");
+  assert(!kernel_end.offset, "Kernel ending address not aligned");
+
+  // Log reserved areas.
+  print("Memory reservations:");
+  print("  Kernel      {paddr}-{paddr}", kernel_start, kernel_end);
+  print("  DeviceTree  {paddr}-{paddr}", devicetree_start, devicetree_end);
+  paddr next_reservation =
+      paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
+  for (;;) {
+    struct fdt_reserve_entry reservation =
+        physical_read_fdt_reserve_entry(next_reservation);
+    next_reservation =
+        paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
+    if (reservation.address == 0 && reservation.size == 0)
+      break;
+
+    paddr reservation_start = paddr_of_bits(reservation.address),
+          reservation_end =
+              paddr_of_bits(reservation.address + reservation.size);
+    print("  Reservation {paddr}-{paddr}", reservation_start, reservation_end);
+  }
+
+  // We log memory ranges as we find them.
+  print("Memory ranges:");
 
   // Parse the structure block, loooking for the memory node.
   u32 address_cells = 0, size_cells = 0;
@@ -192,7 +368,8 @@ void devicetree_mm_init(void) {
               reg = paddr_offset(reg, 4);
             }
 
-            devicetree_mm_init_on_mem_range(paddr_of_bits(addr), size);
+            devicetree_mm_init_on_mem_range(kernel_start, kernel_end,
+                                            paddr_of_bits(addr), size);
           }
 
           // Set a flag so we don't re-process the node for every additional
@@ -216,4 +393,8 @@ void devicetree_mm_init(void) {
       panic("unknown token type in structure block: {u32}", token_type);
     }
   }
+
+  // After we've added each chunk to the initial physical allocator, we can
+  // initialize the real allocator.
+  mm_init_physical(devicetree_start, devicetree_end, kernel_start, kernel_end);
 }
