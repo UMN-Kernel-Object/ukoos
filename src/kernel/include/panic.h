@@ -15,6 +15,8 @@ static inline void _panic(const char *file, usize line, const char *func,
   __panic(file, line, func, msg, ap);
 }
 
+constexpr bool ASSERTIONS_ENABLED = true;
+
 static inline void _assert(const char *file, usize line, const char *func,
                            bool cond, const char *cond_str, const char *msg,
                            ...) {
