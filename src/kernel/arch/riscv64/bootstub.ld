@@ -25,13 +25,17 @@ SECTIONS
 	}
 
 	/**
+	 * This gets set after the .bootstub page, since we never return back
+	 * to it or use it in any way.
+	 */
+	_kernel_start_phys = .;
+
+	/**
 	 * The page tables get appended as well.
 	 */
 	.pgtbls ALIGN(0x1000) :
 	{
-		_pgtbls_start_phys = .;
 		*(.pgtbls)
-		_pgtbls_end_phys = .;
 	}
 
 	/**
@@ -39,9 +43,7 @@ SECTIONS
 	 */
 	.kernel_tables ALIGN(0x1000) :
 	{
-		_kernel_tables_start_phys = .;
 		*(.kernel_tables)
-		_kernel_tables_end_phys = .;
 	}
 
 	/**
@@ -49,13 +51,11 @@ SECTIONS
 	 */
 	.kernel ALIGN(0x1000) :
 	{
-		_kernel_start_phys = .;
 		*(.kernel)
 	}
 	.kernel_bss :
 	{
 		*(.kernel_bss)
-		_kernel_end_phys = .;
 	}
 
 	/**
@@ -63,8 +63,8 @@ SECTIONS
 	 */
 	.stack ALIGN(0x1000) :
 	{
-		_stack_start_phys = .;
 		. += 0x1000;
-		_stack_end_phys = .;
 	}
+
+	_kernel_end_phys = .;
 }
