@@ -166,12 +166,35 @@ void physical_write_u8(paddr paddr, u8 value) {
   *(u8 *)physical_map(paddr) = value;
 }
 
-void physical_write_u16le(paddr, u16);
-void physical_write_u32le(paddr, u32);
-void physical_write_u64le(paddr, u64);
-void physical_write_u16be(paddr, u16);
-void physical_write_u32be(paddr, u32);
-void physical_write_u64be(paddr, u64);
+void physical_write_u16le(paddr paddr, u16 value) {
+  assert(!(paddr.offset & 0x1), "paddr={paddr}", paddr);
+  *(u16 *)physical_map(paddr) = native_to_little(value);
+}
+
+void physical_write_u32le(paddr paddr, u32 value) {
+  assert(!(paddr.offset & 0x3), "paddr={paddr}", paddr);
+  *(u32 *)physical_map(paddr) = native_to_little(value);
+}
+
+void physical_write_u64le(paddr paddr, u64 value) {
+  assert(!(paddr.offset & 0x7), "paddr={paddr}", paddr);
+  *(u64 *)physical_map(paddr) = native_to_little(value);
+}
+
+void physical_write_u16be(paddr paddr, u16 value) {
+  assert(!(paddr.offset & 0x1), "paddr={paddr}", paddr);
+  *(u16 *)physical_map(paddr) = native_to_big(value);
+}
+
+void physical_write_u32be(paddr paddr, u32 value) {
+  assert(!(paddr.offset & 0x3), "paddr={paddr}", paddr);
+  *(u32 *)physical_map(paddr) = native_to_big(value);
+}
+
+void physical_write_u64be(paddr paddr, u64 value) {
+  assert(!(paddr.offset & 0x7), "paddr={paddr}", paddr);
+  *(u64 *)physical_map(paddr) = native_to_big(value);
+}
 
 void copy_from_physical(void *dst, paddr src, usize len) {
   while (len) {
