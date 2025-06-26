@@ -26,14 +26,16 @@ typedef __builtin_va_list va_list;
  * certain optimizations that it wouldn't otherwise be able to do.
  */
 
-void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ len)
-    __attribute__((nonnull(1, 2)));
+__attribute__((nonnull(1))) void bzero(void *dst, __SIZE_TYPE__ len);
+
+__attribute__((nonnull(1, 2))) void *
+memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ len);
 
 [[reproducible]]
-int memcmp(const void *s1, const void *s2, __SIZE_TYPE__ n)
-    __attribute__((nonnull(1, 2), pure));
+__attribute__((nonnull(1, 2), pure)) int memcmp(const void *s1, const void *s2,
+                                                __SIZE_TYPE__ n);
 
 [[reproducible]]
-__SIZE_TYPE__ strlen(const char *s) __attribute__((nonnull(1), pure));
+__attribute__((nonnull(1), pure)) __SIZE_TYPE__ strlen(const char *s);
 
 #endif // UKO_OS_KERNEL__COMPILER_H
