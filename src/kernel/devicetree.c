@@ -221,15 +221,16 @@ static void devicetree_mm_init_on_mem_range(paddr kernel_start,
   }
 }
 
-void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
+void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
+                        uptr *free_va_start, uptr *free_va_end) {
   assert(bits_of_paddr(devicetree_start), "DeviceTree not initialized");
   assert(!kernel_start.offset, "Kernel starting address not aligned");
   assert(!kernel_end.offset, "Kernel ending address not aligned");
 
   // Log reserved areas.
   print("Memory reservations:");
-  print("  Kernel      {paddr}-{paddr}", kernel_start, kernel_end);
-  print("  DeviceTree  {paddr}-{paddr}", devicetree_start, devicetree_end);
+  print("  {paddr}-{paddr} (kernel)", kernel_start, kernel_end);
+  print("  {paddr}-{paddr} (DeviceTree)", devicetree_start, devicetree_end);
   paddr next_reservation =
       paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
   for (;;) {
@@ -243,7 +244,8 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
     paddr reservation_start = paddr_of_bits(reservation.address),
           reservation_end =
               paddr_of_bits(reservation.address + reservation.size);
-    print("  Reservation {paddr}-{paddr}", reservation_start, reservation_end);
+    print("  {paddr}-{paddr} (reservation)", reservation_start,
+          reservation_end);
   }
 
   // We log memory ranges as we find them.
@@ -301,7 +303,7 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
       paddr name_end = name_start;
       while (physical_read_u8(name_end))
         name_end = paddr_offset(name_end, 1);
-      usize name_len = bits_of_paddr(name_end) - bits_of_paddr(name_start);
+      usize name_len = paddr_diff(name_end, name_start);
 
       // Skip the value.
       paddr value_start = here;
@@ -396,5 +398,6 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
 
   // After we've added each chunk to the initial physical allocator, we can
   // initialize the real allocator.
-  mm_init_physical(devicetree_start, devicetree_end, kernel_start, kernel_end);
+  mm_init_physical(devicetree_start, devicetree_end, kernel_start, kernel_end,
+                   free_va_start, free_va_end);
 }

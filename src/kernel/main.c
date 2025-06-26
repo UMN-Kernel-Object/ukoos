@@ -11,7 +11,7 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   print("Starting to boot ukoOS...");
   symbolicate_init(symtab, symtab_len, strtab, strtab_len);
   devicetree_init(devicetree_start);
-  devicetree_mm_init(kernel_start, kernel_end);
+  devicetree_mm_init(kernel_start, kernel_end, &free_va_start, &free_va_end);
 
   TODO();
 }

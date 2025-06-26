@@ -10,8 +10,10 @@ void devicetree_init(paddr devicetree_start);
 
 /**
  * Uses the globally-registered DeviceTree to find memory and give it to the
- * allocator.
+ * physical allocator. Initializes that allocator, adjusting free_va_start and
+ * free_va_end to account for the memory it allocates.
  */
-void devicetree_mm_init(paddr kernel_start, paddr kernel_end);
+void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
+                        uptr *free_va_start, uptr *free_va_end);
 
 #endif // UKO_OS_KERNEL__DEVICETREE_H

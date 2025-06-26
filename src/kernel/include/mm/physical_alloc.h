@@ -15,6 +15,7 @@ void mm_init_add_physical_chunk(paddr start, paddr end);
  * Sets up the physical memory allocator.
  */
 void mm_init_physical(paddr devicetree_start, paddr devicetree_end,
-                      paddr kernel_start, paddr kernel_end);
+                      paddr kernel_start, paddr kernel_end, uptr *free_va_start,
+                      uptr *free_va_end);
 
 #endif // UKO_OS_KERNEL__MM_PHYSICAL_ALLOC_H

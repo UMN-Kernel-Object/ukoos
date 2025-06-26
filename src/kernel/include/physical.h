@@ -32,6 +32,10 @@ static inline unsigned long bits_of_paddr(paddr addr) {
   return u.bits;
 }
 
+static inline usize paddr_diff(paddr end, paddr start) {
+  return bits_of_paddr(end) - bits_of_paddr(start);
+}
+
 static inline paddr paddr_offset(paddr paddr, usize offset) {
   return paddr_of_bits(bits_of_paddr(paddr) + offset);
 }
