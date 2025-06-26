@@ -1,0 +1,62 @@
+#ifndef UKO_OS_KERNEL__MM_PAGING_H
+#define UKO_OS_KERNEL__MM_PAGING_H 1
+
+#include <types.h>
+
+/**
+ * A fence on paging-related changes. The other functions declared in this
+ * header do not necessarily take effect immediately -- call this function to
+ * wait until they have taken effect.
+ */
+void mm_paging_fence(void);
+
+/**
+ * Permissions that can be given to pages.
+ */
+enum page_permissions : u8 {
+  /**
+   * A read-only page only accessible to the kernel.
+   */
+  PGPERM_KRO,
+
+  /**
+   * A read-write page only accessible to the kernel.
+   */
+  PGPERM_KRW,
+
+  /**
+   * An executable page only accessible to the kernel.
+   */
+  PGPERM_KRX,
+
+  /**
+   * A read-only page accessible to userspace. On some platforms, this will not
+   * be accessible to the kernel by default.
+   */
+  PGPERM_URO,
+
+  /**
+   * A read-write page accessible to userspace. On some platforms, this will not
+   * be accessible to the kernel by default.
+   */
+  PGPERM_URW,
+
+  /**
+   * An executable page accessible to userspace. On some platforms, this will
+   * not be accessible to the kernel by default.
+   */
+  PGPERM_URX,
+};
+
+/**
+ * A low-level function that constructs a mapping _without_ recording it in the
+ * allocator. This is only exposed so the allocator can be bootstrapped.
+ *
+ * Returns whether it succeeded.
+ *
+ * This function may not take effect immediately -- call `mm_paging_fence` to
+ * wait until it has taken effect.
+ */
+bool _mm_map(uaddr va, paddr pa, enum page_permissions perms);
+
+#endif // UKO_OS_KERNEL__MM_PAGING_H
