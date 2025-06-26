@@ -20,6 +20,23 @@ typedef __builtin_va_list va_list;
        u32: __builtin_bswap32,                                                 \
        u64: __builtin_bswap64)(X))
 
+#define stdc_leading_zeros __builtin_stdc_leading_zeros
+#define stdc_leading_ones __builtin_stdc_leading_ones
+#define stdc_trailing_zeros __builtin_stdc_trailing_zeros
+#define stdc_trailing_ones __builtin_stdc_trailing_ones
+#define stdc_first_leading_zero __builtin_stdc_first_leading_zero
+#define stdc_first_leading_one __builtin_stdc_first_leading_one
+#define stdc_first_trailing_zero __builtin_stdc_first_trailing_zero
+#define stdc_first_trailing_one __builtin_stdc_first_trailing_one
+#define stdc_count_zeros __builtin_stdc_count_zeros
+#define stdc_count_ones __builtin_stdc_count_ones
+#define stdc_has_single_bit __builtin_stdc_has_single_bit
+#define stdc_bit_width __builtin_stdc_bit_width
+#define stdc_bit_floor __builtin_stdc_bit_floor
+#define stdc_bit_ceil __builtin_stdc_bit_ceil
+#define stdc_rotate_left __builtin_stdc_rotate_left
+#define stdc_rotate_right __builtin_stdc_rotate_right
+
 /**
  * String functions. These don't _look_ builtin (hey, we're defining them here
  * ourselves!), but the compiler's optimizer treats them as builtins, and can do
