@@ -12,16 +12,16 @@ void mm_init_add_physical_chunk(paddr start, paddr end) {
   assert(!start.offset);
   assert(!end.offset);
 
-  physical_write_u64le(start, paddr_to_bits(init_physical_allocator));
+  physical_write_u64le(start, bits_of_paddr(init_physical_allocator));
   physical_write_u64le(paddr_offset(start, sizeof(paddr)),
-                       (paddr_to_bits(end) - paddr_to_bits(start)) >> 12);
+                       (bits_of_paddr(end) - bits_of_paddr(start)) >> 12);
   init_physical_allocator = start;
 }
 
 static void union_range(paddr *start1, paddr *end1, paddr start2, paddr end2) {
-  if (paddr_to_bits(start2) < paddr_to_bits(*start1))
+  if (bits_of_paddr(start2) < bits_of_paddr(*start1))
     *start1 = start2;
-  if (paddr_to_bits(end2) > paddr_to_bits(*end1))
+  if (bits_of_paddr(end2) > bits_of_paddr(*end1))
     *end1 = end2;
 }
 
@@ -38,7 +38,7 @@ void mm_init_physical(paddr devicetree_start, paddr devicetree_end,
   union_range(&all_physical_start, &all_physical_end, devicetree_start,
               devicetree_end);
   print("Allocatable memory chunks:");
-  for (paddr next_chunk = init_physical_allocator; paddr_to_bits(next_chunk);
+  for (paddr next_chunk = init_physical_allocator; bits_of_paddr(next_chunk);
        next_chunk = paddr_of_bits(physical_read_u64le(next_chunk))) {
     paddr chunk_start = next_chunk;
     u64 length = physical_read_u64le(paddr_offset(next_chunk, sizeof(paddr)));

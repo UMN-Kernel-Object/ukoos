@@ -193,7 +193,7 @@ static void format_paddr(struct formatter *fmt, const char *args_start,
     args_end = args_start + strlen(args_start);
   }
   format_number(fmt, args_start, args_end, false,
-                (u64)paddr_to_bits(va_arg(*ap, paddr)));
+                (u64)bits_of_paddr(va_arg(*ap, paddr)));
 }
 
 static void format_u8(struct formatter *fmt, const char *args_start,

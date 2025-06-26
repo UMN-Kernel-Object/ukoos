@@ -55,7 +55,7 @@ static struct fdt_reserve_entry physical_read_fdt_reserve_entry(paddr paddr) {
 }
 
 void devicetree_init(paddr start) {
-  assert(!paddr_to_bits(devicetree_start), "DeviceTree already initialized");
+  assert(!bits_of_paddr(devicetree_start), "DeviceTree already initialized");
 
   struct fdt_header header = physical_read_fdt_header(start);
   assert(header.magic == 0xd00dfeed,
@@ -74,8 +74,8 @@ void devicetree_init(paddr start) {
  * Returns whether the point `x` is inside the half-open range `[start, end)`.
  */
 static bool point_in_range(paddr start, paddr end, paddr x) {
-  return (paddr_to_bits(start) <= paddr_to_bits(x) &&
-          paddr_to_bits(x) < paddr_to_bits(end));
+  return (bits_of_paddr(start) <= bits_of_paddr(x) &&
+          bits_of_paddr(x) < bits_of_paddr(end));
 }
 
 /**
@@ -83,11 +83,11 @@ static bool point_in_range(paddr start, paddr end, paddr x) {
  * `[start1, end1)` and `[start2, end2)`.
  */
 static bool ranges_overlap(paddr start1, paddr end1, paddr start2, paddr end2) {
-  if (paddr_to_bits(start1) >= paddr_to_bits(end1) ||
-      paddr_to_bits(start2) >= paddr_to_bits(end2))
+  if (bits_of_paddr(start1) >= bits_of_paddr(end1) ||
+      bits_of_paddr(start2) >= bits_of_paddr(end2))
     return false;
-  return (paddr_to_bits(start1) < paddr_to_bits(end2) &&
-          paddr_to_bits(start2) < paddr_to_bits(end1));
+  return (bits_of_paddr(start1) < bits_of_paddr(end2) &&
+          bits_of_paddr(start2) < bits_of_paddr(end1));
 }
 
 /**
@@ -118,7 +118,7 @@ static void devicetree_mm_init_on_mem_range(paddr kernel_start,
   //
   // We create them from the "bottom up," so we stop looping when we reach the
   // top of the range (and have no possible bytes left to add).
-  while (paddr_to_bits(start) < paddr_to_bits(end)) {
+  while (bits_of_paddr(start) < bits_of_paddr(end)) {
     paddr chunk_start = start, chunk_end = end;
     paddr next_reservation;
 
@@ -207,7 +207,7 @@ static void devicetree_mm_init_on_mem_range(paddr kernel_start,
     chunk_end = paddr_align_down(chunk_end, 12);
 
     // Check that the chunk is non-empty.
-    if (paddr_to_bits(chunk_start) < paddr_to_bits(chunk_end)) {
+    if (bits_of_paddr(chunk_start) < bits_of_paddr(chunk_end)) {
       assert(!chunk_start.offset);
       assert(!chunk_end.offset);
 
@@ -222,7 +222,7 @@ static void devicetree_mm_init_on_mem_range(paddr kernel_start,
 }
 
 void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
-  assert(paddr_to_bits(devicetree_start), "DeviceTree not initialized");
+  assert(bits_of_paddr(devicetree_start), "DeviceTree not initialized");
   assert(!kernel_start.offset, "Kernel starting address not aligned");
   assert(!kernel_end.offset, "Kernel ending address not aligned");
 
@@ -259,8 +259,8 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
   paddr struct_start =
       paddr_offset(devicetree_start, devicetree_header.off_dt_struct);
   paddr here = struct_start;
-  while (paddr_to_bits(here) !=
-         paddr_to_bits(struct_start) + devicetree_header.size_dt_struct) {
+  while (bits_of_paddr(here) !=
+         bits_of_paddr(struct_start) + devicetree_header.size_dt_struct) {
 
     // Parse token by token.
     enum fdt_struct_token_type token_type = physical_read_u32be(here);
@@ -301,7 +301,7 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
       paddr name_end = name_start;
       while (physical_read_u8(name_end))
         name_end = paddr_offset(name_end, 1);
-      usize name_len = paddr_to_bits(name_end) - paddr_to_bits(name_start);
+      usize name_len = bits_of_paddr(name_end) - bits_of_paddr(name_start);
 
       // Skip the value.
       paddr value_start = here;
@@ -358,7 +358,7 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
           u64 addr = 0, size = 0;
           paddr reg = reg_start;
           paddr reg_end = paddr_offset(reg_start, reg_len);
-          while (paddr_to_bits(reg) != paddr_to_bits(reg_end)) {
+          while (bits_of_paddr(reg) != bits_of_paddr(reg_end)) {
             for (u32 i = 0; i < address_cells; i++) {
               addr = (addr << 32) | (u64)physical_read_u32be(reg);
               reg = paddr_offset(reg, 4);
@@ -385,8 +385,8 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end) {
 
       // When we get to the end, check that we're in the right place to stop.
     case FDT_END:
-      assert(paddr_to_bits(here) ==
-             paddr_to_bits(struct_start) + devicetree_header.size_dt_struct);
+      assert(bits_of_paddr(here) ==
+             bits_of_paddr(struct_start) + devicetree_header.size_dt_struct);
       break;
 
     default:

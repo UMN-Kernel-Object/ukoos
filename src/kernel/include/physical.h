@@ -22,7 +22,7 @@ static inline paddr paddr_of_bits(unsigned long bits) {
   return u.paddr;
 }
 
-static inline unsigned long paddr_to_bits(paddr addr) {
+static inline unsigned long bits_of_paddr(paddr addr) {
   union {
     unsigned long bits;
     paddr paddr;
@@ -33,12 +33,12 @@ static inline unsigned long paddr_to_bits(paddr addr) {
 }
 
 static inline paddr paddr_offset(paddr paddr, usize offset) {
-  return paddr_of_bits(paddr_to_bits(paddr) + offset);
+  return paddr_of_bits(bits_of_paddr(paddr) + offset);
 }
 
 static inline paddr paddr_align_down(paddr paddr, usize bits) {
   usize low_mask = (1 << bits) - 1;
-  return paddr_of_bits(paddr_to_bits(paddr) & ~low_mask);
+  return paddr_of_bits(bits_of_paddr(paddr) & ~low_mask);
 }
 
 static inline paddr paddr_align_up(paddr paddr, usize bits) {
