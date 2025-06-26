@@ -17,7 +17,7 @@ tasks:
       ../ukoos/configure
       make -j$(nproc) -l$(nproc)
       mkdir ukoos-git-$shortrev
-      make DESTDIR=$(realpath ukoos-git) install
+      make DESTDIR=$(realpath ukoos-git-$shortrev) install
       tar --create --file ukoos-git-$shortrev.tar \
           --format posix \
           --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime \
