@@ -323,4 +323,15 @@ void copy_from_physical(void *dst, paddr src, usize len) {
   }
 }
 
-void copy_to_physical(paddr dst, const void *src, usize len);
+void copy_to_physical(paddr dst, const void *src, usize len) {
+  while (len) {
+    void *chunk = physical_map(dst);
+    usize chunk_len = 4096 - dst.offset;
+    if (chunk_len > len)
+      chunk_len = len;
+    memcpy(chunk, src, chunk_len);
+    src += chunk_len;
+    dst = paddr_offset(dst, chunk_len);
+    len -= chunk_len;
+  }
+}
