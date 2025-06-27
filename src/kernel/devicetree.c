@@ -106,11 +106,12 @@ static bool ranges_overlap(paddr start1, paddr end1, paddr start2, paddr end2) {
  * to run it over large inputs (i.e., large numbers of reservations) and can't
  * allocate at this point (so can't sort).
  */
-static void devicetree_mm_init_on_mem_range(paddr kernel_start,
+static void devicetree_mm_init_on_mem_range(const char *name,
+                                            paddr kernel_start,
                                             paddr kernel_end, paddr start,
                                             usize len) {
   paddr end = paddr_offset(start, len);
-  print("  {paddr}-{paddr}", start, end);
+  print("  {paddr}-{paddr} ({cstr})", start, end, name);
 
   // We break up the whole range [start, end) into a number of chunks,
   // maximizing the size of chunks while ensuring no chunk intersects with an
@@ -251,10 +252,12 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
   // We log memory ranges as we find them.
   print("Memory ranges:");
 
-  // Parse the structure block, loooking for the memory node.
+  // Parse the structure block, looking for the memory node.
   u32 address_cells = 0, size_cells = 0;
   paddr reg_start = {0};
   usize reg_len = 0, depth = 0;
+  char current_node_name[24] = {0};
+  usize current_node_name_len = 0;
 
   bool has_device_type_memory = false, has_reg = false,
        processed_memory_node = false;
@@ -269,9 +272,17 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
     here = paddr_offset(here, 4);
     switch (token_type) {
     case FDT_BEGIN_NODE: {
-      // Skip the name.
-      while (physical_read_u8(here))
+      // Advance through the name.
+      current_node_name_len = 0;
+      for (;;) {
+        char byte = physical_read_u8(here);
+        current_node_name[current_node_name_len] = byte;
+        if (current_node_name_len < sizeof(current_node_name) - 1)
+          current_node_name_len++;
+        if (!byte)
+          break;
         here = paddr_offset(here, 1);
+      }
       here = paddr_align_up(paddr_offset(here, 1), 2);
 
       // Track the depth and reset information about props.
@@ -370,8 +381,9 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
               reg = paddr_offset(reg, 4);
             }
 
-            devicetree_mm_init_on_mem_range(kernel_start, kernel_end,
-                                            paddr_of_bits(addr), size);
+            devicetree_mm_init_on_mem_range(current_node_name, kernel_start,
+                                            kernel_end, paddr_of_bits(addr),
+                                            size);
           }
 
           // Set a flag so we don't re-process the node for every additional
