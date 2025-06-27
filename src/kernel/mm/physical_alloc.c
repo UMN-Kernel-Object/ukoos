@@ -11,10 +11,20 @@
  */
 
 struct physical_free_list {
-  struct physical_free_list *next;
+  paddr next;
   // The length of the free list, including this link.
   usize length;
 };
+
+/**
+ * An index into the bitmap.
+ */
+struct bit_index {
+  u64 bit : 3;
+  u64 byte : 61;
+};
+static_assert(sizeof(struct bit_index) == sizeof(u64));
+static_assert(alignof(struct bit_index) == alignof(u64));
 
 // A singly linked list of allocatable chunks of physical memory. The first word
 // of every chunk is the next pointer, the second word is the number of pages in
@@ -29,10 +39,11 @@ static paddr physical_buddy_start = {0}, physical_buddy_end = {0};
 static usize physical_buddy_size_class_count = 0;
 
 // The buddy free lists.
-static struct physical_free_list **physical_free_lists = nullptr;
+static paddr *physical_free_lists = nullptr;
 
 // The buddy bitmap.
 static u8 *physical_bitmap = nullptr;
+static usize physical_bitmap_len = 0;
 
 void mm_init_add_physical_chunk(paddr start, paddr end) {
   assert(!start.offset);
@@ -44,6 +55,41 @@ void mm_init_add_physical_chunk(paddr start, paddr end) {
   init_physical_allocator = start;
 }
 
+static struct bit_index bit_index_of_paddr(paddr paddr, usize size_class) {
+  u64 start = paddr_diff(paddr, physical_buddy_start);
+  assert(!(start & (((u64)1 << (size_class + 12)) - 1)));
+
+  union {
+    u64 bits;
+    struct bit_index index;
+  } index = {.bits = 0};
+
+  // TODO: Closed form of this?
+  for (usize i = 0; i < size_class; i++)
+    index.bits += paddr_diff(physical_buddy_end, physical_buddy_start) >> i;
+  index.bits += start >> size_class;
+  index.bits >>= 12;
+
+  return index.index;
+}
+
+static void push_to_free_list(paddr subchunk_start, usize size_class) {
+  u64 start = paddr_diff(subchunk_start, physical_buddy_start);
+  assert(!(start & (((u64)1 << (size_class + 12)) - 1)));
+  assert(size_class < physical_buddy_size_class_count);
+
+  paddr *free_list = &physical_free_lists[size_class];
+  struct physical_free_list physical_free_list = {0};
+  if (bits_of_paddr(*free_list))
+    copy_from_physical(&physical_free_list, *free_list,
+                       sizeof(struct physical_free_list));
+  physical_free_list.next = *free_list;
+  physical_free_list.length++;
+  copy_to_physical(subchunk_start, &physical_free_list,
+                   sizeof(struct physical_free_list));
+  *free_list = subchunk_start;
+}
+
 static void union_range(paddr *start1, paddr *end1, paddr start2, paddr end2) {
   if (bits_of_paddr(start2) < bits_of_paddr(*start1))
     *start1 = start2;
@@ -52,13 +98,46 @@ static void union_range(paddr *start1, paddr *end1, paddr start2, paddr end2) {
 }
 
 static void mm_init_add_chunk_to_buddy(paddr chunk_start, paddr chunk_end) {
+  assert(!chunk_start.offset);
+  assert(!chunk_end.offset);
+
   usize start = paddr_diff(chunk_start, physical_buddy_start),
         end = paddr_diff(chunk_end, physical_buddy_start);
 
-  print("TODO: mm_init_add_chunk_to_buddy({paddr}, {paddr})", chunk_start,
-        chunk_end);
-  print("                                ({uptr}, {uptr})", (uptr)start,
-        (uptr)end);
+  // It's too slow to add every page in the chunk individually. Instead, we add
+  // power-of-two-sized sub-chunks.
+  //
+  // This should actually ensure we never need to merge two buddies while we're
+  // initializing the allocator, since everything should be put into exactly the
+  // right size class.
+  while (assert(start <= end), start != end) {
+    // Find the largest size class that could fit, given the alignment.
+    usize size_class = stdc_trailing_zeros(start) - 12;
+    if (size_class > physical_buddy_size_class_count)
+      size_class = physical_buddy_size_class_count;
+    paddr subchunk_start = chunk_start, subchunk_end;
+    for (;;) {
+      subchunk_end = paddr_offset(subchunk_start, (u64)4096 << size_class);
+      if (bits_of_paddr(subchunk_end) <= bits_of_paddr(chunk_end)) {
+        break;
+      } else {
+        assert(size_class != 0);
+        size_class--;
+      }
+    }
+
+    // Advance the start, for next loop iteration.
+    chunk_start = subchunk_end;
+    start += (u64)4096 << size_class;
+
+    // Set the bit for the subchunk.
+    struct bit_index bit_index = bit_index_of_paddr(subchunk_start, size_class);
+    physical_bitmap[bit_index.byte] |= 1 << bit_index.bit;
+    assert(bit_index.byte < physical_bitmap_len);
+
+    // Add the subchunk to the appropriate free list.
+    push_to_free_list(subchunk_start, size_class);
+  }
 }
 
 void mm_init_physical(paddr devicetree_start, paddr devicetree_end,
@@ -111,14 +190,13 @@ void mm_init_physical(paddr devicetree_start, paddr devicetree_end,
   // Compute how many bytes we need in the bitmap. We need two bits per page
   // (since a complete binary tree with n leaves has 2n-1 nodes, we ignore the
   // -1 bit), so one byte for every four pages.
-  const usize physical_buddy_bytes = physical_buddy_page_count / 4;
+  physical_bitmap_len = physical_buddy_page_count / 4;
 
   // Compute the number of pages we need to store the book-keeping structures
   // for the physical allocator. These structures are the free lists plus the
   // bitmap.
   const usize physical_buddy_bookkeeping_bytes =
-      physical_buddy_size_class_count * sizeof(struct physical_free_list *) +
-      physical_buddy_bytes;
+      physical_buddy_size_class_count * sizeof(paddr) + physical_bitmap_len;
   const usize physical_buddy_bookkeeping_pages =
       align_up(physical_buddy_bookkeeping_bytes, 12) >> 12;
 
@@ -171,10 +249,9 @@ void mm_init_physical(paddr devicetree_start, paddr devicetree_end,
 
   // Set up the allocator's pointers to point at the virtual address space we
   // claimed.
-  physical_free_lists = (struct physical_free_list **)old_free_va_start;
-  physical_bitmap =
-      (u8 *)(old_free_va_start + physical_buddy_size_class_count *
-                                     sizeof(struct physical_free_list *));
+  physical_free_lists = (paddr *)old_free_va_start;
+  physical_bitmap = (u8 *)(old_free_va_start +
+                           physical_buddy_size_class_count * sizeof(paddr));
 
   // Add each chunk to the buddy allocator.
   paddr chunk_start, chunk_end;
