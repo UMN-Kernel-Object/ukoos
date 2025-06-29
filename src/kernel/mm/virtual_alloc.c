@@ -64,9 +64,19 @@ static struct bit_index bit_index_of_addr(struct virtual_buddy *allocator,
                                           uptr addr, usize size_class) {
   assert(allocator->start <= (uaddr)addr);
   assert((uaddr)addr < allocator->end);
-  assert(!(addr & (((u64)1 << (size_class + 12)) - 1)));
+  usize start = addr - allocator->start;
+  assert(!(start & (((u64)1 << (size_class + 12)) - 1)));
 
-  TODO();
+  union {
+    u64 bits;
+    struct bit_index index;
+  } index = {.bits = 0};
+
+  for (usize i = 0; i < size_class; i++)
+    index.bits += 1 << (26 - i);
+  index.bits += start >> (size_class + 12);
+  assert(index.index.byte < sizeof(allocator->bitmap));
+  return index.index;
 }
 
 static usize size_class_of_size(usize size) {
@@ -95,12 +105,47 @@ void mm_init_virtual(uptr free_va_start, uptr free_va_end) {
   }
 }
 
+static void free_virtual_buddy_free_list(struct virtual_buddy_free_list *ptr) {
+  if (ptr->flags & VIRTUAL_BUDDY_FREE_LIST_BOOTSTRAP)
+    return;
+
+  TODO();
+}
+
 __attribute__((nonnull(1))) uptr mm_va_alloc(struct virtual_buddy *allocator,
                                              usize size) {
   assert(allocator->start < allocator->end,
          "Virtual memory allocator in an invalid state; was it initialized?");
-  usize size_class = size_class_of_size(size);
-  TODO("{usize}", size_class);
+
+  // If there wasn't a free block in the smallest size class that would fit, we
+  // need to try a larger one and split it. Find out if that's the case.
+  usize actual_size_class, ideal_size_class = size_class_of_size(size);
+  for (actual_size_class = ideal_size_class;
+       actual_size_class < 27 && !allocator->free_lists[actual_size_class];
+       actual_size_class++)
+    ;
+
+  // If the loop terminated because all free lists were empty, we must be out of
+  // virtual address space; in that case, return nullptr.
+  if (actual_size_class == 27)
+    return 0;
+
+  // Otherwise, there must be a free block. Pop it.
+  assert(allocator->free_lists[actual_size_class]);
+  struct virtual_buddy_free_list link =
+      *allocator->free_lists[actual_size_class];
+  free_virtual_buddy_free_list(allocator->free_lists[actual_size_class]);
+  allocator->free_lists[actual_size_class] = link.next;
+  uptr block_addr = (uptr)link.addr_hi_bits << 12;
+
+  // As we walk back to our ideal size class, pop latter halves off the block.
+  while (actual_size_class > ideal_size_class) {
+    print("{uptr}-{uptr}", block_addr,
+          block_addr + (1 << (12 + actual_size_class)));
+    actual_size_class--;
+  }
+
+  TODO("{uptr}", block_addr);
 }
 
 __attribute__((nonnull(1))) void mm_va_free(struct virtual_buddy *allocator,
