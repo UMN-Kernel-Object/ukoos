@@ -34,8 +34,76 @@ typedef __builtin_va_list va_list;
 #define stdc_bit_width __builtin_stdc_bit_width
 #define stdc_bit_floor __builtin_stdc_bit_floor
 #define stdc_bit_ceil __builtin_stdc_bit_ceil
+
+#if __has_builtin(__builtin_stdc_rotate_left)
 #define stdc_rotate_left __builtin_stdc_rotate_left
+#else
+[[unsequenced]]
+static inline __UINT8_TYPE__ __stdc_rotate_left_u8(__UINT8_TYPE__ value,
+                                                   unsigned int count) {
+  return (__UINT8_TYPE__)(value << count) | (value >> (8 - count));
+}
+
+[[unsequenced]]
+static inline __UINT16_TYPE__ __stdc_rotate_left_u16(__UINT16_TYPE__ value,
+                                                     unsigned int count) {
+  return (__UINT16_TYPE__)(value << count) | (value >> (16 - count));
+}
+
+[[unsequenced]]
+static inline __UINT32_TYPE__ __stdc_rotate_left_u32(__UINT32_TYPE__ value,
+                                                     unsigned int count) {
+  return (__UINT32_TYPE__)(value << count) | (value >> (32 - count));
+}
+
+[[unsequenced]]
+static inline __UINT64_TYPE__ __stdc_rotate_left_u64(__UINT64_TYPE__ value,
+                                                     unsigned int count) {
+  return (__UINT64_TYPE__)(value << count) | (value >> (64 - count));
+}
+
+#define stdc_rotate_left(VALUE, COUNT)                                         \
+  (_Generic(VALUE,                                                             \
+       u8: __stdc_rotate_left_u8,                                              \
+       u16: __stdc_rotate_left_u16,                                            \
+       u32: __stdc_rotate_left_u32,                                            \
+       u64: __stdc_rotate_left_u64)(VALUE, COUNT))
+#endif
+
+#if __has_builtin(__builtin_stdc_rotate_right)
 #define stdc_rotate_right __builtin_stdc_rotate_right
+#else
+[[unsequenced]]
+static inline __UINT8_TYPE__ __stdc_rotate_right_u8(__UINT8_TYPE__ value,
+                                                    unsigned int count) {
+  return (value >> count) | (__UINT8_TYPE__)(value << (8 - count));
+}
+
+[[unsequenced]]
+static inline __UINT16_TYPE__ __stdc_rotate_right_u16(__UINT16_TYPE__ value,
+                                                      unsigned int count) {
+  return (value >> count) | (__UINT16_TYPE__)(value << (16 - count));
+}
+
+[[unsequenced]]
+static inline __UINT32_TYPE__ __stdc_rotate_right_u32(__UINT32_TYPE__ value,
+                                                      unsigned int count) {
+  return (value >> count) | (__UINT32_TYPE__)(value << (32 - count));
+}
+
+[[unsequenced]]
+static inline __UINT64_TYPE__ __stdc_rotate_right_u64(__UINT64_TYPE__ value,
+                                                      unsigned int count) {
+  return (value >> count) | (__UINT64_TYPE__)(value << (64 - count));
+}
+
+#define stdc_rotate_right(VALUE, COUNT)                                        \
+  (_Generic(VALUE,                                                             \
+       u8: __stdc_rotate_right_u8,                                             \
+       u16: __stdc_rotate_right_u16,                                           \
+       u32: __stdc_rotate_right_u32,                                           \
+       u64: __stdc_rotate_right_u64)(VALUE, COUNT))
+#endif
 
 /**
  * String functions. These don't _look_ builtin (hey, we're defining them here
