@@ -4,6 +4,9 @@ ifndef config_mak_present
 $(error The build was not configured; run ./configure)
 endif
 
+# Turn off some built-in behavior we don't want.
+MAKEFLAGS += -rR
+
 # Helpers.
 ifeq ($(V),1)
   Q =
