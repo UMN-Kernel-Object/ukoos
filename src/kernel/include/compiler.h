@@ -116,6 +116,8 @@ __attribute__((nonnull(1))) void bzero(void *dst, __SIZE_TYPE__ len);
 
 __attribute__((nonnull(1, 2))) void *
 memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ len);
+__attribute__((nonnull(1))) void *memset(void *restrict dst, int byte,
+                                         __SIZE_TYPE__ len);
 
 [[reproducible]]
 __attribute__((nonnull(1, 2), pure)) int memcmp(const void *s1, const void *s2,
