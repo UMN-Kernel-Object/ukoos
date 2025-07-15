@@ -186,6 +186,12 @@ static void format_cstr(struct formatter *fmt, const char *args_start,
   write_str(fmt, va_arg(*ap, const char *));
 }
 
+static void format_isize(struct formatter *fmt, const char *args_start,
+                         const char *args_end, va_list *ap) {
+  isize n = va_arg(*ap, isize);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
 static void format_paddr(struct formatter *fmt, const char *args_start,
                          const char *args_end, va_list *ap) {
   if (args_start == args_end) {
@@ -276,6 +282,8 @@ static format_func find_format_func(const char *type_name_ptr,
       return format_uptr;
     break;
   case 5:
+    if (!memcmp(type_name_ptr, "isize", 5))
+      return format_isize;
     if (!memcmp(type_name_ptr, "paddr", 5))
       return format_paddr;
     if (!memcmp(type_name_ptr, "uaddr", 5))
