@@ -39,6 +39,19 @@ static_assert(alignof(i64) == 8, "incorrect alignment for i64");
 static_assert(sizeof(u64) == 8, "incorrect size for u64");
 static_assert(alignof(u64) == 8, "incorrect alignment for u64");
 
+constexpr i8 I8_MAX = (i8)0x7f;
+constexpr i8 I8_MIN = (i8)0x80;
+constexpr i16 I16_MAX = (i16)0x7fff;
+constexpr i16 I16_MIN = (i16)0x8000;
+constexpr i32 I32_MAX = (i32)0x7fffffffUL;
+constexpr i32 I32_MIN = (i32)0x80000000UL;
+constexpr i64 I64_MAX = (i64)0x7fffffffffffffffULL;
+constexpr i64 I64_MIN = (i64)0x8000000000000000ULL;
+constexpr u8 U8_MAX = 0xff;
+constexpr u16 U16_MAX = 0xffff;
+constexpr u32 U32_MAX = 0xffffffffUL;
+constexpr u64 U64_MAX = 0xffffffffffffffffULL;
+
 /**
  * Pointer-sized types.
  */
