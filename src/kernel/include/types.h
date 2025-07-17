@@ -114,4 +114,12 @@ static_assert(sizeof(usize) == __SIZEOF_SIZE_T__, "incorrect size for usize");
 static_assert(alignof(usize) == __SIZEOF_SIZE_T__,
               "incorrect alignment for usize");
 
+#if __SIZEOF_SIZE_T__ == 8
+constexpr isize ISIZE_MAX = I64_MAX;
+constexpr isize ISIZE_MIN = I64_MIN;
+constexpr usize USIZE_MAX = U64_MAX;
+#else
+#error TODO: Unsupported target
+#endif
+
 #endif // UKO_OS_KERNEL__TYPES_H
