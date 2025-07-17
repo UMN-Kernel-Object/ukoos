@@ -1,0 +1,6 @@
+#ifndef UKO_OS_KERNEL__MACRO_UTILS_H
+#define UKO_OS_KERNEL__MACRO_UTILS_H 1
+
+#define __PASTE(L, R) L##R
+
+#endif // UKO_OS_KERNEL__MACRO_UTILS_H

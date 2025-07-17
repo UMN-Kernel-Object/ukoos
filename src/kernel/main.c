@@ -3,6 +3,7 @@
 #include <mm/virtual_alloc.h>
 #include <panic.h>
 #include <print.h>
+#include <selftest.h>
 #include <symbolicate.h>
 
 [[noreturn]]
@@ -11,6 +12,7 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
           const char *strtab, usize strtab_len, uptr free_va_start,
           uptr free_va_end) {
   print("Starting to boot ukoOS...");
+  run_selftests();
   init_boothart_hart_locals(hart_id);
   symbolicate_init(symtab, symtab_len, strtab, strtab_len);
   devicetree_init(devicetree_start);

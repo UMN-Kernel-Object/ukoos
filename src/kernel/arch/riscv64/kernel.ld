@@ -37,6 +37,12 @@ SECTIONS
 		*(.rodata .rodata.*)
 		PROVIDE(_kernel_end_rodata = .);
 	} :ro
+	.rodata.selftests :
+	{
+		PROVIDE(_kernel_start_selftests = .);
+		KEEP(*(.selftests))
+		PROVIDE(_kernel_end_selftests = .);
+	} :ro
 
 	.data ALIGN(0x1000) :
 	{
