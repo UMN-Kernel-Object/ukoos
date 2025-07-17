@@ -174,6 +174,18 @@ static void format_number(struct formatter *fmt, const char *args_start,
     write_byte(fmt, buf_rev[buf_len - i - 1]);
 }
 
+static void format_bool(struct formatter *fmt, const char *args_start,
+                        const char *args_end, va_list *ap) {
+  if (args_start != args_end) {
+    write_str(fmt, "{{invalid arguments for type bool: ");
+    write_stri(fmt, args_start, args_end);
+    write_str(fmt, "}}");
+    return;
+  }
+
+  write_str(fmt, va_arg(*ap, int) ? "true" : "false");
+}
+
 static void format_cstr(struct formatter *fmt, const char *args_start,
                         const char *args_end, va_list *ap) {
   if (args_start != args_end) {
@@ -276,6 +288,8 @@ static format_func find_format_func(const char *type_name_ptr,
     if (!memcmp(type_name_ptr, "u64", 3))
       return format_u64;
   case 4:
+    if (!memcmp(type_name_ptr, "bool", 4))
+      return format_bool;
     if (!memcmp(type_name_ptr, "cstr", 4))
       return format_cstr;
     if (!memcmp(type_name_ptr, "uptr", 4))
