@@ -48,6 +48,7 @@ kernel-dir = src/kernel
 kernel-objs-asm =
 kernel-objs-c = devicetree main panic print selftest symbolicate
 kernel-objs-c += builtins/bzero builtins/explicit_bzero builtins/memcpy builtins/memcmp builtins/memset builtins/strlen
+kernel-objs-c += crypto/subtle/rfc7539
 kernel-objs-c += mm/physical_alloc mm/virtual_alloc
 include $(srcdir)/src/kernel/arch/$(arch)/include.mak
 
