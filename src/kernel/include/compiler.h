@@ -114,8 +114,11 @@ static inline __UINT64_TYPE__ __stdc_rotate_right_u64(__UINT64_TYPE__ value,
 
 __attribute__((nonnull(1))) void bzero(void *dst, __SIZE_TYPE__ len);
 
+__attribute__((nonnull(1))) void explicit_bzero(void *dst, __SIZE_TYPE__ len);
+
 __attribute__((nonnull(1, 2))) void *
 memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ len);
+
 __attribute__((nonnull(1))) void *memset(void *restrict dst, int byte,
                                          __SIZE_TYPE__ len);
 
