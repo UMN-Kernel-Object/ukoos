@@ -49,7 +49,7 @@ kernel-objs-asm =
 kernel-objs-c = devicetree main panic print random selftest symbolicate
 kernel-objs-c += builtins/bzero builtins/explicit_bzero builtins/memcpy builtins/memcmp builtins/memset builtins/strlen
 kernel-objs-c += crypto/subtle/rfc7539 crypto/subtle/rfc7693
-kernel-objs-c += mm/physical_alloc mm/virtual_alloc
+kernel-objs-c += mm/alloc mm/physical_alloc mm/virtual_alloc
 include $(srcdir)/src/kernel/arch/$(arch)/include.mak
 
 # Common rules.

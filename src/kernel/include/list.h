@@ -124,4 +124,15 @@ static inline struct list_head *list_pop(struct list_head *list) {
   return out;
 }
 
+/**
+ * Removes `elem` from the list that contains it. Panics if `list` is the only
+ * element in the list.
+ */
+static inline void list_remove(struct list_head *elem) {
+  assert(elem != elem->prev && elem != elem->next);
+  elem->prev->next = elem->next;
+  elem->next->prev = elem->prev;
+  *elem = LIST_INIT(*elem);
+}
+
 #endif // UKO_OS_KERNEL__LIST_H

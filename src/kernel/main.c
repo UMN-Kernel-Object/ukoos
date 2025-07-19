@@ -1,5 +1,6 @@
 #include <devicetree.h>
 #include <hart_locals.h>
+#include <mm/alloc.h>
 #include <mm/virtual_alloc.h>
 #include <panic.h>
 #include <print.h>

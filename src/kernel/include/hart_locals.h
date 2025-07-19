@@ -2,6 +2,7 @@
 #define UKO_OS_KERNEL__HART_LOCALS_H 1
 
 #include <crypto/subtle/random_internals.h>
+#include <mm/alloc_internals.h>
 
 /**
  * The data that is local to a hart.
@@ -11,6 +12,11 @@ struct hart_locals {
    * The ID of the hart. Not guaranteed to be small or densely packed.
    */
   u64 hart_id;
+
+  /**
+   * The current heap.
+   */
+  struct mm_alloc_heap *heap;
 
   /**
    * The hart-local RNG.
