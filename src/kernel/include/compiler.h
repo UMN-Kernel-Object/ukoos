@@ -6,6 +6,7 @@
  */
 
 #define alignof _Alignof
+#define atomic _Atomic
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #define static_assert _Static_assert
 
