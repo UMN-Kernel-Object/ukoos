@@ -79,6 +79,108 @@ static_assert(alignof(uaddr) == __SIZEOF_SIZE_T__,
               "incorrect alignment for uaddr");
 
 /**
+ * Strict provenance functions. See [0] for more details, but these are
+ * basically APIs for doing "funny things" to pointers that compile better on
+ * architectures like CHERI or Fil-C than arbitrary int2ptr casts.
+ *
+ * At a high level, you can imagine pointers as actually being a pair of
+ * `(provenance, address)`. Casting ptr2int returns the address part of the
+ * pointer. Strict provenance gives APIs to build pointers from that pair,
+ * instead of relying on int2ptr casts doing "the right thing" to get the
+ * provenance part.
+ *
+ * The current C standard does have a notion of "the right thing"
+ * (exposed addresses with user disambiguation; see PNVI-ae-udi in [1]), but it
+ * is complicated and does not compile well to CHERI or Fil-C.
+ *
+ * Strict provenance instead restricts the set of operations to only those that
+ * are compatible with provenance needing to be explicitly passed around. This
+ * simplifies the formal model, and is what's literally happening in CHERI and
+ * Fil-C.
+ *
+ * [0]: https://github.com/rust-lang/rust/issues/95228
+ * [1]: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2364.pdf
+ */
+
+static inline uaddr _addr_of_ptr(const void *ptr) {
+  // This is written rather awkwardly to avoid exposing `ptr`'s provenance.
+  uaddr addr;
+  memcpy(&addr, &ptr, sizeof(uaddr));
+  return addr;
+}
+
+static inline uaddr _addr_of_ptr_uptr(uptr ptr) {
+  // This is written rather awkwardly to avoid exposing `ptr`'s provenance.
+  uaddr addr;
+  memcpy(&addr, &ptr, sizeof(uaddr));
+  return addr;
+}
+
+/**
+ * Returns the address part of a pointer.
+ */
+#define addr_of_ptr(PTR)                                                       \
+  ({                                                                           \
+    const auto __addr_of_ptr_PTR = (PTR);                                      \
+    constexpr auto __addr_of_ptr_PTR_type =                                    \
+        __builtin_classify_type(__addr_of_ptr_PTR);                            \
+    const auto __addr_of_ptr_PTR_or_null = __builtin_choose_expr(              \
+        __addr_of_ptr_PTR_type == __builtin_classify_type(void *),             \
+        __addr_of_ptr_PTR, (void **)nullptr);                                  \
+    const auto __addr_of_ptr_func = _Generic(__addr_of_ptr_PTR,                \
+        typeof(*__addr_of_ptr_PTR_or_null) *: _addr_of_ptr,                    \
+        nullptr_t: _addr_of_ptr,                                               \
+        uptr: _addr_of_ptr_uptr);                                              \
+    __addr_of_ptr_func(__addr_of_ptr_PTR);                                     \
+  })
+
+static inline void *_ptr_with_addr(void *ptr, uaddr addr) {
+  return &ptr[addr - addr_of_ptr(ptr)];
+}
+
+static inline const void *_ptr_with_addr_const(const void *ptr, uaddr addr) {
+  return &ptr[addr - addr_of_ptr(ptr)];
+}
+
+static inline const uptr _ptr_with_addr_uptr(const uptr ptr_uptr, uaddr addr) {
+  // This is written rather awkwardly to avoid exposing `ptr_uptr`'s provenance.
+  void *ptr_ptr;
+  memcpy(&ptr_ptr, &ptr_uptr, sizeof(uptr));
+  void *out_ptr = _ptr_with_addr(ptr_ptr, addr);
+  uptr out_uptr;
+  memcpy(&out_uptr, &out_ptr, sizeof(uptr));
+  return out_uptr;
+}
+
+/**
+ * Returns a pointer with the same provenance as `PTR` and the address `ADDR`.
+ */
+#define ptr_with_addr(PTR, ADDR)                                               \
+  ({                                                                           \
+    const auto __ptr_with_addr_PTR = (PTR);                                    \
+    constexpr auto __ptr_with_addr_PTR_type =                                  \
+        __builtin_classify_type(__ptr_with_addr_PTR);                          \
+    const auto __ptr_with_addr_PTR_or_null = __builtin_choose_expr(            \
+        __ptr_with_addr_PTR_type == __builtin_classify_type(void *),           \
+        __ptr_with_addr_PTR, (void **)nullptr);                                \
+    const auto __ptr_with_addr_func = _Generic(__ptr_with_addr_PTR,            \
+        typeof(*__ptr_with_addr_PTR_or_null) *: _ptr_with_addr,                \
+        const typeof(*__ptr_with_addr_PTR_or_null) *: _ptr_with_addr_const,    \
+        nullptr_t: _ptr_with_addr,                                             \
+        uptr: _ptr_with_addr_uptr);                                            \
+    __ptr_with_addr_func(__ptr_with_addr_PTR, (ADDR));                         \
+  })
+
+/**
+ * Returns a pointer without a valid provenance and the address `addr`. This
+ * pointer can have `addr_of_ptr` called on it, but most other operations are
+ * UB (e.g. dereferencing the pointer or comparing it to another pointer).
+ */
+static inline void *ptr_without_provenance(uaddr addr) {
+  return ptr_with_addr(nullptr, addr);
+}
+
+/**
  * A physical address.
  */
 typedef struct {
