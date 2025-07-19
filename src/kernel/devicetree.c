@@ -1,7 +1,9 @@
 #include <devicetree.h>
+#include <minmax.h>
 #include <mm/physical_alloc.h>
 #include <physical.h>
 #include <print.h>
+#include <random.h>
 
 struct fdt_header {
   u32 magic;
@@ -222,6 +224,17 @@ static void devicetree_mm_init_on_mem_range(const char *name,
   }
 }
 
+static void devicetree_mm_init_on_rng_seed(paddr seed_start, usize seed_len) {
+  u8 chunk[64];
+  while (seed_len) {
+    usize chunk_len = min(seed_len, (usize)sizeof(chunk));
+    copy_from_physical(chunk, seed_start, chunk_len);
+    entropy_pool_mix(chunk, chunk_len);
+    seed_start = paddr_offset(seed_start, chunk_len);
+    seed_len -= chunk_len;
+  }
+}
+
 void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
                         uptr *free_va_start, uptr *free_va_end) {
   assert(bits_of_paddr(devicetree_start), "DeviceTree not initialized");
@@ -259,7 +272,7 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
   char current_node_name[24] = {0};
   usize current_node_name_len = 0;
 
-  bool has_device_type_memory = false, has_reg = false,
+  bool has_device_type_memory = false, has_reg = false, in_chosen = false,
        processed_memory_node = false;
   paddr struct_start =
       paddr_offset(devicetree_start, devicetree_header.off_dt_struct);
@@ -288,6 +301,8 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
       // Track the depth and reset information about props.
       has_reg = false;
       has_device_type_memory = false;
+      in_chosen = depth == 1 && current_node_name_len == 7 &&
+                  !memcmp(current_node_name, "chosen", 6);
       processed_memory_node = false;
       depth++;
     } break;
@@ -297,6 +312,7 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
       assert(depth > 0);
       has_reg = false;
       has_device_type_memory = false;
+      in_chosen = false;
       processed_memory_node = false;
       depth--;
       break;
@@ -332,6 +348,11 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
             reg_start = value_start;
             reg_len = value_len;
             has_reg = true;
+          }
+          break;
+        case 8:
+          if (in_chosen && !memcmp(name, "rng-seed", 8)) {
+            devicetree_mm_init_on_rng_seed(value_start, value_len);
           }
           break;
         case 11:
