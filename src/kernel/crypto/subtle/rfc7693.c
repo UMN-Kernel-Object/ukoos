@@ -94,62 +94,99 @@ static void blake2s_compress(u32 state[static 8], u32 chunk[static 16],
   explicit_bzero(words, 64);
 }
 
-void blake2s_hash(u8 *out_hash, usize hash_len, const u8 *key, usize key_len,
-                  const u8 *data, usize data_len) {
-  u32 state[8];
-  u32 chunk[16];
-  u64 byte_count = 0;
-
+void blake2s_init(struct blake2s_hasher *hasher, usize hash_len, const u8 *key,
+                  usize key_len) {
   assert(1 <= hash_len && hash_len <= 32);
   assert(0 <= key_len && key_len <= 32);
-  assert(0 <= data_len && data_len <= U64_MAX);
 
   // Initialize the state.
   for (usize i = 0; i < 8; i++)
-    state[i] = blake2s_iv[i];
-  state[0] ^= 0x01010000 ^ ((u32)key_len << 8) ^ (u32)hash_len;
+    hasher->hash_state[i] = blake2s_iv[i];
+  hasher->hash_state[0] ^= 0x01010000 ^ ((u32)key_len << 8) ^ (u32)hash_len;
+  hasher->byte_count_lo = 0;
+  hasher->byte_count_hi = 0;
+  hasher->buffer_len = 0;
+  hasher->hash_len = (u8)hash_len;
 
-  // If there was a key, it fits in (half of!) one block, so we can just handle
-  // it as a single block.
-  if (key_len > 0) {
-    bzero(chunk, 64);
-    memcpy(chunk, key, min(key_len, (usize)64));
-    for (usize i = 0; i < 16; i++)
-      chunk[i] = little_to_native(chunk[i]);
-    byte_count += 64;
-    blake2s_compress(state, chunk, (u32)byte_count, (u32)(byte_count >> 32),
-                     data_len == 0);
+  // If there was a key, process it.
+  if (key_len) {
+    u8 key_buf[64] = {0};
+    memcpy(key_buf, key, key_len);
+    blake2s_update(hasher, key_buf, 64);
+    assert(hasher->byte_count_lo == 0);
+    assert(hasher->byte_count_hi == 0);
+    assert(hasher->buffer_len == 64);
   }
+}
 
-  // If there was neither a key nor a data block, we still hash a block.
-  if (key_len == 0 && data_len == 0) {
-    bzero(chunk, 64);
-    blake2s_compress(state, chunk, 0, 0, true);
-  }
+void blake2s_update(struct blake2s_hasher *hasher, const u8 *data,
+                    usize data_len) {
+  assert(hasher->buffer_len <= 64);
 
-  // Process data blocks.
   while (data_len > 0) {
-    usize chunk_len = min(data_len, (usize)64);
-    bzero(chunk, 64);
-    memcpy(chunk, data, chunk_len);
-    for (usize i = 0; i < 16; i++)
-      chunk[i] = little_to_native(chunk[i]);
-    byte_count += chunk_len;
-    blake2s_compress(state, chunk, (u32)byte_count, (u32)(byte_count >> 32),
-                     data_len == chunk_len);
+    // If the buffer is full, compress it. We do it just before adding another
+    // byte, rather than just after adding a 64th, so we know what the `final`
+    // flag is.
+    if (hasher->buffer_len == 64) {
+      u32 buffer[16];
+      memcpy(buffer, hasher->buffer, 64);
+      for (usize i = 0; i < 16; i++)
+        buffer[i] = little_to_native(buffer[i]);
+      if (ckd_add(&hasher->byte_count_lo, hasher->byte_count_lo, 64))
+        assert(!ckd_add(&hasher->byte_count_hi, hasher->byte_count_hi, 1));
+      blake2s_compress(hasher->hash_state, buffer, hasher->byte_count_lo,
+                       hasher->byte_count_hi, false);
+      hasher->buffer_len = 0;
+    }
+
+    // Copy some bytes into the buffer; enough that either we've finished or
+    // we've filled the buffer.
+    usize chunk_len = min(data_len, (usize)64 - hasher->buffer_len);
+    memcpy(&hasher->buffer[hasher->buffer_len], data, chunk_len);
+    hasher->buffer_len += (u8)chunk_len;
     data += chunk_len;
     data_len -= chunk_len;
   }
+}
 
-  // Convert state to little-endian and copy it to out_hash.
+void blake2s_finish(const struct blake2s_hasher *hasher, u8 *out) {
+  assert(hasher->buffer_len <= 64);
+
+  // Copy the state from the hasher.
+  u32 state[8];
+  memcpy(state, hasher->hash_state, 32);
+
+  // Copy the bytes still in the buffer.
+  u32 buffer[16] = {0};
+  memcpy(buffer, hasher->buffer, hasher->buffer_len);
+  for (usize i = 0; i < 16; i++)
+    buffer[i] = little_to_native(buffer[i]);
+
+  // Update the length for the bytes still in the buffer.
+  u32 byte_count_lo = hasher->byte_count_lo,
+      byte_count_hi = hasher->byte_count_hi;
+  if (ckd_add(&byte_count_lo, byte_count_lo, hasher->buffer_len))
+    assert(!ckd_add(&byte_count_hi, byte_count_hi, 1));
+
+  // Compress the final block.
+  blake2s_compress(state, buffer, byte_count_lo, byte_count_hi, true);
+
+  // Convert state to little-endian and copy it out.
   for (usize i = 0; i < 8; i++)
     state[i] = native_to_little(state[i]);
-  memcpy(out_hash, state, hash_len);
+  memcpy(out, state, hasher->hash_len);
 
-  // Clear the state, to mitigate arbitrary read vulnerabilities stealing
-  // secrets off the stack.
+  // Clear state left on the stack.
   explicit_bzero(state, 32);
-  explicit_bzero(chunk, 64);
+  explicit_bzero(buffer, 64);
+}
+
+void blake2s_hash(u8 *out_hash, usize hash_len, const u8 *key, usize key_len,
+                  const u8 *data, usize data_len) {
+  struct blake2s_hasher hasher;
+  blake2s_init(&hasher, hash_len, key, key_len);
+  blake2s_update(&hasher, data, data_len);
+  blake2s_finish(&hasher, out_hash);
 }
 
 static void blake2b_mix_quarter_round(u64 words[static 16], usize a, usize b,
