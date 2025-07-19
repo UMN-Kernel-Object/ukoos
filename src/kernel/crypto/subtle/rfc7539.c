@@ -27,18 +27,8 @@ static void chacha20_double_round(union chacha20_state *state) {
   chacha20_quarter_round(state->words, 3, 4, 9, 14);
 }
 
-void chacha20_block(union chacha20_state *state) {
-  union chacha20_state working_state;
-  memcpy(working_state.words, state->words, sizeof(working_state.words));
-  for (usize i = 0; i < 10; i++)
-    chacha20_double_round(&working_state);
-  for (usize i = 0; i < 16; i++)
-    state->words[i] += working_state.words[i];
-}
-
-static void chacha20_state_init(union chacha20_state *state,
-                                const u8 key[static 32], u32 block_count,
-                                const u32 nonce[static 3]) {
+void chacha20_state_init(union chacha20_state *state, const u8 key[static 32],
+                         u32 block_count, const u32 nonce[static 3]) {
   state->constant[0] = 0x61707865;
   state->constant[1] = 0x3320646e;
   state->constant[2] = 0x79622d32;
@@ -52,12 +42,40 @@ static void chacha20_state_init(union chacha20_state *state,
   memcpy(state->nonce, nonce, 12);
 }
 
+void chacha20_block(union chacha20_state *state) {
+  union chacha20_state working_state;
+  memcpy(working_state.words, state->words, sizeof(working_state.words));
+  for (usize i = 0; i < 10; i++)
+    chacha20_double_round(&working_state);
+  for (usize i = 0; i < 16; i++)
+    state->words[i] += working_state.words[i];
+}
+
+void chacha20_keystream(const u8 key[static 32], u32 block_count,
+                        const u32 nonce[static 3], void *ptr, usize len) {
+  union chacha20_state state;
+
+  while (len) {
+    chacha20_state_init(&state, key, block_count++, nonce);
+    chacha20_block(&state);
+
+    usize chunk_len = min(len, (usize)64);
+    for (usize i = 0; i < 16; i++)
+      state.words[i] = native_to_little(state.words[i]);
+    memcpy(ptr, state.words, chunk_len);
+    ptr += chunk_len;
+    len -= chunk_len;
+  }
+
+  explicit_bzero(state.words, 64);
+}
+
 void chacha20_encrypt(const u8 key[static 32], u32 block_count,
                       const u32 nonce[static 3], void *ptr, usize len) {
   union chacha20_state state;
   u32 chunk[16];
 
-  do {
+  while (len) {
     chacha20_state_init(&state, key, block_count++, nonce);
     chacha20_block(&state);
 
@@ -69,7 +87,7 @@ void chacha20_encrypt(const u8 key[static 32], u32 block_count,
     memcpy(ptr, chunk, chunk_len);
     ptr += chunk_len;
     len -= chunk_len;
-  } while (len);
+  }
 
   explicit_bzero(state.words, 64);
   explicit_bzero(chunk, 64);
