@@ -21,7 +21,8 @@ jobs:
           qemu-system-riscv64 \
           zstd \
           make \
-          git
+          git \
+          bash
 
       - name: Checkout
         uses: actions/checkout@v4
