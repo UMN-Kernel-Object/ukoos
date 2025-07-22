@@ -22,7 +22,8 @@ jobs:
           zstd \
           make \
           git \
-          bash
+          bash \
+          python3
 
       - name: Checkout
         uses: actions/checkout@v4
