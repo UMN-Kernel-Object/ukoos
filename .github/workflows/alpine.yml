@@ -23,7 +23,8 @@ jobs:
           make \
           git \
           bash \
-          python3
+          python3 \
+          tar
 
       - name: Checkout
         uses: actions/checkout@v4
