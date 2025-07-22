@@ -42,7 +42,7 @@ jobs:
           zstd -19 --threads=0 ukoos-git-$shortrev.tar
           sha256sum ukoos-git-$shortrev.tar ukoos-git-$shortrev.tar.zst
           cp ukoos-git-$shortrev.tar.zst ../ukoos-git.tar.zst
-     - name: Upload Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ukoos
