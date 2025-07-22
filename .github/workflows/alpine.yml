@@ -19,7 +19,10 @@ jobs:
           coreutils \
           gcc-riscv-none-elf \
           qemu-system-riscv64 \
-          zstd
+          zstd \
+          make \
+          git
+
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
