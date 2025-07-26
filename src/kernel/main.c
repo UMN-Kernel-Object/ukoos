@@ -6,6 +6,7 @@
 
 #include <devicetree.h>
 #include <hart_locals.h>
+#include <init.h>
 #include <mm/alloc.h>
 #include <mm/physical_alloc.h>
 #include <mm/virtual_alloc.h>
@@ -43,6 +44,9 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   assert(vma_alloc_by_addr(&kernel_virtual_allocator, 0xffffffe000400000,
                            0xffffffe000600000));
   vma_allocator_print(&kernel_virtual_allocator);
+
+  // Run initializers, which include e.g. setting up device classes and drivers.
+  run_initializers();
 
   print("Running self-tests...");
   run_selftests();

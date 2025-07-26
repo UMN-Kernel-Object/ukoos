@@ -56,6 +56,12 @@ SECTIONS
 		*(.data .data.*)
 		PROVIDE(_kernel_end_data = .);
 	} :rw
+	.data.initializers :
+	{
+		PROVIDE(_kernel_start_initializers = .);
+		KEEP(*(.initializers))
+		PROVIDE(_kernel_end_initializers = .);
+	} :rw
 	.bss :
 	{
 		PROVIDE(_kernel_start_bss = .);
