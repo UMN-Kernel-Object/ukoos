@@ -1,5 +1,6 @@
 #include <devicetree.h>
 #include <hart_locals.h>
+#include <init.h>
 #include <mm/alloc.h>
 #include <mm/virtual_alloc.h>
 #include <panic.h>
@@ -21,6 +22,7 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   devicetree_init(devicetree_start);
   devicetree_mm_init(kernel_start, kernel_end, &free_va_start, &free_va_end);
   mm_init_virtual(free_va_start, free_va_end);
+  run_initializers();
 
   uptr a = mm_va_alloc(mm_kernel_virtual_buddy, 2 * 1024 * 1024);
   uptr b = mm_va_alloc(mm_kernel_virtual_buddy, 4096);
