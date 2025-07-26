@@ -10,6 +10,7 @@
 - [Kernel]()
   - [The `print()` and `format()` functions](./kernel/print.md)
   - [Init Functions](./kernel/init.md)
+  - [Devices](./kernel/devices.md)
   - [Threads and Harts](./kernel/threads-and-harts.md)
   - [Memory management]()
     - [Overview](./kernel/mm/overview.md)

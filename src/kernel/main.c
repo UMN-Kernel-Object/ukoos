@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <device.h>
 #include <devicetree.h>
 #include <hart_locals.h>
 #include <init.h>
@@ -47,6 +48,9 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
 
   // Run initializers, which include e.g. setting up device classes and drivers.
   run_initializers();
+
+  // Print the devices that have been created.
+  print_devices();
 
   print("Running self-tests...");
   run_selftests();
