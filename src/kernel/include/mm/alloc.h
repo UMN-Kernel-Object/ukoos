@@ -7,7 +7,7 @@
  * Frees memory returned by a previous call to `alloc`.
  *
  * When passed `nullptr`, does nothing. This makes code using
- * `__attribute__((cleanup))` easier to write.
+ * `[[gnu::cleanup]]` easier to write.
  */
 void free(void *ptr);
 
@@ -20,16 +20,14 @@ void free(void *ptr);
  * - if `size` is greater than 64, the returned pointer will be aligned to at
  *   least 64.
  */
-__attribute__((alloc_size(1), malloc, malloc(free, 1),
-               warn_unused_result)) void *
+[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
 alloc(usize size);
 
 /**
  * Allocates zeroed-out memory. See `alloc` for the other conditions of this
  * function.
  */
-__attribute__((alloc_size(1), malloc, malloc(free, 1),
-               warn_unused_result)) void *
+[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
 zalloc(usize size);
 
 /**
@@ -41,7 +39,6 @@ zalloc(usize size);
  * - if `new_size` is greater than 64, the returned pointer will be aligned to
  *   at least 64.
  */
-__attribute__((alloc_size(2), warn_unused_result)) void *
-realloc(void *ptr, usize new_size);
+[[gnu::alloc_size(2), nodiscard]] void *realloc(void *ptr, usize new_size);
 
 #endif // UKO_OS_KERNEL__MM_ALLOC_H

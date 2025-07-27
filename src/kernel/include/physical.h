@@ -41,7 +41,7 @@ static inline paddr paddr_offset(paddr paddr, usize offset) {
 }
 
 static inline paddr paddr_align_down(paddr paddr, usize bits) {
-  usize low_mask = (1 << bits) - 1;
+  usize low_mask = ((usize)1 << bits) - 1;
   return paddr_of_bits(bits_of_paddr(paddr) & ~low_mask);
 }
 

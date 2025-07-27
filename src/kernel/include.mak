@@ -7,8 +7,9 @@ kernel-cflags = $(CFLAGS) \
 	-isystem $(srcdir)/src/kernel/include \
 	-isystem $(srcdir)/src/kernel/arch/$(arch)/include \
 	-nostdlib \
-	-std=c2x \
-	-Wconversion
+	-std=c23 \
+	-Wconversion \
+	-Wsystem-headers
 kernel-cflags += -fdata-sections -ffunction-sections
 kernel-ldflags += -Wl,--gc-sections
 kernel-dir = src/kernel

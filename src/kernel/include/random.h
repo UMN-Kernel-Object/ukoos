@@ -12,13 +12,13 @@ void entropy_pool_init(void);
 /**
  * Adds entropy to the entropy pool without crediting it.
  */
-__attribute__((access(read_only, 1, 2))) void entropy_pool_mix(const u8 *buf,
-                                                               usize len);
+[[gnu::access(read_only, 1, 2)]] void entropy_pool_mix(const u8 *buf,
+                                                       usize len);
 
 /**
  * Fills `buf` with `len` random bytes.
  */
-__attribute__((access(write_only, 1, 2))) void getrandom(u8 *buf, usize len);
+[[gnu::access(write_only, 1, 2)]] void getrandom(u8 *buf, usize len);
 
 /**
  * Returns a single random word.
