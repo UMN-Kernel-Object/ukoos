@@ -16,6 +16,17 @@ typedef __builtin_va_list va_list;
 #define va_arg(ap, type) __builtin_va_arg(ap, type)
 #define va_copy(dst, src) __builtin_va_copy(dst, src)
 
+#define likely(COND)                                                           \
+  ({                                                                           \
+    bool __likely_COND = (COND);                                               \
+    __builtin_expect(__likely_COND, true);                                     \
+  })
+#define unlikely(COND)                                                         \
+  ({                                                                           \
+    bool __unlikely_COND = (COND);                                             \
+    __builtin_expect(__unlikely_COND, false);                                  \
+  })
+
 #define bswap(X)                                                               \
   (_Generic(X,                                                                 \
        u16: __builtin_bswap16,                                                 \
