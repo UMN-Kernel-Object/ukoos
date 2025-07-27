@@ -10,6 +10,11 @@
 void entropy_pool_init(void);
 
 /**
+ * Credits the entropy pool.
+ */
+void entropy_pool_credit(usize bits);
+
+/**
  * Adds entropy to the entropy pool without crediting it.
  */
 [[gnu::access(read_only, 1, 2)]] void entropy_pool_mix(const u8 *buf,
