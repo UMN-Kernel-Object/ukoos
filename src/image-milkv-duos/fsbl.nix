@@ -1,13 +1,14 @@
 {
   fetchFromGitHub,
-  stdenv,
+  pkgsCross,
+  stdenvNoCC,
 
   opensbi-milkv-duos,
   u-boot-milkv-duos,
   python3,
 }:
 
-stdenv.mkDerivation (self: {
+stdenvNoCC.mkDerivation (self: {
   pname = "fsbl";
   version = "2025.07.15";
 
@@ -33,6 +34,8 @@ stdenv.mkDerivation (self: {
   sourceRoot = "fsbl";
 
   nativeBuildInputs = [
+    pkgsCross.riscv64-musl.stdenv.cc.bintools.bintools
+    pkgsCross.riscv64-musl.stdenv.cc.cc
     python3
   ];
 
