@@ -31,6 +31,7 @@ kernel-objs-c += builtins/strlen
 kernel-objs-c += crypto/subtle/rfc7539
 kernel-objs-c += crypto/subtle/rfc7693
 kernel-objs-c += devicetree
+kernel-objs-c += hashtable_test
 kernel-objs-c += main
 kernel-objs-c += mm/alloc
 kernel-objs-c += mm/alloc/block
