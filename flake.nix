@@ -60,6 +60,9 @@
             '';
           };
 
+          fsbl-milkv-duos = pkgs.pkgsCross.riscv64-musl.callPackage ./src/image-milkv-duos/fsbl.nix {
+            inherit (packages) opensbi-milkv-duos u-boot-milkv-duos;
+          };
           opensbi-milkv-duos = pkgs.pkgsCross.riscv64-musl.callPackage ./src/image-milkv-duos/opensbi.nix {
             inherit (packages) u-boot-milkv-duos;
           };
