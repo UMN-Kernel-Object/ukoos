@@ -1,0 +1,53 @@
+commit e4be3e25eeedf8f96787625a4c585dbbdeaaf950
+Author: Aurelien Jarno <aurelien@aurel32.net>
+Date:   Fri Jan 28 18:33:46 2022 +0100
+
+    Makefile: fix build with binutils 2.38
+    
+    From version 2.38, binutils default to ISA spec version 20191213. This
+    means that the csr read/write (csrr*/csrw*) instructions and fence.i
+    instruction has separated from the `I` extension, become two standalone
+    extensions: Zicsr and Zifencei. As the kernel uses those instruction,
+    this causes the following build failure:
+    
+     CC        lib/sbi/sbi_tlb.o
+    <<BUILDDIR>>/lib/sbi/sbi_tlb.c: Assembler messages:
+    <<BUILDDIR>>/lib/sbi/sbi_tlb.c:190: Error: unrecognized opcode `fence.i'
+    make: *** [Makefile:431: <<BUILDDIR>>/build/lib/sbi/sbi_tlb.o] Error 1
+    
+    The fix is to specify those extensions explicitly in -march. However as
+    older binutils version do not support this, we first need to detect
+    that.
+    
+    Signed-off-by: Aurelien Jarno <aurelien@aurel32.net>
+    Reviewed-by: Bin Meng <bmeng.cn@gmail.com>
+    Tested-by: Alexandre Ghiti <alexandre.ghiti@canonical.com>
+    Reviewed-by: Anup Patel <anup@brainfault.org>
+
+diff --git a/Makefile b/Makefile
+index 8d15eb1..86d4314 100644
+--- a/Makefile
++++ b/Makefile
+@@ -106,6 +106,9 @@ ifndef PLATFORM_RISCV_XLEN
+   endif
+ endif
+ 
++# Check whether the assembler and the compiler support the Zicsr and Zifencei extensions
++CC_SUPPORT_ZICSR_ZIFENCEI := $(shell $(CC) $(CLANG_TARGET) $(RELAX_FLAG) -nostdlib -march=rv$(OPENSBI_CC_XLEN)imafd_zicsr_zifencei -x c /dev/null -o /dev/null 2>&1 | grep "zicsr\|zifencei" > /dev/null && echo n || echo y)
++
+ # Setup list of objects.mk files
+ ifdef PLATFORM
+ platform-object-mks=$(shell if [ -d $(platform_src_dir)/ ]; then find $(platform_src_dir) -iname "objects.mk" | sort -r; fi)
+@@ -171,7 +174,11 @@ ifndef PLATFORM_RISCV_ABI
+ endif
+ ifndef PLATFORM_RISCV_ISA
+   ifneq ($(PLATFORM_RISCV_TOOLCHAIN_DEFAULT), 1)
+-    PLATFORM_RISCV_ISA = rv$(PLATFORM_RISCV_XLEN)imafdc
++    ifeq ($(CC_SUPPORT_ZICSR_ZIFENCEI), y)
++      PLATFORM_RISCV_ISA = rv$(PLATFORM_RISCV_XLEN)imafdc_zicsr_zifencei
++    else
++      PLATFORM_RISCV_ISA = rv$(PLATFORM_RISCV_XLEN)imafdc
++    endif
+   else
+     PLATFORM_RISCV_ISA = $(OPENSBI_CC_ISA)
+   endif
