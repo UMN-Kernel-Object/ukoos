@@ -12,7 +12,9 @@
       in
       rec {
         devShells.default = pkgs.mkShell {
-          inputsFrom = builtins.attrValues packages;
+          inputsFrom = [
+            packages.ukoos
+          ];
           nativeBuildInputs = [
             pkgs.bear
             pkgs.dtc
@@ -24,35 +26,41 @@
           '';
         };
 
-        packages.default = pkgs.stdenvNoCC.mkDerivation {
-          pname = "ukoos";
-          version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
+        packages = {
+          default = packages.ukoos;
 
-          src = ./.;
-          nativeBuildInputs = [
-            pkgs.getopt
-            pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
-            pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
-            pkgs.python3
-          ];
+          ukoos = pkgs.stdenvNoCC.mkDerivation {
+            pname = "ukoos";
+            version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
 
-          dontUnpack = true;
-          configurePhase = ''
-            runHook preConfigure
+            src = ./.;
+            nativeBuildInputs = [
+              pkgs.getopt
+              pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
+              pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
+              pkgs.python3
+            ];
 
-            mkdir build
-            cd build
-            bash $src/configure
+            dontUnpack = true;
+            configurePhase = ''
+              runHook preConfigure
 
-            runHook postConfigure
-          '';
-          installPhase = ''
-            runHook preInstall
+              mkdir build
+              cd build
+              bash $src/configure
 
-            make install DESTDIR=$out
+              runHook postConfigure
+            '';
+            installPhase = ''
+              runHook preInstall
 
-            runHook postInstall
-          '';
+              make install DESTDIR=$out
+
+              runHook postInstall
+            '';
+          };
+
+          u-boot-milkv-duos = pkgs.pkgsCross.riscv64-musl.callPackage ./src/image-milkv-duos/u-boot.nix { };
         };
       }
     );
