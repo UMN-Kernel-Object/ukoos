@@ -34,6 +34,8 @@ stdenv.mkDerivation {
   ];
   patches = [
     ./u-boot-patches/0002-cmd-inconsistent-return-type.patch
+    ./u-boot-patches/0003-do-not-load-non-load-elf-sections.patch
+    ./u-boot-patches/0004-add-gok-cmd.patch
     (fetchpatch {
       url = "https://github.com/u-boot/u-boot/commit/1dde977518f13824b847e23275001191139bc384.patch";
       hash = "sha256-V0jDpx6O4bFzuaOQejdrRnLiWb5LBTx47T0TZqNtMXk=";
@@ -62,6 +64,7 @@ stdenv.mkDerivation {
       patch -p1 <$file
     done
 
+    cp --no-preserve=all ${./u-boot-patches/gok.c} arch/riscv/lib/gok.c
     cp --no-preserve=all ${./defconfig} configs/milkv_duos_defconfig
 
     cp ../sophgo-sg200x-debian/configs/common/dts/cv181x/* arch/riscv/dts/
