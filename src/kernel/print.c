@@ -17,8 +17,8 @@ static void default_formatter_write_byte(void *ctx, u8 byte) {
 
   register uaddr a0 __asm__("a0") = byte;
   register uaddr a1 __asm__("a1");
-  register uaddr a6 __asm__("a6") = 2;
-  register uaddr a7 __asm__("a7") = 0x4442434E;
+  register uaddr a6 __asm__("a6") = 0;
+  register uaddr a7 __asm__("a7") = 1;
 
   __asm__ volatile("ecall\n"
                    : "+r"(a0), "=r"(a1)
