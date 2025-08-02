@@ -9,10 +9,12 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
       in
       rec {
         devShells.default = pkgs.mkShell {
           inputsFrom = [
+            packages.doc
             packages.ukoos-riscv64
           ];
           nativeBuildInputs = [
@@ -32,7 +34,7 @@
 
           ukoos-riscv64 = pkgs.stdenvNoCC.mkDerivation {
             pname = "ukoos-riscv64";
-            version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
+            inherit version;
 
             src = ./.;
             nativeBuildInputs = [
@@ -59,6 +61,10 @@
 
               runHook postInstall
             '';
+          };
+
+          doc = pkgs.callPackage ./doc {
+            inherit version;
           };
 
           dev-image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
