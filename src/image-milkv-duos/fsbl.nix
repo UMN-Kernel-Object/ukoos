@@ -86,5 +86,5 @@ stdenvNoCC.mkDerivation (self: {
     runHook postInstall
   '';
 
-  hardeningDisable = [ "stackprotector" ];
+  enableParallelBuilding = true;
 })

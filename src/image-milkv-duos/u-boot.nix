@@ -1,9 +1,9 @@
 {
   storageType ? "sd",
 
-  buildPackages,
   fetchFromGitHub,
   fetchpatch,
+  pkgsCross,
   stdenv,
 
   bc,
@@ -34,15 +34,24 @@ stdenv.mkDerivation {
   ];
   patches = [
     ./u-boot-patches/0002-cmd-inconsistent-return-type.patch
+    ./u-boot-patches/0003-remove-config-in-headers.patch
+    ./u-boot-patches/0004-remove-mach-types-from-dwc2-gadget.patch
+    ./u-boot-patches/0005-fix-dwc2-gadget-writel.patch
+    ./u-boot-patches/0006-dwc2-add-cvitek-cv182x.patch
     (fetchpatch {
       url = "https://github.com/u-boot/u-boot/commit/1dde977518f13824b847e23275001191139bc384.patch";
       hash = "sha256-V0jDpx6O4bFzuaOQejdrRnLiWb5LBTx47T0TZqNtMXk=";
     })
+    (fetchpatch {
+      url = "https://github.com/u-boot/u-boot/commit/661e2215f8483cc7a77badeab6dcbf6a88cc715c.patch";
+      hash = "sha256-RZfMfpPlZZ6YezU/gwYxMugW+TxUNUSixnt59ZRfRUU=";
+    })
   ];
   sourceRoot = "u-boot";
 
-  depsBuildBuild = [ buildPackages.stdenv.cc ];
   nativeBuildInputs = [
+    pkgsCross.riscv64-musl.stdenv.cc.bintools.bintools
+    pkgsCross.riscv64-musl.stdenv.cc.cc
     bc
     bison
     flex
@@ -106,8 +115,7 @@ stdenv.mkDerivation {
       CONFIG_USE_DEFAULT_ENV=y \
       CROSS_COMPILE=riscv64-unknown-linux-musl- \
       CVIBOARD=milkv_duos_${storageType} \
-      STORAGE_TYPE=${storageType} \
-      all u-boot-initial-env
+      STORAGE_TYPE=${storageType}
 
     runHook postBuild
   '';
@@ -117,8 +125,10 @@ stdenv.mkDerivation {
 
     install -Dt $out -m 0644 u-boot.bin
     install -Dt $out -m 0644 u-boot.dtb
-    install -Dt $out -m 0644 u-boot-initial-env
+    install -Dt $out/bin tools/mkenvimage
 
     runHook postInstall
   '';
+
+  enableParallelBuilding = true;
 }

@@ -1,0 +1,4 @@
+kernel_addr=0x81800000
+kernel_path=kernel.elf
+bootcmd=run custom_bootcmd || run sdboot
+sdboot=echo Trying to boot from SD...; while true; do mmc dev 0 && fatload mmc 0 ${kernel_addr} ${kernel_path}; if test $? -eq 0; then bootelf ${kernel_addr}; else ums 0 mmc 0; fi; done

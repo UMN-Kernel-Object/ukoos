@@ -1,12 +1,13 @@
 {
   fetchFromGitHub,
   fetchpatch,
-  stdenv,
+  pkgsCross,
+  stdenvNoCC,
 
   u-boot-milkv-duos,
 }:
 
-stdenv.mkDerivation {
+stdenvNoCC.mkDerivation {
   pname = "opensbi";
   version = "2025.01.24";
 
@@ -34,6 +35,11 @@ stdenv.mkDerivation {
     })
   ];
   sourceRoot = "opensbi";
+
+  nativeBuildInputs = [
+    pkgsCross.riscv64-musl.stdenv.cc.bintools.bintools
+    pkgsCross.riscv64-musl.stdenv.cc.cc
+  ];
 
   postPatch = ''
     for file in ../sophgo-sg200x-debian/configs/common/patches/opensbi/*.patch; do
@@ -66,5 +72,5 @@ stdenv.mkDerivation {
     runHook postInstall
   '';
 
-  hardeningDisable = [ "stackprotector" ];
+  enableParallelBuilding = true;
 }

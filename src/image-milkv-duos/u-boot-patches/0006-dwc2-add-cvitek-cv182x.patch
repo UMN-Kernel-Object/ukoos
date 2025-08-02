@@ -1,0 +1,10 @@
+--- a/drivers/usb/gadget/dwc2_udc_otg.c
++++ b/drivers/usb/gadget/dwc2_udc_otg.c
+@@ -1174,6 +1174,7 @@
+ 	{ .compatible = "brcm,bcm2835-usb" },
+ 	{ .compatible = "st,stm32mp15-hsotg",
+ 	  .data = (ulong)dwc2_set_stm32mp1_hsotg_params },
++	{ .compatible = "cvitek,cv182x-usb" },
+ 	{},
+ };
+ 

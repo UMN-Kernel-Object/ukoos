@@ -1,0 +1,23 @@
+--- a/drivers/usb/gadget/dwc2_udc_otg.c
++++ b/drivers/usb/gadget/dwc2_udc_otg.c
+@@ -41,8 +41,6 @@
+ #include <asm/unaligned.h>
+ #include <asm/io.h>
+ 
+-#include <asm/mach-types.h>
+-
+ #include <power/regulator.h>
+ 
+ #include "dwc2_udc_otg_regs.h"
+
+--- a/drivers/usb/gadget/dwc2_udc_otg_phy.c
++++ b/drivers/usb/gadget/dwc2_udc_otg_phy.c
+@@ -30,8 +30,6 @@
+ #include <asm/unaligned.h>
+ #include <asm/io.h>
+ 
+-#include <asm/mach-types.h>
+-
+ #include "dwc2_udc_otg_regs.h"
+ #include "dwc2_udc_otg_priv.h"
+ 

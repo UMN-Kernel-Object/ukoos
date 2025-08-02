@@ -1,0 +1,20 @@
+--- a/drivers/usb/gadget/dwc2_udc_otg.c
++++ b/drivers/usb/gadget/dwc2_udc_otg.c
+@@ -453,7 +453,7 @@
+ {
+ 	/* 2. Soft-reset OTG Core and then unreset again. */
+ 	int i;
+-	unsigned int uTemp = writel(CORE_SOFT_RESET, &reg->grstctl);
++	unsigned int uTemp;
+ 	uint32_t dflt_gusbcfg;
+ 	uint32_t rx_fifo_sz, tx_fifo_sz, np_tx_fifo_sz;
+ 	u32 max_hw_ep;
+@@ -461,6 +461,8 @@
+ 
+ 	debug("Reseting OTG controller\n");
+ 
++	writel(CORE_SOFT_RESET, &reg->grstctl);
++
+ 	dflt_gusbcfg =
+ 		0<<15		/* PHY Low Power Clock sel*/
+ 		|1<<14		/* Non-Periodic TxFIFO Rewind Enable*/

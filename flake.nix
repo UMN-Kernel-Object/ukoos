@@ -13,7 +13,7 @@
       rec {
         devShells.default = pkgs.mkShell {
           inputsFrom = [
-            packages.ukoos
+            packages.ukoos-riscv64
           ];
           nativeBuildInputs = [
             pkgs.bear
@@ -27,10 +27,10 @@
         };
 
         packages = {
-          default = packages.ukoos;
+          default = packages.ukoos-riscv64;
 
-          ukoos = pkgs.stdenvNoCC.mkDerivation {
-            pname = "ukoos";
+          ukoos-riscv64 = pkgs.stdenvNoCC.mkDerivation {
+            pname = "ukoos-riscv64";
             version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
 
             src = ./.;
@@ -60,13 +60,10 @@
             '';
           };
 
-          fsbl-milkv-duos = pkgs.callPackage ./src/image-milkv-duos/fsbl.nix {
-            inherit (packages) opensbi-milkv-duos u-boot-milkv-duos;
+          image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
+            inherit (packages) ukoos-riscv64;
           };
-          opensbi-milkv-duos = pkgs.pkgsCross.riscv64-musl.callPackage ./src/image-milkv-duos/opensbi.nix {
-            inherit (packages) u-boot-milkv-duos;
-          };
-          u-boot-milkv-duos = pkgs.pkgsCross.riscv64-musl.callPackage ./src/image-milkv-duos/u-boot.nix { };
+          inherit (packages.image-milkv-duos) fsbl-milkv-duos opensbi-milkv-duos u-boot-milkv-duos;
         };
       }
     );
