@@ -61,7 +61,12 @@
             '';
           };
 
+          dev-image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
+            dev = true;
+            inherit (packages) ukoos-riscv64;
+          };
           image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
+            dev = false;
             inherit (packages) ukoos-riscv64;
           };
           inherit (packages.image-milkv-duos) fsbl-milkv-duos opensbi-milkv-duos u-boot-milkv-duos;

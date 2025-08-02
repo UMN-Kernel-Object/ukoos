@@ -2,6 +2,7 @@
   dev ? false,
 
   callPackage,
+  lib,
   pkgsCross,
   stdenvNoCC,
 
@@ -26,8 +27,10 @@ stdenvNoCC.mkDerivation (self: {
   buildPhase = ''
     runHook preBuild
 
+    ${lib.optionalString (!dev) ''
+      install -Dt root/boot ${ukoos-riscv64}/sys/kernel.elf
+    ''}
     install -Dt root/boot ${self.passthru.fsbl-milkv-duos}/fip.bin
-    install -Dt root/boot ${ukoos-riscv64}/sys/kernel.elf
     mkenvimage -s 0x20000 -o root/boot/uboot.env ${./u-boot.txt}
     genimage --config ${./genimage.cfg}
 
