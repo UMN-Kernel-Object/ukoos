@@ -18,6 +18,7 @@
           nativeBuildInputs = [
             pkgs.bear
             pkgs.dtc
+            pkgs.minicom
             pkgs.qemu
           ];
           shellHook = ''

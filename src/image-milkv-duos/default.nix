@@ -27,7 +27,8 @@ stdenvNoCC.mkDerivation (self: {
     runHook preBuild
 
     install -Dt root/boot ${self.passthru.fsbl-milkv-duos}/fip.bin
-    mkenvimage -s 0x20000 -o root/boot/uboot.env ${./u-boot.scr}
+    install -Dt root/boot ${ukoos-riscv64}/sys/kernel.elf
+    mkenvimage -s 0x20000 -o root/boot/uboot.env ${./u-boot.txt}
     genimage --config ${./genimage.cfg}
 
     runHook postBuild

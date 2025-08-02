@@ -34,10 +34,6 @@ stdenv.mkDerivation {
   ];
   patches = [
     ./u-boot-patches/0002-cmd-inconsistent-return-type.patch
-    ./u-boot-patches/0003-remove-config-in-headers.patch
-    ./u-boot-patches/0004-remove-mach-types-from-dwc2-gadget.patch
-    ./u-boot-patches/0005-fix-dwc2-gadget-writel.patch
-    ./u-boot-patches/0006-dwc2-add-cvitek-cv182x.patch
     (fetchpatch {
       url = "https://github.com/u-boot/u-boot/commit/1dde977518f13824b847e23275001191139bc384.patch";
       hash = "sha256-V0jDpx6O4bFzuaOQejdrRnLiWb5LBTx47T0TZqNtMXk=";
@@ -112,6 +108,7 @@ stdenv.mkDerivation {
       ARCH=riscv \
       BOARD=cv181x \
       CHIP=cv181x \
+      CONFIG_TFTP_PORT=y \
       CONFIG_USE_DEFAULT_ENV=y \
       CROSS_COMPILE=riscv64-unknown-linux-musl- \
       CVIBOARD=milkv_duos_${storageType} \
