@@ -199,6 +199,13 @@ static void format_cstr(struct formatter *fmt, const char *args_start,
   write_str(fmt, va_arg(*ap, const char *));
 }
 
+static void format_indent(struct formatter *fmt, const char *args_start,
+                          const char *args_end, va_list *ap) {
+  usize i = va_arg(*ap, usize);
+  for (usize j = 0; j < i; j++)
+    write_byte(fmt, ' ');
+}
+
 static void format_isize(struct formatter *fmt, const char *args_start,
                          const char *args_end, va_list *ap) {
   isize n = va_arg(*ap, isize);
@@ -305,6 +312,10 @@ static format_func find_format_func(const char *type_name_ptr,
       return format_uaddr;
     if (!memcmp(type_name_ptr, "usize", 5))
       return format_usize;
+    break;
+  case 6:
+    if (!memcmp(type_name_ptr, "indent", 6))
+      return format_indent;
     break;
   }
   return nullptr;
