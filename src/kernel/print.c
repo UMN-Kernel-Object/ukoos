@@ -1,3 +1,4 @@
+#include <mm/alloc.h>
 #include <physical.h>
 #include <print.h>
 
@@ -396,6 +397,58 @@ static void vfprint(struct formatter *fmt, const char *format, va_list ap) {
       write_byte(fmt, ch);
     }
   }
+}
+
+// TODO: We should have a common library of types for e.g. string buffers.
+struct format_formatter_buffer {
+  u8 *ptr;
+  usize cap, len;
+};
+
+static void format_formatter_write_byte(void *ctx, u8 byte) {
+  struct format_formatter_buffer *buffer = ctx;
+
+  // If we already OOM'd, don't bother writing anything else out.
+  if (!buffer->ptr)
+    return;
+
+  // If we need to grow the buffer, do so.
+  if (buffer->cap == buffer->len) {
+    assert(buffer->cap != 0);
+    buffer->cap *= 2;
+    u8 *new_ptr = alloc(buffer->cap);
+    if (!new_ptr) {
+      free(buffer->ptr);
+      buffer->ptr = nullptr;
+      return;
+    }
+    memcpy(new_ptr, buffer->ptr, buffer->len);
+    free(buffer->ptr);
+    buffer->ptr = new_ptr;
+  }
+
+  // Append the byte.
+  buffer->ptr[buffer->len++] = byte;
+}
+
+char *format(const char *format, ...) {
+  struct format_formatter_buffer buffer = {
+      .ptr = alloc(16),
+      .cap = 16,
+      .len = 0,
+  };
+  struct formatter format_formatter = {
+      .write_byte = format_formatter_write_byte,
+      .ctx = &buffer,
+  };
+
+  va_list ap;
+  va_start(ap);
+  vfprint(&format_formatter, format, ap);
+  va_end(ap);
+
+  format_formatter_write_byte(&buffer, '\0');
+  return (char *)buffer.ptr;
 }
 
 void print(const char *format, ...) {
