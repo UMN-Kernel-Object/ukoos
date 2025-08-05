@@ -12,10 +12,13 @@
       in
       rec {
         devShells.default = pkgs.mkShell {
-          inputsFrom = builtins.attrValues packages;
+          inputsFrom = [
+            packages.ukoos-riscv64
+          ];
           nativeBuildInputs = [
             pkgs.bear
             pkgs.dtc
+            pkgs.minicom
             pkgs.qemu
           ];
           shellHook = ''
@@ -24,35 +27,49 @@
           '';
         };
 
-        packages.default = pkgs.stdenvNoCC.mkDerivation {
-          pname = "ukoos";
-          version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
+        packages = {
+          default = packages.ukoos-riscv64;
 
-          src = ./.;
-          nativeBuildInputs = [
-            pkgs.getopt
-            pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
-            pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
-            pkgs.python3
-          ];
+          ukoos-riscv64 = pkgs.stdenvNoCC.mkDerivation {
+            pname = "ukoos-riscv64";
+            version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
 
-          dontUnpack = true;
-          configurePhase = ''
-            runHook preConfigure
+            src = ./.;
+            nativeBuildInputs = [
+              pkgs.getopt
+              pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
+              pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
+              pkgs.python3
+            ];
 
-            mkdir build
-            cd build
-            bash $src/configure
+            dontUnpack = true;
+            configurePhase = ''
+              runHook preConfigure
 
-            runHook postConfigure
-          '';
-          installPhase = ''
-            runHook preInstall
+              mkdir build
+              cd build
+              bash $src/configure
 
-            make install DESTDIR=$out
+              runHook postConfigure
+            '';
+            installPhase = ''
+              runHook preInstall
 
-            runHook postInstall
-          '';
+              make install DESTDIR=$out
+
+              runHook postInstall
+            '';
+          };
+
+          dev-image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
+            dev = true;
+            inherit (packages) ukoos-riscv64;
+          };
+          image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
+            dev = false;
+            inherit (packages) ukoos-riscv64;
+          };
+          inherit (packages.image-milkv-duos) fsbl-milkv-duos opensbi-milkv-duos u-boot-milkv-duos;
         };
       }
     );
