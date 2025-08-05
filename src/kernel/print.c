@@ -201,6 +201,13 @@ static void format_cstr(struct formatter *fmt, const char *args_start,
 
 static void format_indent(struct formatter *fmt, const char *args_start,
                           const char *args_end, va_list *ap) {
+  if (args_start != args_end) {
+    write_str(fmt, "{{invalid arguments for type indent: ");
+    write_stri(fmt, args_start, args_end);
+    write_str(fmt, "}}");
+    return;
+  }
+
   usize i = va_arg(*ap, usize);
   for (usize j = 0; j < i; j++)
     write_byte(fmt, ' ');
