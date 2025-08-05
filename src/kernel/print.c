@@ -199,6 +199,30 @@ static void format_cstr(struct formatter *fmt, const char *args_start,
   write_str(fmt, va_arg(*ap, const char *));
 }
 
+static void format_i8(struct formatter *fmt, const char *args_start,
+                      const char *args_end, va_list *ap) {
+  i8 n = (i8)va_arg(*ap, i32);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
+static void format_i16(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  i16 n = (i16)va_arg(*ap, i32);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
+static void format_i32(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  i32 n = va_arg(*ap, i32);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
+static void format_i64(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  i64 n = va_arg(*ap, i64);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
 static void format_indent(struct formatter *fmt, const char *args_start,
                           const char *args_end, va_list *ap) {
   if (args_start != args_end) {
@@ -290,12 +314,20 @@ static format_func find_format_func(const char *type_name_ptr,
                                     usize type_name_len) {
   switch (type_name_len) {
   case 2:
+    if (!memcmp(type_name_ptr, "i8", 2))
+      return format_i8;
     if (!memcmp(type_name_ptr, "u8", 2))
       return format_u8;
     if (!memcmp(type_name_ptr, "va", 2))
       return format_va;
     break;
   case 3:
+    if (!memcmp(type_name_ptr, "i16", 3))
+      return format_i16;
+    if (!memcmp(type_name_ptr, "i32", 3))
+      return format_i32;
+    if (!memcmp(type_name_ptr, "i64", 3))
+      return format_i64;
     if (!memcmp(type_name_ptr, "u16", 3))
       return format_u16;
     if (!memcmp(type_name_ptr, "u32", 3))
