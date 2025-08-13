@@ -14,7 +14,6 @@
       rec {
         devShells.default = pkgs.mkShell {
           inputsFrom = [
-            packages.doc
             packages.ukoos-riscv64
           ];
           nativeBuildInputs = [
@@ -39,6 +38,8 @@
             src = ./.;
             nativeBuildInputs = [
               pkgs.getopt
+              pkgs.mdbook
+              pkgs.perl
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
               pkgs.python3
@@ -61,10 +62,6 @@
 
               runHook postInstall
             '';
-          };
-
-          doc = pkgs.callPackage ./doc {
-            inherit version;
           };
 
           dev-image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
