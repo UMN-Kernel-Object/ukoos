@@ -1,5 +1,20 @@
 {
     "build": {
         "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.makefile-tools"
+            ],
+            "settings": {
+                "makefile.configureOnOpen": true,
+                "editor.formatOnSave": true,
+                "editor.defaultFormatter": "ms-vscode.cpptools",
+                "C_Cpp.formatting": "clangFormat",
+                "C_Cpp.clang_format_style": "LLVM"
+            }
+        }
     }
 }
