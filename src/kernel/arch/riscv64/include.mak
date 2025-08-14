@@ -1,4 +1,9 @@
-kernel-cflags += -fno-omit-frame-pointer -mabi=lp64 -march=rv64imac_zicsr_zicntr_zihpm_zba_zbb_zbs_zihintpause_zicbom_zicbop_zicboz -mcmodel=medany
+kernel-cflags += \
+	-DARCH_RISCV64 \
+	-fno-omit-frame-pointer \
+	-mabi=lp64 \
+	-march=rv64imac_zicsr_zicntr_zihpm_zba_zbb_zbs_zihintpause_zicbom_zicbop_zicboz \
+	-mcmodel=medany
 kernel-cflags += -Wconversion
 kernel-objs-asm += arch/riscv64/start
 kernel-objs-c += arch/riscv64/backtrace arch/riscv64/hart_locals arch/riscv64/paging arch/riscv64/panic arch/riscv64/sbi
