@@ -9,6 +9,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
       in
       rec {
         devShells.default = pkgs.mkShell {
@@ -32,11 +33,13 @@
 
           ukoos-riscv64 = pkgs.stdenvNoCC.mkDerivation {
             pname = "ukoos-riscv64";
-            version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
+            inherit version;
 
             src = ./.;
             nativeBuildInputs = [
               pkgs.getopt
+              pkgs.mdbook
+              pkgs.perl
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
               pkgs.python3

@@ -10,7 +10,6 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          apk update
           apk add --no-interactive \
             bash \
             binutils-riscv-none-elf \
@@ -18,13 +17,15 @@ jobs:
             gcc-riscv-none-elf \
             git \
             make \
+            mdbook \
+            perl \
             python3 \
             qemu-system-riscv64 \
             tar \
             zstd
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build kernel
+      - name: Build
         run: |
           git config --global --add safe.directory .
           export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
@@ -45,7 +46,7 @@ jobs:
           zstd -19 --threads=0 ukoos-git-$shortrev.tar
           sha256sum ukoos-git-$shortrev.tar ukoos-git-$shortrev.tar.zst
           cp ukoos-git-$shortrev.tar.zst ../ukoos-git.tar.zst
-      - name: Upload Artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ukoos-git.tar.zst
