@@ -32,7 +32,8 @@ gdb: src/kernel/kernel.sym
 		-ex "focus cmd" \
 		-ex "target remote :1234" \
 		-ex "break main" \
-		-ex "break _panic_halt"
+		-ex "break _panic_halt" \
+		-ex "break unrecoverable_exception"
 gdb_bootstub: src/kernel/kernel.sym
 	gdb-multiarch src/kernel/kernel.sym \
 		-ex "set substitute-path / $(srcdir)/" \
