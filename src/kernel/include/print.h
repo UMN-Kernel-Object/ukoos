@@ -4,15 +4,20 @@
 #include <mm/alloc.h>
 
 /**
- * Formats a string as `print` does, saving the output to a (null-terminated)
- * string and returns it. Returns `nullptr` if there was not enough memory. This
- * string should be freed with `free`.
+ * Formats a string as `print` does. This is not the same as GNU/BSD asprintf(),
+ * and has different format strings! See "The print() and format() functions" in
+ * the documentation.
+ *
+ * The returned string is a null-terminated string, which should be freed with
+ * `free`. Returns `nullptr` if there was not enough memory.
  */
 [[gnu::malloc(free, 1), gnu::warn_unused_result]]
 char *format(const char *fmt, ...);
 
 /**
- * Prints a string to the kernel logs.
+ * Prints a string to the kernel logs. This is not the same as standard C
+ * printf(), and has different format strings! See "The print() and format()
+ * functions" in the documentation.
  */
 void print(const char *fmt, ...);
 
