@@ -1,7 +1,6 @@
 # Summary
 
 - [Introduction](./introduction.md)
-<<<<<<< HEAD
 - [Getting Started]()
   - [Dev Container](./getting-started/devcontainer.md)
 - [Kernel]()
