@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - trunk
-  pull_request: # TODO: Remove me before merging.
 jobs:
   build:
     runs-on: 'ubuntu-latest'
