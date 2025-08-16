@@ -9,5 +9,6 @@ RUN apk add --no-interactive \
             python3 \
             qemu-system-riscv64 \
             tar \
-            zstd
+            zstd \
+            minicom
 
