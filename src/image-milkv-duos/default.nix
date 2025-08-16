@@ -10,12 +10,12 @@
   dosfstools,
   genimage,
   mtools,
-  ukoos-riscv64,
+  ukoos-milkv-duos,
 }:
 
 stdenvNoCC.mkDerivation (self: {
   pname = "image-milkv-duos" + (if dev then "-dev" else "");
-  inherit (ukoos-riscv64) version;
+  inherit (ukoos-milkv-duos) version;
 
   nativeBuildInputs = [
     dosfstools
@@ -29,7 +29,7 @@ stdenvNoCC.mkDerivation (self: {
     runHook preBuild
 
     ${lib.optionalString (!dev) ''
-      install -Dt root/boot ${ukoos-riscv64}/sys/kernel.elf
+      install -Dt root/boot ${ukoos-milkv-duos}/sys/kernel.elf
     ''}
     install -Dt root/boot ${self.passthru.fsbl-milkv-duos}/fip.bin
     mkenvimage -s 0x20000 -o root/boot/uboot.env ${./u-boot.txt}

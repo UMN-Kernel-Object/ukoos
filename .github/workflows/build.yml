@@ -32,7 +32,7 @@ jobs:
           shortrev=$(git rev-parse --short HEAD)
           mkdir build
           cd build
-          ../configure
+          ../configure --target milkv-duos
           make -j$(nproc) -l$(nproc)
           mkdir ukoos-git-$shortrev
           make DESTDIR=$(realpath ukoos-git-$shortrev) install

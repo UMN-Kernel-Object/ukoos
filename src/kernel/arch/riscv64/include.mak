@@ -2,7 +2,6 @@ kernel-cflags += \
 	-DARCH_RISCV64 \
 	-fno-omit-frame-pointer \
 	-mabi=lp64 \
-	-march=rv64imac_zicsr_zicntr_zihpm_zba_zbb_zbs_zihintpause_zicbom_zicbop_zicboz \
 	-mcmodel=medany
 kernel-objs-asm += arch/riscv64/start
 kernel-objs-c += arch/riscv64/backtrace arch/riscv64/hart_locals arch/riscv64/paging arch/riscv64/panic arch/riscv64/sbi
@@ -46,11 +45,11 @@ gdb_bootstub: src/kernel/kernel.sym
 qemu: src/kernel/kernel.elf
 	qemu-system-riscv64 \
 		--machine virt \
-		--cpu rva22s64 \
 		--smp 1 \
 		-m 1G \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
+		$(target-qemuflags) \
 		$(QEMUFLAGS)
 qemu-debug: src/kernel/kernel.elf
 	qemu-system-riscv64 \

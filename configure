@@ -7,7 +7,12 @@ usage() {
 	printf >&2 'Usage: ./configure [OPTION]...\n\n'
 	printf >&2 'Defaults for the options are specified in brackets.\n'
 	printf >&2 '\nSystem:\n'
-	printf >&2 '  --arch=ARCH             build a kernel for the given architecture [%s]\n' "$arch"
+	printf >&2 '  --arch=ARCH             build for the given architecture [%s]\n' "$arch"
+	printf >&2 '  --target=TARGET         build for the given target'
+	if [[ "$has_target" != 0 ]]; then
+		printf >&2 ' [%s]' "$target"
+	fi
+	printf >&2 '\n'
 	printf >&2 '\nInstallation directories:\n'
 	printf >&2 '  --prefix=PREFIX         install to this directory [%s]\n' "$prefix"
 	printf >&2 '\nDefaults:\n'
@@ -20,11 +25,13 @@ known_arches=(riscv64)
 # shellcheck disable=SC2034 # Only accessed indirectly.
 tool_prefixes_riscv64=(riscv64-none-elf- riscv-none-elf- riscv64-unknown-elf-)
 
-args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,prefix:' -- "$@")
+args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,prefix:,target:' -- "$@")
 eval set -- "$args"
 unset args
 
 arch=riscv64
+target=
+has_target=0
 default_cflags=1
 default_ldflags=1
 help=0
@@ -63,6 +70,11 @@ while true; do
 		prefix="$2"
 		shift 2
 		;;
+	--target)
+		target="$2"
+		has_target=1
+		shift 2
+		;;
 	--)
 		shift
 		break
@@ -80,10 +92,29 @@ if [[ "$help" != 0 ]]; then
 	usage
 fi
 
+# Check that the target option is present and valid.
+if [[ "$has_target" == 0 ]]; then
+	printf >&2 './configure: the --target option is required\n'
+	printf >&2 "./configure: use \`--target list' to get a list of available targets\n"
+	exit 1
+elif [[ "$target" == list ]]; then
+	for file in "$repo/src/targets/$arch/"*.mak; do
+		basename "$file" .mak
+	done
+	exit 0
+elif [[ ! -f "$repo/src/targets/$arch/$target.mak" ]]; then
+	printf >&2 "./configure: the target \`%s' did not exist for %s\n" "$target" "$arch"
+	printf >&2 "./configure: use \`--target list' to get a list of available targets\n"
+	exit 1
+fi
+
+# Print a warning about reconfiguring.
 if [[ -e Makefile ]]; then
 	if [[ "$(realpath Makefile)" != "$(realpath "$repo/Makefile")" ]]; then
 		printf >&2 './configure: a different Makefile already exists\n'
 		exit 1
+	else
+		printf >&2 "./configure: already configured; you probably want to run \`make clean' to get rid of old build artifacts\n"
 	fi
 else
 	ln -s "$repo/Makefile" Makefile
@@ -125,6 +156,7 @@ cat >config.mak <<EOF
 arch = $(printf %q "$arch")
 prefix = $(printf %q "$prefix")
 srcdir = $(printf %q "$repo")
+target = $(printf %q "$target")
 
 CC = $(printf %q "$CC")
 STRIP = $(printf %q "$STRIP")
