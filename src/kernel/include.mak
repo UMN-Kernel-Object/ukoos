@@ -3,13 +3,17 @@ kernel-cflags = $(CFLAGS) \
 	-ffile-prefix-map=$(srcdir)= \
 	-ffreestanding \
 	-fno-builtin-main \
+	-fstack-check \
 	-fwrapv \
 	-isystem $(srcdir)/src/kernel/include \
 	-isystem $(srcdir)/src/kernel/arch/$(arch)/include \
 	-nostdlib \
 	-std=c23 \
+	-Walloca \
 	-Wconversion \
-	-Wsystem-headers
+	-Wsystem-headers \
+	-Wvla \
+	-Wwrite-strings
 kernel-cflags += -fdata-sections -ffunction-sections
 kernel-ldflags += -Wl,--gc-sections
 kernel-dir = src/kernel
