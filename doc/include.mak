@@ -1,3 +1,4 @@
+components += doc
 doc-dir = doc
 
 $(eval $(call compute_component_variables,doc))

@@ -186,8 +186,8 @@ static void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
   TODO("alloc_generic");
 }
 
-__attribute__((alloc_size(1), malloc, malloc(free, 1), nonnull(2),
-               warn_unused_result)) static void *
+[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), gnu::nonnull(2),
+  nodiscard]] static void *
 alloc_small(usize size, struct mm_alloc_heap *heap) {
   assert(0 < size && size <= 1024);
 
@@ -215,8 +215,7 @@ alloc_small(usize size, struct mm_alloc_heap *heap) {
   return block;
 }
 
-__attribute__((alloc_size(1), malloc, malloc(free, 1),
-               warn_unused_result)) void *
+[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
 alloc(usize size) {
   struct mm_alloc_heap *heap = get_hart_locals()->heap;
   if (size == 0)
@@ -253,8 +252,7 @@ void free(void *ptr) {
   }
 }
 
-__attribute__((alloc_size(1), malloc, malloc(free, 1),
-               warn_unused_result)) void *
+[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
 zalloc(usize size) {
   void *out = alloc(size);
   if (out)

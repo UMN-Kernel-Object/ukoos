@@ -16,6 +16,17 @@ typedef __builtin_va_list va_list;
 #define va_arg(ap, type) __builtin_va_arg(ap, type)
 #define va_copy(dst, src) __builtin_va_copy(dst, src)
 
+#define likely(COND)                                                           \
+  ({                                                                           \
+    bool __likely_COND = (COND);                                               \
+    __builtin_expect(__likely_COND, true);                                     \
+  })
+#define unlikely(COND)                                                         \
+  ({                                                                           \
+    bool __unlikely_COND = (COND);                                             \
+    __builtin_expect(__unlikely_COND, false);                                  \
+  })
+
 #define bswap(X)                                                               \
   (_Generic(X,                                                                 \
        u16: __builtin_bswap16,                                                 \
@@ -40,25 +51,25 @@ typedef __builtin_va_list va_list;
 #if __has_builtin(__builtin_stdc_rotate_left)
 #define stdc_rotate_left __builtin_stdc_rotate_left
 #else
-[[unsequenced]]
+[[gnu::const]]
 static inline __UINT8_TYPE__ __stdc_rotate_left_u8(__UINT8_TYPE__ value,
                                                    unsigned int count) {
   return (__UINT8_TYPE__)(value << count) | (value >> (8 - count));
 }
 
-[[unsequenced]]
+[[gnu::const]]
 static inline __UINT16_TYPE__ __stdc_rotate_left_u16(__UINT16_TYPE__ value,
                                                      unsigned int count) {
   return (__UINT16_TYPE__)(value << count) | (value >> (16 - count));
 }
 
-[[unsequenced]]
+[[gnu::const]]
 static inline __UINT32_TYPE__ __stdc_rotate_left_u32(__UINT32_TYPE__ value,
                                                      unsigned int count) {
   return (__UINT32_TYPE__)(value << count) | (value >> (32 - count));
 }
 
-[[unsequenced]]
+[[gnu::const]]
 static inline __UINT64_TYPE__ __stdc_rotate_left_u64(__UINT64_TYPE__ value,
                                                      unsigned int count) {
   return (__UINT64_TYPE__)(value << count) | (value >> (64 - count));
@@ -75,25 +86,25 @@ static inline __UINT64_TYPE__ __stdc_rotate_left_u64(__UINT64_TYPE__ value,
 #if __has_builtin(__builtin_stdc_rotate_right)
 #define stdc_rotate_right __builtin_stdc_rotate_right
 #else
-[[unsequenced]]
+[[gnu::const]]
 static inline __UINT8_TYPE__ __stdc_rotate_right_u8(__UINT8_TYPE__ value,
                                                     unsigned int count) {
   return (value >> count) | (__UINT8_TYPE__)(value << (8 - count));
 }
 
-[[unsequenced]]
+[[gnu::const]]
 static inline __UINT16_TYPE__ __stdc_rotate_right_u16(__UINT16_TYPE__ value,
                                                       unsigned int count) {
   return (value >> count) | (__UINT16_TYPE__)(value << (16 - count));
 }
 
-[[unsequenced]]
+[[gnu::const]]
 static inline __UINT32_TYPE__ __stdc_rotate_right_u32(__UINT32_TYPE__ value,
                                                       unsigned int count) {
   return (value >> count) | (__UINT32_TYPE__)(value << (32 - count));
 }
 
-[[unsequenced]]
+[[gnu::const]]
 static inline __UINT64_TYPE__ __stdc_rotate_right_u64(__UINT64_TYPE__ value,
                                                       unsigned int count) {
   return (value >> count) | (__UINT64_TYPE__)(value << (64 - count));
@@ -113,21 +124,22 @@ static inline __UINT64_TYPE__ __stdc_rotate_right_u64(__UINT64_TYPE__ value,
  * certain optimizations that it wouldn't otherwise be able to do.
  */
 
-__attribute__((nonnull(1))) void bzero(void *dst, __SIZE_TYPE__ len);
+[[gnu::access(write_only, 1), gnu::nonnull(1)]]
+void bzero(void *dst, __SIZE_TYPE__ len);
 
-__attribute__((nonnull(1))) void explicit_bzero(void *dst, __SIZE_TYPE__ len);
+[[gnu::access(write_only, 1), gnu::nonnull(1)]]
+void explicit_bzero(void *dst, __SIZE_TYPE__ len);
 
-__attribute__((nonnull(1, 2))) void *
-memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ len);
+[[gnu::access(write_only, 1), gnu::nonnull(1, 2)]]
+void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ len);
 
-__attribute__((nonnull(1))) void *memset(void *restrict dst, int byte,
-                                         __SIZE_TYPE__ len);
+[[gnu::access(write_only, 1), gnu::nonnull(1)]]
+void *memset(void *restrict dst, int byte, __SIZE_TYPE__ len);
 
-[[reproducible]]
-__attribute__((nonnull(1, 2), pure)) int memcmp(const void *s1, const void *s2,
-                                                __SIZE_TYPE__ n);
+[[gnu::nonnull(1, 2), gnu::pure]]
+int memcmp(const void *s1, const void *s2, __SIZE_TYPE__ n);
 
-[[reproducible]]
-__attribute__((nonnull(1), pure)) __SIZE_TYPE__ strlen(const char *s);
+[[gnu::nonnull(1), gnu::pure]]
+__SIZE_TYPE__ strlen(const char *s);
 
 #endif // UKO_OS_KERNEL__COMPILER_H

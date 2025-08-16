@@ -14,7 +14,7 @@ static struct mm_alloc_heap boothart_heap;
 /**
  * The segment used in the initial pages.
  */
-static __attribute__((aligned(1 << MM_ALLOC_SEGMENT_SHIFT))) union {
+static union [[gnu::aligned(1 << MM_ALLOC_SEGMENT_SHIFT)]] {
 
   struct mm_alloc_segment segment;
   char bytes[1 << MM_ALLOC_SEGMENT_SHIFT];
