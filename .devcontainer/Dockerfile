@@ -10,5 +10,7 @@ RUN apk add --no-interactive \
             qemu-system-riscv64 \
             tar \
             zstd \
-            minicom
+            minicom \
+            perl \
+            mdbook
 
