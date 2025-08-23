@@ -12,5 +12,6 @@ RUN apk add --no-interactive \
             zstd \
             minicom \
             perl \
-            mdbook
+            mdbook \
+            busybox-extras
 
