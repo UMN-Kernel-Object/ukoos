@@ -9,6 +9,8 @@ ukoOS has multiple strategies for memory management, that manage memory at diffe
 
 - The kernel keeps track of all of RAM, and hands out pages to be mapped into userspace processes and to be used by the heap memory allocator.
 
+  This allocator is currently not capable of allocating more than a single contiguous page, but could be extended to support this in the future.
+
   The allocator that handles these requests is called **the physical memory allocator**.
 
 - The kernel has a large region of virtual address space that it reserves to map memory-mapped devices to.

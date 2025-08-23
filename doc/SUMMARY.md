@@ -10,4 +10,5 @@
   - [Memory management]()
     - [Overview](./kernel/mm/overview.md)
     - [Memory map](./kernel/mm/memory-map.md)
+    - [Booting](./kernel/mm/booting.md)
 - [Targets]()
