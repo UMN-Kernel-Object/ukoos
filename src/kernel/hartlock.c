@@ -1,9 +1,10 @@
 #include "hart_locals.h"
 #include "hartlock.h"
 #include "panic.h"
+#include "types.h"
 
-void hart_lock() {
-	int old_state = intr_get();
+void hart_lock(void) {
+	u32 old_state = intr_get();
 	intr_off();
 	struct hart_locals *hart = get_hart_locals();
 	if (hart->noff == 0) {
@@ -12,13 +13,13 @@ void hart_lock() {
 	hart->noff += 1;
 }
 
-void hart_unlock() {
+void hart_unlock(void) {
 	if (intr_get()) {
-		panic("popoff: interruptable");
+		panic("hart_unlock: interruptable");
 	}
 	struct hart_locals *hart = get_hart_locals();
 	if (hart->noff < 1) {
-		panic("popoff: noff < 1");
+		panic("hart_unlock: noff < 1");
 	}
 	hart->noff -= 1;
 	if (hart->noff == 0 && hart->intena) {
