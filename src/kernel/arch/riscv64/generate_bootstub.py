@@ -6,11 +6,23 @@
 
 from argparse import ArgumentParser
 from dataclasses import dataclass
+import logging
 from pathlib import Path
 import shutil
 import struct
 from tempfile import NamedTemporaryFile
-from typing import Iterator, Union
+from typing import Generator, Iterator, Union
+
+
+logger = logging.getLogger(__file__)
+
+
+def flags_to_str(flags: int) -> str:
+    assert flags < 256
+    return "".join(
+        (ch if (flags & (1 << i)) else "-")
+        for i, ch in reversed(list(enumerate("VRWXUGAD")))
+    )
 
 
 @dataclass
@@ -65,7 +77,29 @@ class Pgtbls:
 
         return loop(0, self.pgtbl2)
 
-    def map(self, paddr: int, vaddr: int, flags: int) -> Pte:
+    def log_map(self, vaddr: int, flags: int, memsz: int, label: str):
+        logger.info(
+            f"[{flags_to_str(flags)}] {vaddr:#018x}-{vaddr+memsz-1:#018x}: {label} ({memsz // 1024} K)"
+        )
+
+    def map(
+        self,
+        paddr: int,
+        vaddr: int,
+        flags: int,
+        memsz: int,
+        label: str,
+    ) -> Generator[tuple[int, Pte], None, None]:
+        self.log_map(vaddr, flags, memsz, label)
+        for i in range(0, memsz, 4096):
+            yield (i, self.map_one(paddr + i, vaddr + i, flags, label, log=False))
+
+    def map_one(
+        self, paddr: int, vaddr: int, flags: int, label: str, log: bool = True
+    ) -> Pte:
+        if log:
+            self.log_map(vaddr, flags, 4096, label)
+
         assert (paddr & 0xFFF) == 0
         ppn = paddr >> 12
 
@@ -156,9 +190,17 @@ def read_shdrs(elf_path: Path) -> Iterator[SectionHeader]:
 
 def main():
     arg_parser = ArgumentParser()
+    arg_parser.add_argument("-v", "--verbose", action="store_true")
     arg_parser.add_argument("kernel", type=Path)
     arg_parser.add_argument("bootstub", type=Path)
     args = arg_parser.parse_args()
+
+    # Configure the logger.
+    logging.basicConfig(
+        format="{message}",
+        level=logging.INFO if args.verbose else logging.WARNING,
+        style="{",
+    )
 
     # Find the kernel's symbol table and string table.
     shdrs = list(read_shdrs(args.kernel))
@@ -176,6 +218,9 @@ def main():
             "Symbol table's link field didn't refer to a SHT_STRTAB section"
         )
 
+    # Load all the PT_LOAD program headers.
+    phdrs = [phdr for phdr in read_phdrs(args.kernel) if phdr.type == 1]
+
     # Create PTEs for all the mappings we want to make, so we can measure the
     # size of the page tables. This is the kernel, the stack page, and the root
     # page table.
@@ -183,57 +228,82 @@ def main():
     kernel_ptes: list[tuple[int, int, Pte]] = []
     kernel_tables_ptes: list[Pte] = []
     max_kernel_va = 0
-    for phdr in read_phdrs(args.kernel):
-        if phdr.type == 1:  # PT_LOAD
-            flags = 0xC1  # PTE.D | PTE.A | PTE.V
-            if phdr.flags & (1 << 0):  # PF_X
-                flags |= 0x08  # PTE.X
-            if phdr.flags & (1 << 1):  # PF_W
-                flags |= 0x04  # PTE.W
-            if phdr.flags & (1 << 2):  # PF_R
-                flags |= 0x02  # PTE.R
-            for offset in range(0, phdr.memsz, 4096):
-                kernel_ptes.append(
-                    (
-                        phdr.offset + offset,
-                        max(0, min(4096, phdr.filesz - offset)),
-                        pgtbls.map(0, phdr.vaddr + offset, flags),
-                    )
-                )
-            max_kernel_va = max(max_kernel_va, (phdr.vaddr + phdr.memsz + 4095) & ~4095)
+    for phdr in phdrs:
+        flags = 0xE1  # PTE.D | PTE.A | PTE.G | PTE.V
+        if phdr.flags & (1 << 0):  # PF_X
+            flags |= 0x08  # PTE.X
+        if phdr.flags & (1 << 1):  # PF_W
+            flags |= 0x04  # PTE.W
+        if phdr.flags & (1 << 2):  # PF_R
+            flags |= 0x02  # PTE.R
+        kernel_ptes.extend(
+            (phdr.offset + i, max(0, min(4096, phdr.filesz - i)), pte)
+            for i, pte in pgtbls.map(0, phdr.vaddr, flags, phdr.memsz, "kernel")
+        )
+        max_kernel_va = max(max_kernel_va, (phdr.vaddr + phdr.memsz + 4095) & ~4095)
     if max_kernel_va == 0:
         raise Exception("Kernel mapped no memory")
     symtab_va = max_kernel_va
-    for offset in range(0, symtab.size + strtab.size, 4096):
-        kernel_tables_ptes.append(
-            pgtbls.map(
-                0,
-                symtab_va + offset,
-                0xC3,  # PTE.D | PTE.A | PTE.R | PTE.V
-            )
+    kernel_tables_ptes.extend(
+        pte
+        for _, pte in pgtbls.map(
+            0,
+            symtab_va,
+            0xE3,  # PTE.D | PTE.A | PTE.G | PTE.R | PTE.V
+            symtab.size + strtab.size,
+            "symbol and string tables",
         )
-    stack_page_pte = pgtbls.map(
+    )
+    stack_page_pte = pgtbls.map_one(
         0,
         0xFFFFFFFFFFFFC000,  # stack page
-        0xC7,  # PTE.D | PTE.A | PTE.W | PTE.R | PTE.V
+        0xE7,  # PTE.D | PTE.A | PTE.G | PTE.W | PTE.R | PTE.V
+        "stack TODO",
     )
-    root_pgtbl_pte = pgtbls.map(
+    root_pgtbl_pte = pgtbls.map_one(
         0,
         0xFFFFFFFFFFFFD000,  # root page table
-        0xC7,  # PTE.D | PTE.A | PTE.W | PTE.R | PTE.V
+        0xE7,  # PTE.D | PTE.G | PTE.A | PTE.W | PTE.R | PTE.V
+        "root pgtbl TODO",
     )
 
     # Figure out the layout of everything in physical memory.
-    next_paddr = 0x80080000  # start address
-    next_paddr += 4096  # skip the bootstub
-    pgtbls_start = next_paddr
-    next_paddr += sum(4096 for _ in pgtbls.all_pgtbls())
-    kernel_tables_start = next_paddr
-    next_paddr += symtab.size + strtab.size
-    next_paddr = (next_paddr + 4095) & ~4095
-    kernel_start = next_paddr
-    next_paddr += 4096 * len(kernel_ptes)
-    stack_start = next_paddr
+    for line in (
+        "┌──────────────────────────────────────────────────────────────────────────────┐",
+        "│ Physical memory layout                                                       │",
+        "├────────────────────┬────────────────────┬─────────┬──────────────────────────┤",
+        "│ Start Address      │ End Address        │ Size    │ Label                    │",
+        "├────────────────────┼────────────────────┼─────────┼──────────────────────────┤",
+    ):
+        logger.info(line)
+
+    def reserve(label, length):
+        nonlocal next_paddr
+        old_paddr = next_paddr
+        next_paddr += length
+        next_paddr = (next_paddr + 4095) & ~4095
+        size_kib = (next_paddr - old_paddr) // 1024
+        logger.info(
+            f"│ {old_paddr:#018x} │ {next_paddr - 1:#018x} │ {size_kib:>5} K │ {label:<24} │"
+        )
+        return old_paddr
+
+    total_start_paddr = next_paddr = 0x80080000  # start address
+    reserve("bootstub", 4096)
+    pgtbls_start_paddr = reserve("page tables", sum(4096 for _ in pgtbls.all_pgtbls()))
+    kernel_tables_start_paddr = reserve(
+        "symbol and string tables", symtab.size + strtab.size
+    )
+    kernel_start_paddr = reserve("kernel", 4096 * len(kernel_ptes))
+    boothart_stack_start_paddr = reserve("boothart initial stack", 2 << 12)
+    boothart_heap_start_paddr = reserve("boothart initial heap", 1 << 22)
+
+    for line in (
+        "├────────────────────┼────────────────────┼─────────┼──────────────────────────┤",
+        f"│ {total_start_paddr:#018x} │ {next_paddr - 1:#018x} │ {(next_paddr - total_start_paddr) // 1024:>5} K │ Total                    │",
+        "└────────────────────┴────────────────────┴─────────┴──────────────────────────┘",
+    ):
+        logger.info(line)
     del next_paddr
 
     # Count how many trailing kernel pages are purely zeroes.
@@ -247,7 +317,7 @@ def main():
     # Assign addresses to kernel table pages.
     kernel_section = f'.section .kernel_tables, "a", @progbits\n'
     for i, pte in enumerate(kernel_tables_ptes):
-        pte.ppn = (kernel_tables_start + 4096 * i) >> 12
+        pte.ppn = (kernel_tables_start_paddr + 4096 * i) >> 12
 
     # Assign addresses to kernel pages.
     kernel_section = f'.section .kernel, "a", @progbits\n'
@@ -260,17 +330,17 @@ def main():
             kernel_section += f'.section .kernel_bss, "a", @nobits\n'
         if file_len < 4096:
             kernel_section += f".zero {4096 - file_len}\n"
-        pte.ppn = (kernel_start + 4096 * i) >> 12
+        pte.ppn = (kernel_start_paddr + 4096 * i) >> 12
 
     # Assign addresses to the other pages.
-    stack_page_pte.ppn = stack_start >> 12
-    root_pgtbl_pte.ppn = pgtbls_start >> 12
+    stack_page_pte.ppn = boothart_stack_start_paddr >> 12
+    root_pgtbl_pte.ppn = pgtbls_start_paddr >> 12
 
     # Compute the addresses of the page tables.
     pgtbl_paddrs = {}
     for addr, pgtbl in pgtbls.all_pgtbls():
         name = f"boot_pgtbl_{pgtbl.level}_{addr:016x}"
-        pgtbl_paddrs[name] = pgtbls_start + 4096 * len(pgtbl_paddrs)
+        pgtbl_paddrs[name] = pgtbls_start_paddr + 4096 * len(pgtbl_paddrs)
 
     # Write to a temporary file, so that a crash partway through doesn't
     # confuse make into thinking we successfully completed next run.
