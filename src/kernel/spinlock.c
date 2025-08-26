@@ -1,9 +1,9 @@
 #include "hartlock.h"
 #include "panic.h"
-#include "print.h"
 #include "spinlock.h"
 
-int holding(struct spinlock *sp) {
+/* Returns 1 if thread is holding the specified spinlock */
+u32 holding(struct spinlock *sp) {
 	struct hart_locals *hart = get_hart_locals();
 	return ((sp->state == 1) && (sp->hart == hart));
 }
@@ -15,7 +15,7 @@ void initlock(struct spinlock *sp, const char *name) {
 }
 
 void acquire(struct spinlock *sp) {
-	hart_lock();  // ensure interrupts disabled
+	hart_lock();
 	if (holding(sp)) {
 		panic("acquire: {name}", sp->name);
 	}
