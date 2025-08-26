@@ -5,9 +5,9 @@
 #include "types.h"
 
 struct spinlock {
-	u32 state;
-	const char *name;
-	struct hart_locals *hart;
+	struct hart_locals *hart;  // Hart holding the lock
+	const char *name;          // Name of the lock
+	u32 state;                 // Is the lock acquired?
 };
 
 void initlock(struct spinlock *sp, const char *name);
