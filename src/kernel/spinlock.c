@@ -1,3 +1,4 @@
+#include "hartlock.h"
 #include "panic.h"
 #include "print.h"
 #include "spinlock.h"
@@ -7,30 +8,6 @@ int holding(struct spinlock *sp) {
 	return ((sp->state == 1) && (sp->hart == hart));
 }
 
-void pushoff() {
-	int old_state = intr_get();
-	intr_off();
-	struct hart_locals *hart = get_hart_locals();
-	if (hart->noff == 0) {
-		hart->intena = old_state;
-	}
-	hart->noff += 1;
-}
-
-void popoff() {
-	if (intr_get()) {
-		panic("popoff: interruptable");
-	}
-	struct hart_locals *hart = get_hart_locals();
-	if (hart->noff < 1) {
-		panic("popoff: noff < 1");
-	}
-	hart->noff -= 1;
-	if (hart->noff == 0 && hart->intena) {
-		intr_on();
-	}
-}
-
 void initlock(struct spinlock *sp, const char *name) {
 	sp->name = name;
 	sp->state = 0;
@@ -38,7 +15,7 @@ void initlock(struct spinlock *sp, const char *name) {
 }
 
 void acquire(struct spinlock *sp) {
-	pushoff();  // ensure interrupts disabled
+	hart_lock();  // ensure interrupts disabled
 	if (holding(sp)) {
 		panic("acquire: {name}", sp->name);
 	}
@@ -54,6 +31,6 @@ void release(struct spinlock *sp) {
 	sp->hart = 0;
 	__sync_synchronize();
 	__sync_lock_release(&sp->state);  // sp->state = 0;
-	popoff();  // enable interrupts if needed
+	hart_unlock();  // enable interrupts if needed
 }
 
