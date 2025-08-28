@@ -11,7 +11,7 @@
 # Expects the following arguments:
 #
 # a0: The hart ID.
-# a1: The DeviceTree pointer.
+# a1: The Devicetree pointer.
 .p2align 2
 .global _start
 .type _start, @function

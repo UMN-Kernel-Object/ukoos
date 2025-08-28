@@ -63,15 +63,15 @@ static struct fdt_reserve_entry physical_read_fdt_reserve_entry(paddr paddr) {
 }
 
 void devicetree_init(paddr start) {
-  assert(!bits_of_paddr(devicetree_start), "DeviceTree already initialized");
+  assert(!bits_of_paddr(devicetree_start), "Devicetree already initialized");
 
   struct fdt_header header = physical_read_fdt_header(start);
   assert(header.magic == 0xd00dfeed,
-         "DeviceTree magic value did not match (got {u32:#010x}, expected "
+         "Devicetree magic value did not match (got {u32:#010x}, expected "
          "0xd00dfeed)",
          header.magic);
   assert(header.last_comp_version <= 17,
-         "DeviceTree was not compatible with our parser");
+         "Devicetree was not compatible with our parser");
 
   devicetree_start = start;
   devicetree_end = paddr_offset(devicetree_start, header.totalsize);
@@ -105,8 +105,8 @@ static bool ranges_overlap(paddr start1, paddr end1, paddr start2, paddr end2) {
  *
  * The areas that it skips are:
  *
- * - Any memory reservations from the DeviceTree.
- * - The DeviceTree itself.
+ * - Any memory reservations from the Devicetree.
+ * - The Devicetree itself.
  * - The kernel, including the initial page tables, the symbol and string
  *   tables, and the initial stack.
  *
@@ -245,14 +245,14 @@ static void devicetree_mm_init_on_rng_seed(paddr seed_start, usize seed_len) {
 
 void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
                         uptr *free_va_start, uptr *free_va_end) {
-  assert(bits_of_paddr(devicetree_start), "DeviceTree not initialized");
+  assert(bits_of_paddr(devicetree_start), "Devicetree not initialized");
   assert(!kernel_start.offset, "Kernel starting address not aligned");
   assert(!kernel_end.offset, "Kernel ending address not aligned");
 
   // Log reserved areas.
   print("Memory reservations:");
   print("  {paddr}-{paddr} (kernel)", kernel_start, kernel_end);
-  print("  {paddr}-{paddr} (DeviceTree)", devicetree_start, devicetree_end);
+  print("  {paddr}-{paddr} (Devicetree)", devicetree_start, devicetree_end);
   paddr next_reservation =
       paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
   for (;;) {

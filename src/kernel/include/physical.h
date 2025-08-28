@@ -12,8 +12,8 @@
  * volatile, and must be aligned.
  *
  * These functions are very inefficiently implemented -- drivers should map the
- * memory they needs to access instead. However, they do work before the memory
- * allocator is configured, which is needed to e.g. parse the DeviceTree.
+ * memory they needs to access instead. However, they do work in contexts where
+ * memory cannot be allocated.
  */
 
 #include <panic.h>
