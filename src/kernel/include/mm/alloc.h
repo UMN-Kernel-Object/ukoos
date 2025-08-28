@@ -33,8 +33,15 @@ alloc(usize size);
  * Allocates zeroed-out memory. See `alloc` for the other conditions of this
  * function.
  */
-[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
-zalloc(usize size);
+
+[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1),
+  nodiscard]] static void *
+zalloc(usize size) {
+  void *out = alloc(size);
+  if (out)
+    bzero(out, size);
+  return out;
+}
 
 /**
  * Allocates a copy of an object.

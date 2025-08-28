@@ -258,14 +258,6 @@ void free(void *ptr) {
   }
 }
 
-[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
-zalloc(usize size) {
-  void *out = alloc(size);
-  if (out)
-    bzero(out, size);
-  return out;
-}
-
 void *realloc(void *ptr, usize new_size) {
   struct mm_alloc_page *page = page_of_ptr(ptr);
   usize new_size_class = size_class_of_size(new_size);
