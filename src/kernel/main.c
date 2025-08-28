@@ -19,10 +19,14 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
           paddr kernel_end, const struct Elf64_Sym *symtab, usize symtab_len,
           const char *strtab, usize strtab_len) {
   print("Starting to boot ukoOS...");
-  run_selftests();
-  init_boothart_hart_locals(hart_id);
-  entropy_pool_init();
   symbolicate_init(symtab, symtab_len, strtab, strtab_len);
+  entropy_pool_init();
+  arch_entropy_pool_seed_early();
+  init_boothart_hart_locals(hart_id);
+
+  print("Running self-tests...");
+  run_selftests();
+
   devicetree_init(devicetree_start);
   // devicetree_mm_init(kernel_start, kernel_end, &free_va_start, &free_va_end);
   // mm_init_virtual(free_va_start, free_va_end);
