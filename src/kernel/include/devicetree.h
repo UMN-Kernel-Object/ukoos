@@ -10,12 +10,12 @@
 #include <types.h>
 
 /**
- * Registers the given DeviceTree globally.
+ * Registers the given Devicetree globally.
  */
 void devicetree_init(paddr devicetree_start);
 
 /**
- * Uses the globally-registered DeviceTree to:
+ * Uses the globally-registered Devicetree to:
  * - find memory and give it to the physical allocator
  * - find an RNG seed and give it to the entropy pool
  *
