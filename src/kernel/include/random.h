@@ -27,6 +27,13 @@ void entropy_pool_credit(usize bits);
                                                        usize len);
 
 /**
+ * Seeds the global entropy pool with entropy that can be added very early in
+ * boot. What and how much this is depends heavily on the architecture, and may
+ * vary from device to device.
+ */
+void arch_entropy_pool_seed_early(void);
+
+/**
  * Fills `buf` with `len` random bytes.
  */
 [[gnu::access(write_only, 1, 2)]] void getrandom(u8 *buf, usize len);
