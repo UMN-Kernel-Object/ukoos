@@ -4,17 +4,17 @@
 #include "types.h"
 
 void hart_lock(void) {
-	u32 old_state = intr_get();
-	intr_off();
+	u32 old_irq_state = get_irq_state();
+	irq_disable();
 	struct hart_locals *hart = get_hart_locals();
 	if (hart->noff == 0) {
-		hart->intena = old_state;
+		hart->intena = old_irq_state;
 	}
 	hart->noff += 1;
 }
 
 void hart_unlock(void) {
-	if (intr_get()) {
+	if (irq_get_state() != 0) {
 		panic("hart_unlock: interruptable");
 	}
 	struct hart_locals *hart = get_hart_locals();
@@ -23,7 +23,7 @@ void hart_unlock(void) {
 	}
 	hart->noff -= 1;
 	if (hart->noff == 0 && hart->intena) {
-		intr_on();
+		irq_enable();
 	}
 }
 
