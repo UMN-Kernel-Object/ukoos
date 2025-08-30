@@ -19,7 +19,7 @@ If you are using Arch
 
 `sudo pacman -S git podman-docker`
 
-If you are using a distribution not listed here, install with your distributions package manager.
+If you are using a distribution not listed here, install with your distribution's package manager.
 
 Open Visual Studio Code, and navigate to the Extensions menu located at the bottom of the left hand side bar.
 Install the `Dev Containers` extension.
