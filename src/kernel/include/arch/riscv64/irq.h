@@ -1,10 +1,10 @@
 #ifndef UKO_OS_KERNEL__IRQ_H
 #define UKO_OS_KERNEL__IRQ_H 1
 
-#include "insns.h"
-#include "types.h"
+#include <insns.h>
+#include <types.h>
 
-#define RISCV64_SSTATUS_SIE (1UL << 1)
+constexpr u64 RISCV64_SSTATUS_SIE = (1UL << 1);
 
 /**
  * irq_enable - Enables interrupt requests.
@@ -12,22 +12,20 @@
  * Sets the SIE (supervisor interrupt enable) flag in the SSTATUS CSR.
  */
 static inline void irq_enable(void) {
-	u64 sstatus = csrr(RISCV64_CSR_SSTATUS);
-	csrw(RISCV64_CSR_SSTATUS, (sstatus | RISCV64_SSTATUS_SIE));
+	csrs(RISCV64_CSR_SSTATUS, RISCV64_SSTATUS_SIE)
 }
 
 /**
  * irq_disable - Disables interrupt requests.
  *
- * Masks the SIE (supervisor interrupt enable) flag in the SSTATUS CSR.
+ * Clears the SIE (supervisor interrupt enable) flag in the SSTATUS CSR.
  */
 static inline void irq_disable(void) {
-	u64 sstatus = csrr(RISCV64_CSR_SSTATUS);
-	csrw(RISCV64_CSR_SSTATUS, (sstatus & ~RISCV64_SSTATUS_SIE));
+	csrc(RISCV64_CSR_SSTATUS, RISCV64_SSTATUS_SIE)
 }
 
 /**
- * get_irq_status - Gets the state of the SSTATUS SIE bit.
+ * get_irq_state - Gets the state of the SSTATUS SIE bit.
  *
  * Return: u32 1 if SIE bit in SSTATUS is set, 0 otherwise.
  */
