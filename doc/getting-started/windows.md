@@ -16,7 +16,7 @@ Open Docker Desktop and verify these settings (you can skip the account page if 
 
 ![docker](../img/wsl-default.png)
 
-- Settings -> Resources -> WSL integration -> verify 'Enable integration with my default WSL distro' is enabled.
+- Settings -> Resources -> WSL integration -> verify "Enable integration with my default WSL distro" is enabled.
 
 ![docker engine](../img/wsl2-engine.png)
 
