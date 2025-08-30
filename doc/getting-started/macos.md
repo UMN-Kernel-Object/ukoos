@@ -5,7 +5,7 @@ Install [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-insta
 Install [Visual Studio Code](https://code.visualstudio.com/Download)
 
 Open Visual Studio Code, and navigate to the Extensions menu located at the bottom of the left hand side bar.
-Install the `Dev Containers` extension.
+Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
 
 ![vscode extension](../img/vscode-extension.png)
 

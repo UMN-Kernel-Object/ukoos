@@ -25,8 +25,8 @@ Download and install [Visual Studio Code](https://code.visualstudio.com/download
 Open Visual Studio Code, and navigate to the Extensions menu located at the bottom of the left hand side bar.
 Install these extensions:
 
-- WSL
-- Dev Containers
+- [WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl)
+- [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 
 ![vscode extension](../img/vscode-extension.png)
 

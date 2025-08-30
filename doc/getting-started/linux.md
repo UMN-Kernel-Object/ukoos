@@ -22,7 +22,7 @@ If you are using Arch
 If you are using a distribution not listed here, install with your distribution's package manager.
 
 Open Visual Studio Code, and navigate to the Extensions menu located at the bottom of the left hand side bar.
-Install the `Dev Containers` extension.
+Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
 
 ![vscode extension](../img/vscode-extension.png)
 
