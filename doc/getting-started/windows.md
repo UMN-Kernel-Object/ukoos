@@ -5,8 +5,11 @@
 We need to first install everything needed for running our environment.
 
 First, install WSL.
-To install WSL, verify Hardware Virtualization is enabled (note all pre-installed Windows 11 computers should come with Virtualization enabled).
+You need to verify Hardware Virtualization is enabled (note all pre-installed Windows 11 computers should come with Virtualization enabled).
 Go to [this link](https://support.microsoft.com/en-us/windows/enable-virtualization-on-windows-c5578302-6e43-4b4b-a449-8ced115f58e1) to learn how to enable Hardware Virtualization.
+Once that is enabled, open a `PowerShell` window and run the following command:
+
+`wsl --install`
 
 Install [git](https://git-scm.com/downloads) if you do not have it already.
 You can install it using Winget (`winget install --id=Git.Git  -e`), or downloading from their [website](https://git-scm.com/downloads).
