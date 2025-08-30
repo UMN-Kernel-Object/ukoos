@@ -10,7 +10,7 @@ Install [git](https://git-scm.com/downloads) if you do not have it already. You 
 
 Install [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/). Download it, run the installer and follow any installation prompts.
 
-Open Docker Desktop nd verify these settings (you can skip the account page if you'd like):
+Open Docker Desktop and verify these settings (you can skip the account page if you'd like):
 
 - Settings -> verify 'Use the WSL 2 based engine' is checked.
 
