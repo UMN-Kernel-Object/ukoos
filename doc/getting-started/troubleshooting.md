@@ -10,4 +10,8 @@
 
 - If you open ukoOS in the dev container, and it does not recognize `./configure` and/or `sh`, run `git reset --hard`. **NOTE THIS WILL ERASE ALL YOUR LOCAL CHANGES**.
 
+- If you get the error shown below, you will need to launch Docker Desktop, then try connecting to the dec container again.
+
+![Docker daemon error](../img/docker-daemon-window-error.png)
+
 ## Dev Container
