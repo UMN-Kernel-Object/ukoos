@@ -30,3 +30,5 @@ git clone ukoOS (`git clone https://github.com/UMN-Kernel-Object/ukoos`), open t
 It should prompt you to `reopen in Dev Container.` If not, press `Ctrl` + `Shift` + `P` and type `Reopen in Dev Container`.
 
 You are now in the ukoOS Dev Container.
+To verify this, run the below command and verify the line `NAME="Alpine Linux"` is present.
+`cat /etc/os-release`

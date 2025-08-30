@@ -15,3 +15,7 @@ You can install it using [Homebrew](https://brew.sh/) (`brew install git`), or d
 
 git clone ukoOS (`git clone https://github.com/UMN-Kernel-Object/ukoos`), open the folder in Visual Studio Code (File -> Open Folder).
 It should prompt you to `reopen in Dev Container.` If not, press `Cmd` + `Shift` + `P` and type `Reopen in Dev Container`.
+
+You are now in the ukoOS Dev Container.
+To verify this, run the below command and verify the line `NAME="Alpine Linux"` is present.
+`cat /etc/os-release`
