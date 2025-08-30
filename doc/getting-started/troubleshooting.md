@@ -18,4 +18,9 @@ This is an issue we are having with Fedora's tftp package, and possibly more.
 
 ![Docker daemon error](../img/docker-daemon-window-error.png)
 
+- If Docker Desktop does not open, you need to open Task Manager and end the "Docker Desktop Backend" task, shown below.
+(To end a task, click on it, then click "End task" on the top right.)
+
+![Docker backend process](../img/docker-desktop-backend.png)
+
 ## Dev Container
