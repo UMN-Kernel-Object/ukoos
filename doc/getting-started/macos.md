@@ -19,3 +19,6 @@ It should prompt you to `reopen in Dev Container.` If not, press `Cmd` + `Shift`
 You are now in the ukoOS Dev Container.
 To verify this, run the below command and verify the line `NAME="Alpine Linux"` is present.
 `cat /etc/os-release`
+
+When you have a change ready to be commited, you must sign off your commits. Your commits should look something like this:
+`git commit -s -m 'commit message'`

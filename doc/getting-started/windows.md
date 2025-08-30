@@ -40,3 +40,6 @@ To verify this, run the below command and verify the line `NAME="Alpine Linux"` 
 `cat /etc/os-release`
 **BEFORE YOU MAKE ANY LOCAL CHANGES, RUN THIS COMMAND:** `git reset --hard`.
 This allows you to run `./configure` without issues.
+
+When you have a change ready to be commited, you must sign off your commits. Your commits should look something like this:
+`git commit -s -m 'commit message'`
