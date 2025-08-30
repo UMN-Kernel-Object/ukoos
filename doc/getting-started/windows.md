@@ -12,7 +12,7 @@ Install [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-i
 
 Open Docker Desktop and verify these settings (you can skip the account page if you'd like):
 
-- Settings -> verify 'Use the WSL 2 based engine' is checked.
+- Settings -> verify "Use the WSL 2 based engine" is checked.
 
 ![docker](../img/wsl-default.png)
 
