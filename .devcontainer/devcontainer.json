@@ -16,6 +16,7 @@
                 "C_Cpp.clang_format_style": "LLVM"
             }
         }
-    }
+    },
+    "runArgs": ["--network=host"]
 }
 
