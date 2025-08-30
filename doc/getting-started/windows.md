@@ -43,7 +43,7 @@ It should prompt you to `reopen in Dev Container`, If not, press `Ctrl` + `Shift
 You are now in the ukoOS Dev Container.
 To verify this, run the below command and verify the line `NAME="Alpine Linux"` is present.
 `cat /etc/os-release`
-**BEFORE YOU MAKE ANY LOCAL CHANGES, RUN THIS COMMAND. OTHERWISE, ALL YOUR LOCAL CHANGES WILL BE DISREGARDED:** `git reset --hard`.
+Before you make any local changes, you must run `git reset --hard`. **NOTE: IF YOU HAVE ANY LOCAL CHANGES, THIS COMMAND WILL DISCARD THEM.**
 This allows you to run `./configure` without issues.
 
 When you have a change ready to be commited, you must sign off your commits. Your commits should look something like this:
