@@ -2,10 +2,27 @@
 
 ## Linux
 
-- If you are not using the dev container, and your distribution's `tftp` times out, install `busybox`, and try again.
+- If you are not using the dev container, and your distribution's `tftp` times out (error shown below), install `busybox`, and try again.
 If Busybox conflicts with your current tftp package, remove that and then install Busybox again.
 Then, just running `tftp` should work.
 This is an issue we are having with Fedora's tftp package, and possibly more.
+
+```
+> tftp 192.168.2.91 -c put kernel.elf
+Transfer timed out.
+```
+
+The error on the board/tftp server side:
+
+```
+uko-uboot# tftpsrv
+Speed: 100, full duplex
+Using ethernet@4070000 device
+Listening for TFTP transfer on 169.254.96.84
+Load address: 0x81800000
+Loading: T T T T T T T T T T
+Retry count exceeded; starting again
+```
 
 ## macOS
 
