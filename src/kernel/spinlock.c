@@ -15,7 +15,7 @@ void initlock(struct spinlock *sp, const char *name) {
 }
 
 void acquire(struct spinlock *sp) {
-	hart_lock();  // Lock execuation to current thread
+	hart_lock();  // Lock execution to current hart
 	if (holding(sp)) {
 		panic("acquire: {name}", sp->name);
 	}
@@ -31,6 +31,6 @@ void release(struct spinlock *sp) {
 	sp->hart = 0;
 	__sync_synchronize();
 	__sync_lock_release(&sp->state);  // sp->state = 0;
-	hart_unlock();  // Unlock execuation if necessary
+	hart_unlock();  // Unlock execution if necessary
 }
 

@@ -1,5 +1,6 @@
 #include "hart_locals.h"
 #include "hartlock.h"
+#include "irq.h"
 #include "panic.h"
 #include "types.h"
 
