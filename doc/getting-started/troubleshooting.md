@@ -39,7 +39,7 @@ env: use -[v]S to pass options in shebang lines
 run `git reset --hard`.
 **NOTE THIS WILL ERASE ALL YOUR LOCAL CHANGES**.
 
-- If you get the error shown below, you will need to launch Docker Desktop, then try connecting to the dec container again.
+- If you get the error shown below, you will need to launch Docker Desktop, then try connecting to the dev container again.
 
 ![Docker daemon error](../img/docker-daemon-window-error.png)
 
