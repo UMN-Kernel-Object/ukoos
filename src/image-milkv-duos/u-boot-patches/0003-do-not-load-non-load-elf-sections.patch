@@ -1,0 +1,13 @@
+--- a/lib/elf.c
++++ b/lib/elf.c
+@@ -34,6 +34,10 @@
+ 
+ 	/* Load each program header */
+ 	for (i = 0; i < ehdr->e_phnum; ++i) {
++		if(phdr->p_type != PT_LOAD) {
++			phdr++;
++			continue;
++		}
+ 		void *dst = (void *)(ulong)phdr->p_paddr;
+ 		void *src = (void *)addr + phdr->p_offset;
+ 

@@ -1,3 +1,4 @@
+#include <mm/alloc.h>
 #include <physical.h>
 #include <print.h>
 
@@ -17,8 +18,8 @@ static void default_formatter_write_byte(void *ctx, u8 byte) {
 
   register uaddr a0 __asm__("a0") = byte;
   register uaddr a1 __asm__("a1");
-  register uaddr a6 __asm__("a6") = 2;
-  register uaddr a7 __asm__("a7") = 0x4442434E;
+  register uaddr a6 __asm__("a6") = 0;
+  register uaddr a7 __asm__("a7") = 1;
 
   __asm__ volatile("ecall\n"
                    : "+r"(a0), "=r"(a1)
@@ -198,6 +199,44 @@ static void format_cstr(struct formatter *fmt, const char *args_start,
   write_str(fmt, va_arg(*ap, const char *));
 }
 
+static void format_i8(struct formatter *fmt, const char *args_start,
+                      const char *args_end, va_list *ap) {
+  i8 n = (i8)va_arg(*ap, i32);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
+static void format_i16(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  i16 n = (i16)va_arg(*ap, i32);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
+static void format_i32(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  i32 n = va_arg(*ap, i32);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
+static void format_i64(struct formatter *fmt, const char *args_start,
+                       const char *args_end, va_list *ap) {
+  i64 n = va_arg(*ap, i64);
+  format_number(fmt, args_start, args_end, n < 0, (u64)n);
+}
+
+static void format_indent(struct formatter *fmt, const char *args_start,
+                          const char *args_end, va_list *ap) {
+  if (args_start != args_end) {
+    write_str(fmt, "{{invalid arguments for type indent: ");
+    write_stri(fmt, args_start, args_end);
+    write_str(fmt, "}}");
+    return;
+  }
+
+  usize i = va_arg(*ap, usize);
+  for (usize j = 0; j < i; j++)
+    write_byte(fmt, ' ');
+}
+
 static void format_isize(struct formatter *fmt, const char *args_start,
                          const char *args_end, va_list *ap) {
   isize n = va_arg(*ap, isize);
@@ -275,12 +314,20 @@ static format_func find_format_func(const char *type_name_ptr,
                                     usize type_name_len) {
   switch (type_name_len) {
   case 2:
+    if (!memcmp(type_name_ptr, "i8", 2))
+      return format_i8;
     if (!memcmp(type_name_ptr, "u8", 2))
       return format_u8;
     if (!memcmp(type_name_ptr, "va", 2))
       return format_va;
     break;
   case 3:
+    if (!memcmp(type_name_ptr, "i16", 3))
+      return format_i16;
+    if (!memcmp(type_name_ptr, "i32", 3))
+      return format_i32;
+    if (!memcmp(type_name_ptr, "i64", 3))
+      return format_i64;
     if (!memcmp(type_name_ptr, "u16", 3))
       return format_u16;
     if (!memcmp(type_name_ptr, "u32", 3))
@@ -304,6 +351,10 @@ static format_func find_format_func(const char *type_name_ptr,
       return format_uaddr;
     if (!memcmp(type_name_ptr, "usize", 5))
       return format_usize;
+    break;
+  case 6:
+    if (!memcmp(type_name_ptr, "indent", 6))
+      return format_indent;
     break;
   }
   return nullptr;
@@ -396,6 +447,58 @@ static void vfprint(struct formatter *fmt, const char *format, va_list ap) {
       write_byte(fmt, ch);
     }
   }
+}
+
+// TODO: We should have a common library of types for e.g. string buffers.
+struct format_formatter_buffer {
+  u8 *ptr;
+  usize cap, len;
+};
+
+static void format_formatter_write_byte(void *ctx, u8 byte) {
+  struct format_formatter_buffer *buffer = ctx;
+
+  // If we already OOM'd, don't bother writing anything else out.
+  if (!buffer->ptr)
+    return;
+
+  // If we need to grow the buffer, do so.
+  if (buffer->cap == buffer->len) {
+    assert(buffer->cap != 0);
+    buffer->cap *= 2;
+    u8 *new_ptr = alloc(buffer->cap);
+    if (!new_ptr) {
+      free(buffer->ptr);
+      buffer->ptr = nullptr;
+      return;
+    }
+    memcpy(new_ptr, buffer->ptr, buffer->len);
+    free(buffer->ptr);
+    buffer->ptr = new_ptr;
+  }
+
+  // Append the byte.
+  buffer->ptr[buffer->len++] = byte;
+}
+
+char *format(const char *format, ...) {
+  struct format_formatter_buffer buffer = {
+      .ptr = alloc(16),
+      .cap = 16,
+      .len = 0,
+  };
+  struct formatter format_formatter = {
+      .write_byte = format_formatter_write_byte,
+      .ctx = &buffer,
+  };
+
+  va_list ap;
+  va_start(ap);
+  vfprint(&format_formatter, format, ap);
+  va_end(ap);
+
+  format_formatter_write_byte(&buffer, '\0');
+  return (char *)buffer.ptr;
 }
 
 void print(const char *format, ...) {

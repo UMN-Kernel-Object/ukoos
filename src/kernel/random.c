@@ -52,6 +52,8 @@ static u64 global_entropy_estimate = 0;
 
 void entropy_pool_init(void) { blake2s_init(&entropy_pool, 32, nullptr, 0); }
 
+void entropy_pool_credit(usize bits) { global_entropy_estimate += bits; }
+
 void entropy_pool_mix(const u8 *buf, usize len) {
   blake2s_update(&entropy_pool, buf, len);
 }
@@ -79,12 +81,16 @@ static struct random_rng *ensure_hart_local_rng(void) {
   struct random_rng *rng = &get_hart_locals()->rng;
 
   // See if the global heap's entropy estimate is more than 256 bits "ahead" of
-  // the one the local heap was initialized with.
-  bool should_reinit = global_entropy_estimate - rng->entropy_estimate > 256;
+  // the one the local heap was initialized with, or if we never actually
+  // initialized it.
+  bool should_reinit =
+      !rng->inited ||
+      ((rng->entropy_estimate == 0) && global_entropy_estimate != 0) ||
+      (global_entropy_estimate - rng->entropy_estimate > 256);
 
-  // If the hart-local RNG has never been initialized, initialize it. Otherwise,
-  // hand it back.
-  if (!rng->inited || should_reinit) {
+  // If the hart-local RNG needs re-initialization, do so. Otherwise, hand it
+  // back.
+  if (should_reinit) {
     // We use the current hash as both the next seed and the state of the RNG.
     blake2s_finish(&entropy_pool, rng->state);
     blake2s_init(&entropy_pool, 32, rng->state, 32);

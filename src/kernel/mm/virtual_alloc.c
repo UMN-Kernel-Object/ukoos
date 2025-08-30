@@ -112,8 +112,8 @@ static void free_virtual_buddy_free_list(struct virtual_buddy_free_list *ptr) {
   TODO();
 }
 
-__attribute__((nonnull(1))) uptr mm_va_alloc(struct virtual_buddy *allocator,
-                                             usize size) {
+[[gnu::nonnull(1)]] uptr mm_va_alloc(struct virtual_buddy *allocator,
+                                     usize size) {
   assert(allocator->start < allocator->end,
          "Virtual memory allocator in an invalid state; was it initialized?");
 
@@ -148,8 +148,8 @@ __attribute__((nonnull(1))) uptr mm_va_alloc(struct virtual_buddy *allocator,
   TODO("{uptr}", block_addr);
 }
 
-__attribute__((nonnull(1))) void mm_va_free(struct virtual_buddy *allocator,
-                                            uptr ptr, usize size) {
+[[gnu::nonnull(1)]] void mm_va_free(struct virtual_buddy *allocator, uptr ptr,
+                                    usize size) {
   assert(ptr);
 
   usize size_class = size_class_of_size(size);

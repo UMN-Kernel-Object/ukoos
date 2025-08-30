@@ -135,11 +135,11 @@ static inline uaddr _addr_of_ptr_uptr(uptr ptr) {
   })
 
 static inline void *_ptr_with_addr(void *ptr, uaddr addr) {
-  return &ptr[addr - addr_of_ptr(ptr)];
+  return ptr + (addr - addr_of_ptr(ptr));
 }
 
 static inline const void *_ptr_with_addr_const(const void *ptr, uaddr addr) {
-  return &ptr[addr - addr_of_ptr(ptr)];
+  return ptr + (addr - addr_of_ptr(ptr));
 }
 
 static inline const uptr _ptr_with_addr_uptr(const uptr ptr_uptr, uaddr addr) {
