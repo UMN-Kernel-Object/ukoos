@@ -1,7 +1,8 @@
 # Windows 11 Setup Guide
 
-We need to install everything needed for running our environment. Begin by installing WSL
+We need to install everything needed for running our environment.
 
+First, install WSL.
 To install WSL, verify Hardware Virtualization is enabled. Note all pre-installed Windows 11 computers should come with Virtualization enabled.
 Go to [this link](https://support.microsoft.com/en-us/windows/enable-virtualization-on-windows-c5578302-6e43-4b4b-a449-8ced115f58e1) to learn how to enable Hardware Virtualization.
 
