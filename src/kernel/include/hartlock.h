@@ -2,7 +2,7 @@
 #define UKO_OS_KERNEL__HARTLOCK_H 1
 
 /**
- * hart_lock - Locks the executing thread to the current hart.
+ * hartlock_acquire - Locks the executing thread to the current hart.
  *
  * Disables interrupts to prevent the current thread from being moved
  * to another hart. This does not provide mutual exclusion, nor does it 
@@ -10,15 +10,15 @@
  * thread continues to execute on the same hart by preventing
  * preemption via interrupts.
  */
-void hart_lock(void);
+void hartlock_acquire(void);
 
 /**
- * hart_unlock - Unlocks the executing thread from the current hart.
+ * hartlock_release - Unlocks the executing thread from the current hart.
  *
- * Re-enables interrupts if they were enabled at the time hart_lock()
+ * Re-enables interrupts if they were enabled at the time hartlock_acquire()
  * was called. If interrupts were already disabled, they remain disabled.
  */
-void hart_unlock(void);
+void hartlock_release(void);
 
 #endif  // UKO_OS_KERNEL__HARTLOCK_H
 

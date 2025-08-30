@@ -1,8 +1,8 @@
 #ifndef UKO_OS_KERNEL__SPINLOCK_H
 #define UKO_OS_KERNEL__SPINLOCK_H 1
 
-#include "hart_locals.h"
-#include "types.h"
+#include <hart_locals.h>
+#include <types.h>
 
 /**
  * struct spinlock - Basic spinlock structure.
@@ -23,7 +23,7 @@ struct spinlock {
  *
  * Initializes a spinlock that disables interrupts.
  */
-void initlock(struct spinlock *sp, const char *name);
+void spinlock_init(struct spinlock *sp, const char *name);
 
 /**
  * acquire - Acquire a spinlock.
@@ -32,7 +32,7 @@ void initlock(struct spinlock *sp, const char *name);
  * Acquires the specified spinlock. If the lock is already held,
  * the caller will spin until the lock becomes available.
  */
-void acquire(struct spinlock *sp);
+void spinlock_acquire(struct spinlock *sp);
 
 /**
  * release - Release a spinlock.
@@ -41,7 +41,7 @@ void acquire(struct spinlock *sp);
  * Releases the previously acquired spinlock. The lock must have
  * been acquired by the same context.
  */
-void release(struct spinlock *sp);
+void spinlock_release(struct spinlock *sp);
 
 #endif // UKO_OS_KERNEL__SPINLOCK_H
 
