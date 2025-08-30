@@ -11,7 +11,15 @@ This is an issue we are having with Fedora's tftp package, and possibly more.
 
 ## Windows 11
 
-- If you open ukoOS in the dev container, and it does not recognize `./configure` and/or `sh`, run `git reset --hard`.
+- If you open ukoOS in the dev container, and you get this error:
+
+```
+/workspaces/ukoos # ./configure
+env: ‘bash\r’: No such file or directory
+env: use -[v]S to pass options in shebang lines
+```
+
+run `git reset --hard`.
 **NOTE THIS WILL ERASE ALL YOUR LOCAL CHANGES**.
 
 - If you get the error shown below, you will need to launch Docker Desktop, then try connecting to the dec container again.
