@@ -8,6 +8,6 @@
 
 ## Windows 11
 
-If you open ukoOS in the dev container, and it does not recognize `./configure` and/or `sh`, run `git reset --hard`. **NOTE THIS WILL ERASE ALL YOUR LOCAL CHANGES**.
+- If you open ukoOS in the dev container, and it does not recognize `./configure` and/or `sh`, run `git reset --hard`. **NOTE THIS WILL ERASE ALL YOUR LOCAL CHANGES**.
 
 ## Dev Container
