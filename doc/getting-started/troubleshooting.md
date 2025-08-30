@@ -2,7 +2,7 @@
 
 ## Linux
 
-- If you are not using the dev container, and your distributions `tftp` times out, install `busybox`, and try again. If busybox conflicts with your current tftp package, remove that and then install busybox again. Then, just running `tftp` should work. This is an issue we are having with Fedora's tftp package, and possibly more.
+- If you are not using the dev container, and your distribution's `tftp` times out, install `busybox`, and try again. If Busybox conflicts with your current tftp package, remove that and then install Busybox again. Then, just running `tftp` should work. This is an issue we are having with Fedora's tftp package, and possibly more.
 
 ## macOS
 
