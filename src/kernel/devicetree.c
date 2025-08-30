@@ -230,6 +230,8 @@ static void devicetree_mm_init_on_rng_seed(paddr seed_start, usize seed_len) {
     usize chunk_len = min(seed_len, (usize)sizeof(chunk));
     copy_from_physical(chunk, seed_start, chunk_len);
     entropy_pool_mix(chunk, chunk_len);
+    // Don't fill the entire pool with a single source.
+    entropy_pool_credit(min(8 * chunk_len, (usize)128));
     seed_start = paddr_offset(seed_start, chunk_len);
     seed_len -= chunk_len;
   }

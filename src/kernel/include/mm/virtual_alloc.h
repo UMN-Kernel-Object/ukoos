@@ -75,15 +75,15 @@ void mm_init_virtual(uptr free_va_start, uptr free_va_end);
  *
  * `size` must not be zero.
  */
-__attribute__((nonnull(1))) uptr mm_va_alloc(struct virtual_buddy *allocator,
-                                             usize size);
+[[gnu::nonnull(1)]] uptr mm_va_alloc(struct virtual_buddy *allocator,
+                                     usize size);
 
 /**
  * Frees a range of virtual address space allocated with `mm_va_alloc`.
  *
  * `size` must be the size that was originally allocated.
  */
-__attribute__((nonnull(1))) void mm_va_free(struct virtual_buddy *allocator,
-                                            uptr ptr, usize size);
+[[gnu::nonnull(1)]] void mm_va_free(struct virtual_buddy *allocator, uptr ptr,
+                                    usize size);
 
 #endif // UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H

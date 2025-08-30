@@ -6,8 +6,8 @@
 
 #define _DEFINE_SELFTEST(N)                                                    \
   static void __PASTE(__selftest_func_, N)(void);                              \
-  __attribute__((section(".selftests,\"a\",@progbits#"),                       \
-                 used)) static struct selftest __PASTE(__selftest_, N)[1] = {{ \
+  [[gnu::section(".selftests,\"a\",@progbits#"),                               \
+    gnu::used]] static struct selftest __PASTE(__selftest_, N)[1] = {{         \
       __PASTE(__selftest_func_, N),                                            \
       __FILE__,                                                                \
       __LINE__,                                                                \

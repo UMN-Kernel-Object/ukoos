@@ -5,13 +5,11 @@
 #include <types.h>
 
 #define __DEFINE_MINMAX_FOR_TYPE(TYPE)                                         \
-  [[unsequenced]]                                                              \
-  static inline TYPE max_##TYPE(TYPE lhs, TYPE rhs) {                          \
+  [[gnu::const]] static inline TYPE max_##TYPE(TYPE lhs, TYPE rhs) {           \
     return (lhs > rhs) ? lhs : rhs;                                            \
   }                                                                            \
                                                                                \
-  [[unsequenced]]                                                              \
-  static inline TYPE min_##TYPE(TYPE lhs, TYPE rhs) {                          \
+  [[gnu::const]] static inline TYPE min_##TYPE(TYPE lhs, TYPE rhs) {           \
     return (lhs < rhs) ? lhs : rhs;                                            \
   }
 

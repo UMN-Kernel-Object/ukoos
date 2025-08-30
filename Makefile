@@ -5,6 +5,7 @@ $(error The build was not configured; run ./configure)
 endif
 
 # Turn off some built-in behavior we don't want.
+.DEFAULT_GOAL = all
 MAKEFLAGS += -rR
 
 # Helpers.
@@ -15,7 +16,7 @@ else
 endif
 define defcleanable_one
 clean::
-	@if [[ -e $(1) ]]; then echo "CLEAN   $(1)"; rm $(1); fi
+	@if [[ -f $(1) ]]; then echo "CLEAN   $(1)"; rm $(1); fi
 endef
 define defcleanable
 $(foreach arg,$(1),$(eval $(call defcleanable_one,$(arg))))
@@ -32,25 +33,8 @@ $(1)-ldflags ?=
 endef
 
 # Information about the build to perform.
-components = kernel
-kernel-cflags = $(CFLAGS) \
-	-ffile-prefix-map=$(srcdir)= \
-	-ffreestanding \
-	-fno-builtin-main \
-	-fwrapv \
-	-isystem $(srcdir)/src/kernel/include \
-	-isystem $(srcdir)/src/kernel/arch/$(arch)/include \
-	-nostdlib \
-	-std=c2x
-kernel-cflags += -fdata-sections -ffunction-sections
-kernel-ldflags += -Wl,--gc-sections
-kernel-dir = src/kernel
-kernel-objs-asm =
-kernel-objs-c = devicetree main panic print random selftest symbolicate
-kernel-objs-c += builtins/bzero builtins/explicit_bzero builtins/memcpy builtins/memcmp builtins/memset builtins/strlen
-kernel-objs-c += crypto/subtle/rfc7539 crypto/subtle/rfc7693
-kernel-objs-c += mm/alloc mm/physical_alloc mm/virtual_alloc
-include $(srcdir)/src/kernel/arch/$(arch)/include.mak
+include $(srcdir)/doc/include.mak
+include $(srcdir)/src/kernel/include.mak
 
 # Common rules.
 all::
@@ -62,6 +46,7 @@ watch:
 	watchexec \
 		--clear clear \
 		--restart \
+		--watch $(srcdir)/doc \
 		--watch $(srcdir)/src \
 		-- $(MAKE) $(filter-out watch,$(MAKECMDGOALS))
 .PHONY: all clean install watch

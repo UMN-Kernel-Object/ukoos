@@ -1,0 +1,124 @@
+diff --git i/lib/cpu/riscv/bl1_entrypoint.S w/lib/cpu/riscv/bl1_entrypoint.S
+index dd85be9..c16b3d4 100644
+--- i/lib/cpu/riscv/bl1_entrypoint.S
++++ w/lib/cpu/riscv/bl1_entrypoint.S
+@@ -67,7 +67,7 @@ bl1_entrypoint_rel:
+ 
+   # set mxstatus to init value
+   li x3, 0xc0638000
+-  csrw mxstatus, x3
++  csrw 0x7c0, x3
+ 
+   # set plic_ctrl = 1 for linux plic
+   li x3, 0x701FFFFC # plic_base + 0x1FFFFC
+@@ -76,10 +76,10 @@ bl1_entrypoint_rel:
+ 
+   // invalidate all memory for BTB,BHT,DCACHE,ICACHE
+   li x3, 0x30013
+-  csrs mcor, x3
++  csrs 0x7c2, x3
+   // enable ICACHE,DCACHE,BHT,BTB,RAS,WA
+   li x3, 0x7f
+-  csrs mhcr, x3
++  csrs 0x7c1, x3
+   // enable data_cache_prefetch, amr
+   li x3, 0x610c
+   csrs mhint, x3 #mhint
+diff --git i/lib/cpu/riscv/bl2_entrypoint.S w/lib/cpu/riscv/bl2_entrypoint.S
+index 7344387..f6a3eed 100644
+--- i/lib/cpu/riscv/bl2_entrypoint.S
++++ w/lib/cpu/riscv/bl2_entrypoint.S
+@@ -57,7 +57,7 @@ bl2_entrypoint_real:
+ 
+   # set mxstatus to init value
+   li x3, 0xc0638000
+-  csrw mxstatus, x3
++  csrw 0x7c0, x3
+ 
+   # set plic_ctrl = 1
+   li x3, 0x701FFFFC # plic_base + 0x1FFFFC
+@@ -66,20 +66,20 @@ bl2_entrypoint_real:
+ 
+   # invalid I-cache
+   li x3, 0x33
+-  csrc mcor, x3
++  csrc 0x7c2, x3
+   li x3, 0x11
+-  csrs mcor, x3
++  csrs 0x7c2, x3
+   # enable I-cache
+   li x3, 0x1
+-  csrs mhcr, x3
++  csrs 0x7c1, x3
+   # invalid D-cache
+   li x3, 0x33
+-  csrc mcor, x3
++  csrc 0x7c2, x3
+   li x3, 0x12
+-  csrs mcor, x3
++  csrs 0x7c2, x3
+   # enable D-cache
+   li x3, 0x2
+-  csrs mhcr, x3
++  csrs 0x7c1, x3
+ 
+   la sp, __STACKS_END__
+ 
+diff --git i/lib/cpu/riscv/cache.c w/lib/cpu/riscv/cache.c
+index 54828f8..192f040 100644
+--- i/lib/cpu/riscv/cache.c
++++ w/lib/cpu/riscv/cache.c
+@@ -57,14 +57,14 @@ void flush_dcache_range(uintptr_t start, size_t size)
+ void enable_dcache(void)
+ {
+ 	asm volatile(
+-		"csrs mhcr, %0;" ::"rI"(0x2)
++		"csrs 0x7c1, %0;" ::"rI"(0x2)
+ 	);
+ }
+ 
+ void disable_dcache(void)
+ {
+ 	asm volatile(
+-		"csrc mhcr, %0;" ::"rI"(0x2)
++		"csrc 0x7c1, %0;" ::"rI"(0x2)
+ 	);
+ }
+ 
+diff --git i/lib/cpu/riscv/cpu.mk w/lib/cpu/riscv/cpu.mk
+index bffa5f8..7bb7fd3 100644
+--- i/lib/cpu/riscv/cpu.mk
++++ w/lib/cpu/riscv/cpu.mk
+@@ -4,7 +4,7 @@ ASFLAGS +=\
+ 	$(CPPFLAGS) \
+ 	-DRISCV \
+ 	-D__ASSEMBLY__ \
+-	-march=rv64imafdcvxthead -mstrict-align \
++	-march=rv64imafdc_xtheadcmo_xtheadsync_xtheadvector -mstrict-align \
+ 	-mcmodel=medany \
+ 	-mabi=lp64d \
+ 	-ffreestanding  \
+@@ -13,7 +13,7 @@ ASFLAGS +=\
+ TF_CFLAGS += \
+ 	$(CPPFLAGS) \
+ 	-DRISCV \
+-	-march=rv64imafdcvxthead \
++	-march=rv64imafdc_xtheadcmo_xtheadsync_xtheadvector \
+ 	-mcmodel=medany \
+ 	-mabi=lp64d \
+ 	-ffreestanding -fno-builtin -Wall -std=gnu99 \
+diff --git i/lib/cpu/riscv/cpu_helper.c w/lib/cpu/riscv/cpu_helper.c
+index 7e093fa..7d676fc 100644
+--- i/lib/cpu/riscv/cpu_helper.c
++++ w/lib/cpu/riscv/cpu_helper.c
+@@ -11,8 +11,8 @@
+ void sync_cache(void)
+ {
+ 	asm volatile(
+-			"icache.iall\n"
+-			"sync.i\n"
++			"th.icache.iall\n"
++			"th.sync.i\n"
+ 			:
+ 			:
+ 			: "memory");

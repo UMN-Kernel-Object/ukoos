@@ -24,6 +24,7 @@ static inline void _assert(const char *file, usize line, const char *func,
   va_start(ap);
   if (!cond)
     _panic(file, line, func, "{va}: {cstr}", msg, ap, cond_str);
+  va_end(ap);
 }
 
 #define assert(cond, ...)                                                      \
