@@ -26,6 +26,7 @@ Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName
 
 ![vscode extension](../img/vscode-extension.png)
 
-git clone ukoOS (`git clone https://github.com/UMN-Kernel-Object/ukoos`), open the folder in Visual Studio Code (File -> Open Folder). It should prompt you to `reopen in Dev Container.` If not, press `Ctrl` + `Shift` + `P` and type `Reopen in Dev Container`.
+git clone ukoOS (`git clone https://github.com/UMN-Kernel-Object/ukoos`), open the folder in Visual Studio Code (File -> Open Folder).
+It should prompt you to `reopen in Dev Container.` If not, press `Ctrl` + `Shift` + `P` and type `Reopen in Dev Container`.
 
 You are now in the ukoOS Dev Container.
