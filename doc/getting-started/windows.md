@@ -1,6 +1,8 @@
 # Windows 11 Setup Guide
 
-We need to install everything needed for running our environment.
+### Note that doing this on Windows 11 requires more setup, and is more prone to errors then macOS and Linux. If you can, we recommend using macOS or Linux
+
+We need to first install everything needed for running our environment.
 
 First, install WSL.
 To install WSL, verify Hardware Virtualization is enabled (note all pre-installed Windows 11 computers should come with Virtualization enabled).
