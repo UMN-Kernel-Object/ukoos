@@ -1,0 +1,34 @@
+# Windows 11 Setup Guide
+
+We need to install everything needed for running our environment. Begin by installing WSL
+
+To install WSL, verify Hardware Virtualization is enabled. Note all pre-installed Windows 11 computers should come with Virtualization enabled.
+Go to [this link](https://support.microsoft.com/en-us/windows/enable-virtualization-on-windows-c5578302-6e43-4b4b-a449-8ced115f58e1) to learn how to enable Hardware Virtualization.
+
+Install [git](https://git-scm.com/downloads) if you do not have it already. You can install it using Winget (`winget install --id=Git.Git  -e`), or downloading from their [website](https://git-scm.com/downloads).
+
+Install [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/). Download it, run the installer and follow any installation prompts.
+
+Open Docker Desktop nd verify these settings (you can skip the account page if you'd like):
+
+- Settings -> verify 'Use the WSL 2 based engine' is checked.
+
+![docker](../img/wsl-default.png)
+
+- Settings -> Resources -> WSL integration -> verify 'Enable integration with my default WSL distro' is enabled.
+
+![docker engine](../img/wsl2-engine.png)
+
+Download and install [Visual Studio Code](https://code.visualstudio.com/download).
+
+Open Visual Studio Code, and navigate to the Extensions menu located at the bottom of the left hand side bar.
+Install these extensions:
+
+- WSL
+- Dev Containers
+
+![vscode extension](../img/vscode-extension.png)
+
+git clone ukoOS (`git clone https://github.com/UMN-Kernel-Object/ukoos`), open the folder in Visual Studio Code. Follow any installation prompts that pop up. It should prompt you to `reopen in Dev Container.` If not, press `Ctrl` + `Shift` + `P` and type 'Reopen in Dev Container`.
+
+You are now in the ukoOS Dev Container.
