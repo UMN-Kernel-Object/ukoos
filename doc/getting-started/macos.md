@@ -7,6 +7,8 @@ Install [Visual Studio Code](https://code.visualstudio.com/Download)
 Open Visual Studio Code, and navigate to the Extensions menu located at the bottom of the left hand side bar.
 Install the `Dev Containers` extension.
 
+![vscode extension](../img/vscode-extension.png)
+
 Install [git](https://git-scm.com/downloads) if you do not have it already. You can install it using [Homebrew](https://brew.sh/) (`brew install git`), or downloading from their [website](https://git-scm.com/downloads).
 
 git clone ukoOS (`git clone https://github.com/UMN-Kernel-Object/ukoos`), open the folder in Visual Studio Code (File -> Open Folder). It should prompt you to `reopen in Dev Container.` If not, press `Cmd` + `Shift` + `P` and type 'Reopen in Dev Container`.
