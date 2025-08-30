@@ -139,6 +139,9 @@ void *memset(void *restrict dst, int byte, __SIZE_TYPE__ len);
 [[gnu::nonnull(1, 2), gnu::pure]]
 int memcmp(const void *s1, const void *s2, __SIZE_TYPE__ n);
 
+[[gnu::nonnull(1, 2), gnu::pure]]
+int strcmp(const char *s1, const char *s2);
+
 [[gnu::nonnull(1), gnu::pure]]
 __SIZE_TYPE__ strlen(const char *s);
 
