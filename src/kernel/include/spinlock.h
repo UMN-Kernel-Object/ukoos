@@ -2,18 +2,19 @@
 #define UKO_OS_KERNEL__SPINLOCK_H 1
 
 #include <hart_locals.h>
+#include <stdatomic.h>
 #include <types.h>
 
 /**
  * struct spinlock - Basic spinlock structure.
+ * @lock: Atomic lock flag (true if acquired, false otherwise).
  * @hart: Pointer to the hart holding the lock.
  * @name: Name of the lock (for debugging).
- * @state: Lock state (one if acquired, zero if free).
  */
 struct spinlock {
+	volatile atomic_flag lock;
 	struct hart_locals *hart;
 	const char *name;
-	u32 state;
 };
 
 /**
