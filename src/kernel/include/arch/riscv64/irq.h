@@ -25,11 +25,11 @@ static inline void irq_disable(void) {
 }
 
 /**
- * get_irq_state - Gets the state of the SSTATUS SIE bit.
+ * are_irq_enabled - Checks if interrupt requests are enabled.
  *
- * Return: u32 1 if SIE bit in SSTATUS is set, 0 otherwise.
+ * Return: true if interrupt requests are enabled, false otherwise.
  */
-static inline u32 get_irq_state(void) {
+static inline bool are_irq_enabled(void) {
 	u64 sstatus = csrr(RISCV64_CSR_SSTATUS);
 	return (sstatus & RISCV64_SSTATUS_SIE) != 0;
 }

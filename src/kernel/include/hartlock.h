@@ -20,5 +20,12 @@ void hartlock_acquire(void);
  */
 void hartlock_release(void);
 
+/**
+ * is_hart_locked - Checks if the executing thread has a hartlock.
+ *
+ * Return: true if the thread has a hartlock, false otherwise.
+ */
+bool is_hart_locked(void);
+
 #endif  // UKO_OS_KERNEL__HARTLOCK_H
 

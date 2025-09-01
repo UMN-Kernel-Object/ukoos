@@ -21,7 +21,7 @@ struct hart_locals {
   /**
    * Were interrupts enabled before interrupt disable nesting?
    */
-  u32 prev_irq_state;
+  bool prev_irq_enabled;
 
   /**
    * The current heap.
