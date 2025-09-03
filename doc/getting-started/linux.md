@@ -1,21 +1,22 @@
 # Linux Setup Guide
 
-Install [Visual Studio Code](https://code.visualstudio.com/docs/setup/linux) if you do not have it already. Note that you will need to follow the instructions for your Linux distribution
+Install [Visual Studio Code](https://code.visualstudio.com/docs/setup/linux) if you do not have it already.
+Note that you will need to follow the instructions for your Linux distribution
 
 Install these packages:
 
 - git
 - podman-docker
 
-If you are using Debian/Ubuntu
+If you are using Debian/Ubuntu:
 
 `sudo apt install git podman-docker`
 
-If you are using Fedora
+If you are using Fedora:
 
 `sudo dnf install git podman-docker`
 
-If you are using Arch
+If you are using Arch:
 
 `sudo pacman -S git podman-docker`
 
@@ -33,5 +34,6 @@ You are now in the ukoOS Dev Container.
 To verify this, run the below command and verify the line `NAME="Alpine Linux"` is present.
 `cat /etc/os-release`
 
-When you have a change ready to be commited, you must sign off your commits. Your commits should look something like this:
+When you have a change ready to be committed, you must sign off your commits.
+Your commits should look something like this:
 `git commit -s -m 'commit message'`
