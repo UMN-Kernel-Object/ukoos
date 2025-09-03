@@ -20,6 +20,17 @@ You are now in the ukoOS Dev Container.
 To verify this, run the below command and verify the line `NAME="Alpine Linux"` is present.
 `cat /etc/os-release`
 
-When you have a change ready to be committed, you must sign off your commits.
+**How to sign off and commit changes (in VSCode):**
+
+Go to the "Source Control" tab in VSCode, and in the message box, write a description of what you've done.
+Press the 3 dots icon shown below, go down to the `commit` menu, and select "Commit (Signed Off)."
+
+![vscode extension](../img/how-to-commit.png)
+
+When the pop-up "Would you like to stage all your changes and commit them directly" pops up, click yes.
+To push the changes, click "Sync Changes."
+
+**How to sign off and commit changes (in the CLI):**
+
 Your commits should look something like this:
-`git commit -s -m 'commit message'`
+`git commit -s -m 'description of what you've done'`
