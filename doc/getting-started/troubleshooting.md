@@ -1,0 +1,54 @@
+# Troubleshooting
+
+## Linux
+
+- If you are not using the dev container, and your distribution's `tftp` times out (error shown below), install `busybox`, and try again.
+Then, running `busybox tftp` should work.
+This is an issue we are having with Fedora's tftp package, and possibly more.
+
+```
+> tftp 192.168.2.91 -c put kernel.elf
+Transfer timed out.
+```
+
+The error on the board/tftp server side:
+
+```
+uko-uboot# tftpsrv
+Speed: 100, full duplex
+Using ethernet@4070000 device
+Listening for TFTP transfer on 169.254.96.84
+Load address: 0x81800000
+Loading: T T T T T T T T T T
+Retry count exceeded; starting again
+```
+
+## macOS
+
+Currently no known issues.
+
+## Windows 11
+
+- If you open ukoOS in the dev container, and you get this error:
+
+```
+/workspaces/ukoos # ./configure
+env: ‘bash\r’: No such file or directory
+env: use -[v]S to pass options in shebang lines
+```
+
+run `git reset --hard`.
+**NOTE THIS WILL ERASE ALL YOUR LOCAL CHANGES**.
+
+- If you get the error shown below, you will need to launch Docker Desktop, then try connecting to the dev container again.
+
+![Docker daemon error](../img/docker-daemon-window-error.png)
+
+- If Docker Desktop does not open, you need to open Task Manager and end the "Docker Desktop Backend" task, shown below.
+(To end a task, click on it, then click "End task" on the top right.)
+
+![Docker backend process](../img/docker-desktop-backend.png)
+
+## Dev Container
+
+Currently no known issues.
