@@ -29,12 +29,6 @@ Once the kernel is built, we can run the code inside a virutal machine (qemu)
 make qemu
 ```
 
-**Include asciinema**
-
-It should spit out a bunch of debug information, look for  XXXXX
-XXXXXXXX
-
-
 ## Debugging
 
 From the first terminal run qemu, but we need to add options to enable debugging
@@ -47,10 +41,12 @@ Which will be controlled by GDB once we start it here (from a new shell)
 make gdb
 ```
 
-From the gdb window
-```
-target remote :1234
-```
+The first terminal, running `make qemu QEMUFLASG="-s -S"` will look like this
+<script src="https://asciinema.org/a/nUMuioNor2TUBlmMSJrmqhNXi.js" id="asciicast-nUMuioNor2TUBlmMSJrmqhNXi" async="true"></script>
+
+
+And the second, running `make gdb`
+<script src="https://asciinema.org/a/kto7njh7ulCJ62ueOpL5mFZ3d.js" id="asciicast-kto7njh7ulCJ62ueOpL5mFZ3d" async="true"></script>
 
 There is a [more detailed guide](/getting-started/using-gdb.md) on using gdb, but here are the basics:  
 | Command    | Meaning                                                   |
@@ -62,7 +58,4 @@ There is a [more detailed guide](/getting-started/using-gdb.md) on using gdb, bu
 | b symbol   | add breakpoint to symbol (symbol is a function name, etc.)|
 | file *file*| load symbols from *file*                                  |
 | tui enable | enable tui (show both source and gdb prompt               |
-
-
-**ASCIINEMA GDB**
 

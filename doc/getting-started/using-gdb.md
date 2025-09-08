@@ -13,11 +13,6 @@ Which will be controlled by GDB once we start it here (from a new shell)
 make gdb
 ```
 
-From the gdb window
-```
-target remote :1234
-```
-
 ## Commands
 
 Here are some useful commands, note that commands can be abbreviated so `next` can become `n`. There are many other commands so make sure to read the docs and help menus.
@@ -61,5 +56,17 @@ The `p` command can do quite a lot:
 | p *expr*    | print out some c-like expression, e.g. p struct->name     |
 | p/s \**addr*| print c-string at *addr*                                  |
 
+
+
+## Demo
+
+These are from the [first day](/tutorials/first-day.md) docs.
+
+The first terminal, running `make qemu QEMUFLASG="-s -S"` will look like this
+<script src="https://asciinema.org/a/nUMuioNor2TUBlmMSJrmqhNXi.js" id="asciicast-nUMuioNor2TUBlmMSJrmqhNXi" async="true"></script>
+
+
+And the second, running `make gdb`
+<script src="https://asciinema.org/a/kto7njh7ulCJ62ueOpL5mFZ3d.js" id="asciicast-kto7njh7ulCJ62ueOpL5mFZ3d" async="true"></script>
 
 
