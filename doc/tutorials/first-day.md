@@ -2,7 +2,7 @@
 
 ## Setting Up
 
-Start with the [setting up guide](/getting-started/devcontainer.md) to download and setup the workspace and tools required. You will need VSCode and Docker, a devcontainer is provided in the git repository.
+Start by setting up a dev container for [Linux](/getting-started/linux.md), [MacOS](/getting-started/macos.md), [Windows](/getting-started/windows.md). You will need VSCode and Docker to use the provided devcontainer (in the git repo).
 
 ## Checkout out first day code
 
@@ -42,19 +42,27 @@ From the first terminal run qemu, but we need to add options to enable debugging
 make qemu QEMUFLAGS="-s -S"
 ```
 
-Which will be controlled by GDB once we start it here
+Which will be controlled by GDB once we start it here (from a new shell)
 ```shell
 make gdb
 ```
 
+From the gdb window
+```
+target remote :1234
+```
+
 There is a [more detailed guide](/getting-started/using-gdb.md) on using gdb, but here are the basics:  
-| Command  | Meaning                                                   |
-|----------|-----------------------------------------------------------|
-| n        | next line                                                 |
-| s        | step (like next line, but enters function calls)          |
-| c        | continue until next breakpoint (or end)                   |
-| b        | add breakpoint at current point                           |
-| b symbol | add breakpoint to symbol (symbol is a function name, etc.)|
+| Command    | Meaning                                                   |
+|------------|-----------------------------------------------------------|
+| n          | next line                                                 |
+| s          | step (like next line, but enters function calls)          |
+| c          | continue until next breakpoint (or end)                   |
+| b          | add breakpoint at current point                           |
+| b symbol   | add breakpoint to symbol (symbol is a function name, etc.)|
+| file *file*| load symbols from *file*                                  |
+| tui enable | enable tui (show both source and gdb prompt               |
+
 
 **ASCIINEMA GDB**
 
