@@ -2,7 +2,10 @@
 
 - [Introduction](./introduction.md)
 - [Getting Started]()
-  - [Dev Container](./getting-started/devcontainer.md)
+  - [Linux](./getting-started/linux.md)
+  - [macOS](./getting-started/macos.md)
+  - [Windows](./getting-started/windows.md)
+  - [Troubleshooting](./getting-started/troubleshooting.md)
   - [Compiling](./getting-started/compiling.md)
 - [Kernel](kernel/kernel.md)
   - [The `print()` and `format()` functions](./kernel/print.md)
