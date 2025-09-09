@@ -14,6 +14,6 @@ RUN apk add --no-interactive \
             perl \
             mdbook \
             busybox-extras \
-            gdb \
-            ssh
+            gdb-multiarch \
+            openssh
 

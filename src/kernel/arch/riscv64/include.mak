@@ -26,24 +26,22 @@ $(call defcleanable, \
 
 # Targets for booting and debugging the kernel.
 gdb: src/kernel/kernel.sym
-	gdb src/kernel/kernel.sym \
+	gdb-multiarch src/kernel/kernel.sym \
 		-ex "set substitute-path / $(srcdir)/" \
 		-ex "layout src" \
 		-ex "focus cmd" \
 		-ex "target remote :1234" \
 		-ex "break main" \
-		-ex "break _panic_halt" \
-		-ex "continue"
+		-ex "break _panic_halt"
 gdb_bootstub: src/kernel/kernel.sym
-	gdb src/kernel/kernel.sym \
+	gdb-multiarch src/kernel/kernel.sym \
 		-ex "set substitute-path / $(srcdir)/" \
 		-ex "layout asm" \
 		-ex "layout regs" \
 		-ex "focus cmd" \
 		-ex "target remote :1234" \
 		-ex "break *0x80080000" \
-		-ex "break main" \
-		-ex "continue"
+		-ex "break main"
 qemu: src/kernel/kernel.elf
 	qemu-system-riscv64 \
 		--machine virt \
@@ -53,7 +51,17 @@ qemu: src/kernel/kernel.elf
 		-nographic \
 		-kernel src/kernel/kernel.elf \
 		$(QEMUFLAGS)
-.PHONY: gdb gdb_bootstub qemu
+qemu-debug: src/kernel/kernel.elf
+	qemu-system-riscv64 \
+		--machine virt \
+		--cpu rva22s64 \
+		--smp 1 \
+		-m 1G \
+		-nographic \
+		-kernel src/kernel/kernel.elf \
+		-s -S \
+		$(QEMUFLAGS)
+.PHONY: gdb gdb_bootstub qemu qemu-debug
 
 # Link the kernel. This kernel will have debug symbols, and not actually be
 # bootable -- it depends on being loaded by and having the boot environment set
