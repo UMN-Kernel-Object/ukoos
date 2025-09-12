@@ -13,5 +13,7 @@ RUN apk add --no-interactive \
             minicom \
             perl \
             mdbook \
-            busybox-extras
+            busybox-extras \
+            gdb-multiarch \
+            openssh
 
