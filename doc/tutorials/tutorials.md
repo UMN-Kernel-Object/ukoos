@@ -8,4 +8,4 @@ The First Day tutorial will start from nothing and end with fixing a bug in oper
 
 ### [Hardware](./hardware.md)
 
-Once the operating system is built and run in a virtual machine, it can be tested on real hardware. Start with how to checkout hardware and learn how to load and test code on physical devices.
+Once the operating system is built and run in a virtual machine, it can be tested on real hardware. Start with how to checkout hardware and learn how to load and test code on physical devices. Hardware is currently in progress, so the tutorial hasn't been made yet.

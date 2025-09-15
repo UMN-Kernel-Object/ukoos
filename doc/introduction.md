@@ -9,8 +9,3 @@ The operating system is meant to be educational for the UMN Kernel Object club, 
 ## Kernel documentation
 
 In addition to tutorials, the kernel itself is [documented](kernel/kernel.md).
-
-
-### Real hardware
-
-ukoOS also runs on real hardware, check out the [guide](/tutorials/hardware.md) to see how.

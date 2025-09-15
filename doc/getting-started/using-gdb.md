@@ -4,7 +4,7 @@ GDB is a debugger that will allow us to debug the kernel under a virtual machine
 
 From the first terminal run qemu, but we need to add options to enable debugging
 ```shell
-make qemu QEMUFLAGS="-s -S"
+make qemu-debug
 ```
 
 
@@ -62,8 +62,8 @@ The `p` command can do quite a lot:
 
 These are from the [first day](/tutorials/first-day.md) docs.
 
-The first terminal, running `make qemu QEMUFLASG="-s -S"` will look like this
-<script src="https://asciinema.org/a/nUMuioNor2TUBlmMSJrmqhNXi.js" id="asciicast-nUMuioNor2TUBlmMSJrmqhNXi" async="true"></script>
+The first terminal, running `make qemu-debug` will look like this
+<script src="https://asciinema.org/a/j0QKk3PSpPhwaB49N18fIqhU4.js" id="asciicast-j0QKk3PSpPhwaB49N18fIqhU4" async="true"></script>
 
 
 And the second, running `make gdb`
