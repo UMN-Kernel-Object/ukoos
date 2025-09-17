@@ -1,9 +1,17 @@
 {
+  inputs.u-boot-milkv-duos = {
+    url = "github:UMN-Kernel-Object/u-boot/milkv-duos-sd";
+    inputs = {
+      flake-utils.follows = "flake-utils";
+      nixpkgs.follows = "nixpkgs";
+    };
+  };
   outputs =
     {
       self,
       flake-utils,
       nixpkgs,
+      u-boot-milkv-duos,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -66,13 +74,14 @@
 
           dev-image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
             dev = true;
-            inherit (packages) ukoos-riscv64;
+            inherit (packages) ukoos-riscv64 u-boot-milkv-duos;
           };
           image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
             dev = false;
-            inherit (packages) ukoos-riscv64;
+            inherit (packages) ukoos-riscv64 u-boot-milkv-duos;
           };
-          inherit (packages.image-milkv-duos) fsbl-milkv-duos opensbi-milkv-duos u-boot-milkv-duos;
+          u-boot-milkv-duos = u-boot-milkv-duos.packages.${system}.default;
+          inherit (packages.image-milkv-duos) fsbl-milkv-duos opensbi-milkv-duos;
         };
       }
     );
