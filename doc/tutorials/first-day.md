@@ -9,7 +9,7 @@ Start by setting up a dev container for [Linux](/getting-started/linux.md), [Mac
 
 If there are any issues, check out the [troubleshooting guide](/getting-started/troubleshooting.md) and ask us questions.
 
-## Checkout out code
+## Checkout code
 
 The kernel is hosted on [GitHub](https://github.com/UMN-Kernel-Object/ukoos) so if you haven't already downloaded the code, here is how:
 ```shell

@@ -7,7 +7,7 @@
   - [Windows](./getting-started/windows.md)
   - [Troubleshooting](./getting-started/troubleshooting.md)
   - [Using GDB](./getting-started/using-gdb.md)
-- [Kernel](kernel/kernel.md)
+- [Kernel]()
   - [The `print()` and `format()` functions](./kernel/print.md)
   - [Threads and Harts](./kernel/threads-and-harts.md)
 - [Targets]()
