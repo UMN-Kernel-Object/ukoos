@@ -1,7 +1,5 @@
 # First Day
 
-
-
 # Setting Up
 
 Start by setting up a dev container for [Linux](/getting-started/linux.md), [MacOS](/getting-started/macos.md), [Windows](/getting-started/windows.md). You will need VSCode and Docker to use the provided devcontainer (in the git repo).
@@ -21,7 +19,7 @@ cd ukoos
 
 ## Compiling
 
-Once we have the code and tools, the [compiling guide](/getting-started/compiling.md) will show how to build and test the kernel. The basics (from the ukoos folder).
+Once we have the code and tools, we can compile the code from the dev container
 ```shell
 mkdir build
 cd build

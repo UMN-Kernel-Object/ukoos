@@ -6,7 +6,6 @@
   - [macOS](./getting-started/macos.md)
   - [Windows](./getting-started/windows.md)
   - [Troubleshooting](./getting-started/troubleshooting.md)
-  - [Compiling](./getting-started/compiling.md)
   - [Using GDB](./getting-started/using-gdb.md)
 - [Kernel](kernel/kernel.md)
   - [The `print()` and `format()` functions](./kernel/print.md)
