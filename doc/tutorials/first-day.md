@@ -2,7 +2,7 @@
 
 # Setting Up
 
-Start by setting up a dev container for [Linux](/getting-started/linux.md), [MacOS](/getting-started/macos.md), [Windows](/getting-started/windows.md). You will need VSCode and Docker to use the provided devcontainer (in the git repo).
+Start by setting up a dev container for [Linux](../getting-started/linux.md), [MacOS](../getting-started/macos.md), [Windows](../getting-started/windows.md). You will need VSCode and Docker to use the provided devcontainer (in the git repo).
 
 
 ## Troubleshooting
