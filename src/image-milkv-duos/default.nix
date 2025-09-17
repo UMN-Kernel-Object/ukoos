@@ -1,5 +1,6 @@
 {
   dev ? false,
+  u-boot-milkv-duos,
 
   callPackage,
   lib,
@@ -18,9 +19,9 @@ stdenvNoCC.mkDerivation (self: {
 
   nativeBuildInputs = [
     dosfstools
-    mtools
     genimage
-    self.passthru.u-boot-milkv-duos
+    mtools
+    u-boot-milkv-duos
   ];
 
   dontUnpack = true;
@@ -46,11 +47,11 @@ stdenvNoCC.mkDerivation (self: {
 
   passthru = {
     fsbl-milkv-duos = callPackage ./fsbl.nix {
-      inherit (self.passthru) opensbi-milkv-duos u-boot-milkv-duos;
+      inherit (self.passthru) opensbi-milkv-duos;
+      inherit u-boot-milkv-duos;
     };
     opensbi-milkv-duos = pkgsCross.riscv64-musl.callPackage ./opensbi.nix {
-      inherit (self.passthru) u-boot-milkv-duos;
+      inherit u-boot-milkv-duos;
     };
-    u-boot-milkv-duos = callPackage ./u-boot.nix { };
   };
 })
