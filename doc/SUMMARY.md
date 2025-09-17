@@ -12,5 +12,4 @@
   - [Threads and Harts](./kernel/threads-and-harts.md)
 - [Targets]()
 - [Tutorials](./tutorials/tutorials.md)
-  - [Hardware](./tutorials/hardware.md)
   - [First Day](./tutorials/first-day.md)
