@@ -72,6 +72,9 @@ Switch to the tutorial code
 ```shell
 git checkout tutorials/first-day
 ```
+
+Please note, do not run the `./configure` script from the `tutorials/first-day` branch, it will make the following commands not work.
+
 and rebuild
 ```shell
 cd build
