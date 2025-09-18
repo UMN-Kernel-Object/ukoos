@@ -60,7 +60,7 @@ The `p` command can do quite a lot:
 
 ## Demo
 
-These are from the [first day](/tutorials/first-day.md) docs.
+These are from the [first day](../tutorials/first-day.md) docs.
 
 The first terminal, running `make qemu-debug` will look like this
 <script src="https://asciinema.org/a/j0QKk3PSpPhwaB49N18fIqhU4.js" id="asciicast-j0QKk3PSpPhwaB49N18fIqhU4" async="true"></script>
@@ -68,5 +68,3 @@ The first terminal, running `make qemu-debug` will look like this
 
 And the second, running `make gdb`
 <script src="https://asciinema.org/a/kto7njh7ulCJ62ueOpL5mFZ3d.js" id="asciicast-kto7njh7ulCJ62ueOpL5mFZ3d" async="true"></script>
-
-
