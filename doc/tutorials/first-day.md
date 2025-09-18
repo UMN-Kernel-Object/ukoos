@@ -29,7 +29,7 @@ make
 
 ## Running
 
-Once the kernel is built, we can run the code inside a virutal machine (qemu)
+Once the kernel is built, we can run the code inside a virtual machine (qemu)
 ```shell
 make qemu
 ```
