@@ -43,7 +43,10 @@ static inline usize paddr_diff(paddr end, paddr start) {
 }
 
 static inline paddr paddr_offset(paddr paddr, usize offset) {
-  return paddr_of_bits(bits_of_paddr(paddr) + offset);
+  uaddr addr = bits_of_paddr(paddr);
+  assert(!ckd_add(&addr, addr, offset),
+         "paddr_offset: overflow adding {offset} to {paddr}", offset, paddr);
+  return paddr_of_bits(addr);
 }
 
 static inline paddr paddr_align_down(paddr paddr, usize bits) {
