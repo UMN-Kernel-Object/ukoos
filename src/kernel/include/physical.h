@@ -18,9 +18,9 @@
 
 #include <panic.h>
 
-static inline paddr paddr_of_bits(unsigned long bits) {
+static inline paddr paddr_of_bits(uaddr bits) {
   union {
-    unsigned long bits;
+    uaddr bits;
     paddr paddr;
   } u;
   u.bits = bits;
@@ -28,9 +28,9 @@ static inline paddr paddr_of_bits(unsigned long bits) {
   return u.paddr;
 }
 
-static inline unsigned long bits_of_paddr(paddr addr) {
+static inline uaddr bits_of_paddr(paddr addr) {
   union {
-    unsigned long bits;
+    uaddr bits;
     paddr paddr;
   } u;
   assert(addr.rsvd == 0);
