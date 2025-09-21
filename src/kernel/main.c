@@ -27,7 +27,13 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   print("Running self-tests...");
   run_selftests();
 
-  devicetree_init(devicetree_start);
+  struct devicetree_node *devicetree =
+      devicetree_parse_from_physical(devicetree_start);
+  if (!devicetree)
+    panic("Failed to parse Devicetree");
+  devicetree_print(devicetree);
+  devicetree_free(devicetree);
+
   // devicetree_mm_init(kernel_start, kernel_end, &free_va_start, &free_va_end);
   // mm_init_virtual(free_va_start, free_va_end);
 
