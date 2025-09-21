@@ -76,6 +76,7 @@
 
           ukoos-milkv-duos = ukoos "riscv64" "milkv-duos";
           ukoos-milkv-jupiter = ukoos "riscv64" "milkv-jupiter";
+          ukoos-qemu-riscv64 = ukoos "riscv64" "qemu-riscv64";
 
           dev-image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
             dev = true;

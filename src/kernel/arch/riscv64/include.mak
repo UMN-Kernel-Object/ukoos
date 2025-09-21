@@ -44,8 +44,6 @@ gdb_bootstub: src/kernel/kernel.sym
 		-ex "break main"
 qemu: src/kernel/kernel.elf
 	qemu-system-riscv64 \
-		--machine virt \
-		--smp 1 \
 		-m 1G \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
@@ -53,13 +51,11 @@ qemu: src/kernel/kernel.elf
 		$(QEMUFLAGS)
 qemu-debug: src/kernel/kernel.elf
 	qemu-system-riscv64 \
-		--machine virt \
-		--cpu rva22s64 \
-		--smp 1 \
 		-m 1G \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
 		-s -S \
+		$(target-qemuflags) \
 		$(QEMUFLAGS)
 .PHONY: gdb gdb_bootstub qemu qemu-debug
 
