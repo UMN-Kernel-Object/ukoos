@@ -89,10 +89,13 @@ src/kernel/kernel.sym: src/kernel/arch/riscv64/kernel-unstripped.elf
 	$(Q)$(STRIP) --only-keep-debug -o $@ $<
 
 # Generate the bootstub.
-src/kernel/arch/riscv64/bootstub_generated.S: $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel.elf
+src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub_generated.S &: $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel.elf
 	@mkdir -p $(dir $@)
 	@echo "GEN     $@"
-	$(Q)$(PYTHON3) $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel-unstripped.elf $@
+	$(Q)$(PYTHON3) $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py \
+		src/kernel/arch/riscv64/kernel-unstripped.elf \
+		src/kernel/arch/riscv64/bootstub_generated.ld \
+		src/kernel/arch/riscv64/bootstub_generated.S
 
 # Compile the bootstub.
 src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_generated.S
@@ -102,7 +105,7 @@ src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_g
 
 # Link the bootstub to produce the bootable ELF. The bootstub includes the
 # kernel, so we don't need to somehow include it.
-src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub.o src/kernel/arch/riscv64/bootstub_generated.o
+src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub.o src/kernel/arch/riscv64/bootstub_generated.o
 	@mkdir -p $(dir $@)
 	@echo "LD      $@"
 	$(Q)$(CC) $(kernel-cflags) $(kernel-ldflags) \
