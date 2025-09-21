@@ -7,6 +7,7 @@ kernel-cflags = $(CFLAGS) \
 	-ffile-prefix-map=$(srcdir)= \
 	-ffreestanding \
 	-fno-builtin-main \
+	-fstack-check \
 	-fwrapv \
 	-isystem $(srcdir)/src/kernel/include \
 	-isystem $(srcdir)/src/kernel/arch/$(arch)/include \
