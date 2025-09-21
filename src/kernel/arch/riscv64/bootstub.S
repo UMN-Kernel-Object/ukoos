@@ -17,8 +17,7 @@
 .type _start, @function
 _start:
 	# Set up the initial stack.
-	la sp, 0xffffffffffffd000 - 16
-	la t0, _stack_end_phys - 16
+	ld sp, (initial_stack_va)
 
 	# Get the (physical) address of the root page table.
 	la t1, boot_pgtbl_2_0000000000000000
@@ -38,10 +37,6 @@ _start:
 	ld a5, (symtab_len)
 	ld a6, (strtab_va)
 	ld a7, (strtab_len)
-	ld t3, (free_va_start)
-	ld t4, (free_va_end)
-	sd t3, (t0)
-	sd t4, 8(t0)
 
 	# Get the (virtual) address of the higher-half entrypoint.
 	ld t0, (entrypoint)
