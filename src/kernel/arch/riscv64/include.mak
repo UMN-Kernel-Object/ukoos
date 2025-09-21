@@ -25,7 +25,7 @@ $(call defcleanable, \
 
 # Targets for booting and debugging the kernel.
 gdb: src/kernel/kernel.sym
-	gdb-multiarch src/kernel/kernel.sym \
+	$(GDB) src/kernel/kernel.sym \
 		-ex "set substitute-path / $(srcdir)/" \
 		-ex "layout src" \
 		-ex "focus cmd" \
@@ -34,7 +34,7 @@ gdb: src/kernel/kernel.sym
 		-ex "break _panic_halt" \
 		-ex "break unrecoverable_exception"
 gdb_bootstub: src/kernel/kernel.sym
-	gdb-multiarch src/kernel/kernel.sym \
+	$(GDB) src/kernel/kernel.sym \
 		-ex "set substitute-path / $(srcdir)/" \
 		-ex "layout asm" \
 		-ex "layout regs" \

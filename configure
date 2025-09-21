@@ -132,24 +132,34 @@ tool_prefixes_var="tool_prefixes_${arch}[@]"
 find_tool() {
 	# Intentionally using -z, since it's not rare for people to e.g. set
 	# CC= instead of unsetting it.
-	if [[ -z "${!1:-}" ]]; then
-		for tool_prefix in "${!tool_prefixes_var}"; do
-			if command -v "$tool_prefix$2" >/dev/null 2>/dev/null; then
-				printf -v "$1" '%s%s' "$tool_prefix" "$2"
+	tool_name="$1"
+	shift
+	if [[ -z "${!tool_name:-}" ]]; then
+		for tool in "$@"; do
+			if command -v "$tool" >/dev/null 2>/dev/null; then
+				printf -v "$tool_name" '%s' "$tool"
 				break
 			fi
 		done
 	fi
-	if [[ -z "${!1:-}" ]]; then
-		printf >&2 './configure: could not find a tool for $%s\n' "$1"
+	if [[ -z "${!tool_name:-}" ]]; then
+		printf >&2 './configure: could not find a tool for $%s\n' "$tool_name"
 		exit 1
 	fi
+}
+find_tool_with_prefix() {
+	tools=()
+	for tool_prefix in "${!tool_prefixes_var}"; do
+		tools+=("$tool_prefix$2")
+	done
+	find_tool "$1" "${tools[@]}"
 }
 
 # Detect tools. Since we're expecting a freestanding compiler, we _don't_
 # assume that e.g. the default gcc is a reasonable compiler to use.
-find_tool CC gcc
-find_tool STRIP strip
+find_tool_with_prefix CC gcc
+find_tool_with_prefix STRIP strip
+find_tool GDB gdb-multiarch gdb
 
 # Generate the config.mak.
 cat >config.mak <<EOF
@@ -159,6 +169,7 @@ srcdir = $(printf %q "$repo")
 target = $(printf %q "$target")
 
 CC = $(printf %q "$CC")
+GDB = $(printf %q "$GDB")
 STRIP = $(printf %q "$STRIP")
 CFLAGS = $(printf %s "${CFLAGS:-}")
 LDFLAGS = $(printf %s "${LDFLAGS:-}")

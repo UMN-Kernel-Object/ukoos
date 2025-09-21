@@ -41,7 +41,7 @@
 
               mkdir build
               cd build
-              bash $src/configure --arch ${arch} --target ${target}
+              GDB=false bash $src/configure --arch ${arch} --target ${target}
 
               runHook postConfigure
             '';
@@ -62,6 +62,7 @@
           nativeBuildInputs = [
             pkgs.bear
             pkgs.dtc
+            pkgs.gdb
             pkgs.minicom
             pkgs.qemu
           ];
