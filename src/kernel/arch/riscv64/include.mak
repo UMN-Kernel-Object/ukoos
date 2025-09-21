@@ -59,6 +59,11 @@ qemu-debug: src/kernel/kernel.elf
 		$(QEMUFLAGS)
 .PHONY: gdb gdb_bootstub qemu qemu-debug
 
+# A target for dumping the kernel.
+objdump: src/kernel/arch/riscv64/kernel-unstripped.elf
+	$(OBJDUMP) -d src/kernel/arch/riscv64/kernel-unstripped.elf | less
+.PHONY: objdump
+
 # Link the kernel. This kernel will have debug symbols, and not actually be
 # bootable -- it depends on being loaded by and having the boot environment set
 # up by the bootstub.

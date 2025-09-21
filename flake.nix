@@ -68,6 +68,7 @@
           ];
           shellHook = ''
             export CC=riscv64-none-elf-gcc
+            export OBJDUMP=riscv64-none-elf-objdump
             export STRIP=riscv64-none-elf-strip
           '';
         };
