@@ -8,7 +8,7 @@ kernel-cflags += \
 	-mabi=lp64 \
 	-mcmodel=medany
 kernel-objs-asm += arch/riscv64/start
-kernel-objs-c += arch/riscv64/backtrace arch/riscv64/hart_locals arch/riscv64/paging arch/riscv64/panic arch/riscv64/sbi
+kernel-objs-c += arch/riscv64/backtrace arch/riscv64/hart_locals arch/riscv64/paging arch/riscv64/panic arch/riscv64/physical arch/riscv64/sbi
 
 $(eval $(call compute_component_variables,kernel))
 
