@@ -85,7 +85,7 @@ src/kernel/kernel.sym: src/kernel/arch/riscv64/kernel-unstripped.elf
 src/kernel/arch/riscv64/bootstub_generated.S: $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel.elf
 	@mkdir -p $(dir $@)
 	@echo "GEN     $@"
-	$(Q)python3 $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel-unstripped.elf $@
+	$(Q)$(PYTHON3) $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel-unstripped.elf $@
 
 # Compile the bootstub.
 src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_generated.S
