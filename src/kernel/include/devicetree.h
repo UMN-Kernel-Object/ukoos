@@ -98,4 +98,10 @@ struct devicetree_prop *devicetree_prop(struct devicetree_node *parent,
  */
 void devicetree_print(struct devicetree_node *root);
 
+/**
+ * Adds the `/chosen/rng-seed` property to the entropy pool, then deletes it
+ * from the Devicetree.
+ */
+void devicetree_add_entropy(struct devicetree_node *root);
+
 #endif // UKO_OS_KERNEL__DEVICETREE_H

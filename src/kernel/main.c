@@ -31,6 +31,7 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
       devicetree_parse_from_physical(devicetree_start);
   if (!devicetree)
     panic("Failed to parse Devicetree");
+  devicetree_add_entropy(devicetree);
   devicetree_print(devicetree);
   devicetree_free(devicetree);
 
