@@ -9,6 +9,7 @@
 #include <mm/alloc.h>
 #include <physical.h>
 #include <print.h>
+#include <random.h>
 
 struct fdt_header {
   u32 magic;
@@ -533,4 +534,17 @@ void devicetree_print(struct devicetree_node *node) {
       }
     }
   }
+}
+
+void devicetree_add_entropy(struct devicetree_node *root) {
+  struct devicetree_node *chosen = devicetree_child(root, "chosen");
+  if (!chosen)
+    return;
+  struct devicetree_prop *rng_seed = devicetree_prop(chosen, "rng-seed");
+  if (!rng_seed)
+    return;
+
+  entropy_pool_mix(rng_seed->value, rng_seed->value_len);
+  entropy_pool_credit(8 * rng_seed->value_len);
+  devicetree_prop_free(rng_seed);
 }
