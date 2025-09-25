@@ -72,7 +72,9 @@ struct devicetree_node {
 /**
  * Parses a Devicetree, given its start address in _physical_ memory.
  */
-struct devicetree_node *devicetree_parse_from_physical(paddr devicetree_start);
+struct devicetree_node *devicetree_parse_from_physical(paddr devicetree_start,
+                                                       paddr kernel_start,
+                                                       paddr kernel_end);
 
 /**
  * Frees the Devicetree.

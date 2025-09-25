@@ -241,11 +241,92 @@ static bool devicetree_add_prop_u32(struct devicetree_node *node,
   return devicetree_add_prop(node, name, bytes, 4);
 }
 
+static bool devicetree_add_reservation(struct devicetree_node *reserved_memory,
+                                       usize *reservation_num,
+                                       struct fdt_reserve_entry reservation,
+                                       u32 address_cells, u32 size_cells) {
+  // Allocate a node for the reservation.
+  struct devicetree_node *node = alloc(sizeof(struct devicetree_node));
+  if (!node)
+    return false;
+
+  // Choose a name for the reservation.
+  char *reservation_name = nullptr;
+  do {
+    if (reservation_name)
+      free(reservation_name);
+    reservation_name =
+        format("memory-reservation-block@{usize}", (*reservation_num)++);
+    if (!reservation_name)
+      goto fail;
+  } while (devicetree_child(reserved_memory, reservation_name));
+
+  // Initialize the node.
+  *node = (struct devicetree_node){
+      .parent = reserved_memory,
+      .parent_children_head = LIST_INIT(node->parent_children_head),
+      .children = LIST_INIT(node->children),
+      .props = LIST_INIT(node->props),
+      .name = reservation_name,
+  };
+  list_push(&reserved_memory->children, &node->parent_children_head);
+
+  // Add the reg field to the props.
+  u8 reg[16];
+  usize reg_len = 0;
+  switch (address_cells) {
+  case 1: {
+    u32 address = (u32)native_to_big(reservation.address);
+    memcpy(&reg[reg_len], &address, 4);
+    reg_len += 4;
+  } break;
+  case 2: {
+    u64 address = native_to_big(reservation.address);
+    memcpy(&reg[reg_len], &address, 8);
+    reg_len += 8;
+  } break;
+  default:
+    print("Invalid value for /reserved-memory's #address-cells: {u32}",
+          address_cells);
+    goto fail;
+  }
+  switch (size_cells) {
+  case 1: {
+    u32 size = (u32)native_to_big(reservation.size);
+    memcpy(&reg[reg_len], &size, 4);
+    reg_len += 4;
+  } break;
+  case 2: {
+    u64 size = native_to_big(reservation.size);
+    memcpy(&reg[reg_len], &size, 8);
+    reg_len += 8;
+  } break;
+  default:
+    print("Invalid value for /reserved-memory's #size-cells: {u32}",
+          size_cells);
+    goto fail;
+  }
+
+  if (!devicetree_add_prop(node, "reg", reg, reg_len))
+    goto fail;
+
+  return true;
+
+fail:
+  list_remove(&node->parent_children_head);
+  free(node->name);
+  free(node);
+  return false;
+}
+
+/**
+ * Adds reservations from the reserved memory block, and adds the kernel itself,
+ * to the /reserved-memory node of the Devicetree.
+ */
 static bool devicetree_add_reservations(paddr devicetree_start,
+                                        paddr kernel_start, paddr kernel_end,
                                         struct fdt_header *header,
                                         struct devicetree_node *devicetree) {
-  struct devicetree_node *node = nullptr;
-
   // Ensure the reserved-memory node exists.
   struct devicetree_node *reserved_memory =
       devicetree_child(devicetree, "reserved-memory");
@@ -253,7 +334,7 @@ static bool devicetree_add_reservations(paddr devicetree_start,
     // Create the reserved-memory node.
     reserved_memory = alloc(sizeof(struct devicetree_node));
     if (!reserved_memory)
-      goto fail;
+      return false;
     *reserved_memory = (struct devicetree_node){
         .parent = devicetree,
         .parent_children_head =
@@ -264,17 +345,17 @@ static bool devicetree_add_reservations(paddr devicetree_start,
     };
     if (!reserved_memory->name) {
       free(reserved_memory);
-      goto fail;
+      return false;
     }
     list_push(&devicetree->children, &reserved_memory->parent_children_head);
 
     // Add its required props.
     if (!devicetree_add_prop_u32(reserved_memory, "#address-cells", 2))
-      goto fail;
+      return false;
     if (!devicetree_add_prop_u32(reserved_memory, "#size-cells", 2))
-      goto fail;
+      return false;
     if (!devicetree_add_prop(reserved_memory, "ranges", nullptr, 0))
-      goto fail;
+      return false;
   }
 
   // Get the number of address and size cells.
@@ -284,19 +365,19 @@ static bool devicetree_add_reservations(paddr devicetree_start,
                              devicetree_prop(reserved_memory, "#size-cells");
   if (!address_cells_prop) {
     print("Invalid value for /reserved-memory's #address-cells: missing");
-    goto fail;
+    return false;
   }
   if (!size_cells_prop) {
     print("Invalid value for /reserved-memory's #size-cells: missing");
-    goto fail;
+    return false;
   }
   if (address_cells_prop->value_len != 4) {
     print("Invalid value for /reserved-memory's #address-cells: too long");
-    goto fail;
+    return false;
   }
   if (size_cells_prop->value_len != 4) {
     print("Invalid value for /reserved-memory's #size-cells: too long");
-    goto fail;
+    return false;
   }
   u32 address_cells, size_cells;
   memcpy(&address_cells, address_cells_prop->value, 4);
@@ -309,93 +390,32 @@ static bool devicetree_add_reservations(paddr devicetree_start,
   paddr next_reservation =
       paddr_offset(devicetree_start, header->off_mem_rsvmap);
   usize reservation_num = 0;
+  struct fdt_reserve_entry reservation = {0};
   for (;;) {
-    struct fdt_reserve_entry reservation =
-        physical_read_fdt_reserve_entry(next_reservation);
+    reservation = physical_read_fdt_reserve_entry(next_reservation);
     next_reservation =
         paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
     if (reservation.address == 0 && reservation.size == 0)
       break;
 
-    // Allocate a node for the reservation.
-    node = alloc(sizeof(struct devicetree_node));
-    if (!node)
-      goto fail;
-
-    // Choose a name for the reservation.
-    char *reservation_name = nullptr;
-    do {
-      if (reservation_name)
-        free(reservation_name);
-      reservation_name =
-          format("memory-reservation-block@{usize}", reservation_num);
-      if (!reservation_name)
-        goto fail;
-
-    } while (devicetree_child(reserved_memory, reservation_name));
-
-    // Initialize the node.
-    *node = (struct devicetree_node){
-        .parent = reserved_memory,
-        .parent_children_head = LIST_INIT(node->parent_children_head),
-        .children = LIST_INIT(node->children),
-        .props = LIST_INIT(node->props),
-        .name = reservation_name,
-    };
-    list_push(&reserved_memory->children, &node->parent_children_head);
-
-    // Add the reg field to the props.
-    u8 reg[16];
-    usize reg_len = 0;
-    switch (address_cells) {
-    case 1: {
-      u32 address = (u32)native_to_big(reservation.address);
-      memcpy(&reg[reg_len], &address, 4);
-      reg_len += 4;
-    } break;
-    case 2: {
-      u64 address = native_to_big(reservation.address);
-      memcpy(&reg[reg_len], &address, 8);
-      reg_len += 8;
-    } break;
-    default:
-      print("Invalid value for /reserved-memory's #address-cells: {u32}",
-            address_cells);
-      goto fail;
-    }
-    switch (size_cells) {
-    case 1: {
-      u32 size = (u32)native_to_big(reservation.size);
-      memcpy(&reg[reg_len], &size, 4);
-      reg_len += 4;
-    } break;
-    case 2: {
-      u64 size = native_to_big(reservation.size);
-      memcpy(&reg[reg_len], &size, 8);
-      reg_len += 8;
-    } break;
-    default:
-      print("Invalid value for /reserved-memory's #size-cells: {u32}",
-            size_cells);
-      goto fail;
-    }
-
-    if (!devicetree_add_prop(node, "reg", reg, reg_len))
-      goto fail;
+    if (!devicetree_add_reservation(reserved_memory, &reservation_num,
+                                    reservation, address_cells, size_cells))
+      return false;
   }
+
+  // Add a reservation for the kernel.
+  reservation.address = bits_of_paddr(kernel_start);
+  reservation.size = paddr_diff(kernel_end, kernel_start);
+  if (!devicetree_add_reservation(reserved_memory, &reservation_num,
+                                  reservation, address_cells, size_cells))
+    return false;
 
   return true;
-
-fail:
-  if (node) {
-    list_remove(&node->parent_children_head);
-    free(node->name);
-    free(node);
-  }
-  return false;
 }
 
-struct devicetree_node *devicetree_parse_from_physical(paddr devicetree_start) {
+struct devicetree_node *devicetree_parse_from_physical(paddr devicetree_start,
+                                                       paddr kernel_start,
+                                                       paddr kernel_end) {
   struct devicetree_node *devicetree = nullptr;
 
   // Parse the header.
@@ -417,7 +437,8 @@ struct devicetree_node *devicetree_parse_from_physical(paddr devicetree_start) {
     goto fail;
 
   // Parse the memory reservations block and add it to the tree.
-  if (!devicetree_add_reservations(devicetree_start, &header, devicetree))
+  if (!devicetree_add_reservations(devicetree_start, kernel_start, kernel_end,
+                                   &header, devicetree))
     goto fail;
 
   return devicetree;
