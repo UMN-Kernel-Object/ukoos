@@ -33,6 +33,8 @@ This early in boot, the entropy pool cannot be fully seeded, so we have to try t
 Right now, our only source of entropy at this point is the cycle and time counters.
 We take a trap while moving to the higher half, so we can get some unpredictability from the timings there; when booting on real hardware, the time taken to load the kernel from storage should also provide some.
 
+The Devicetree gets parsed into memory owned by the heap allocator, which lets us add memory reservations for e.g. the kernel itself.
+
 ## Physical allocator
 
 Once the heap allocator is initialized on the boothart, we can discover the rest of the RAM.
@@ -48,9 +50,9 @@ Once it's parsed, we can easily extract the parts of it we need:
 From the memory and reservations, we can find all the free regions of unreserved RAM.
 We use a simple free list to track them.
 
-Once this is done, the heap allocator is able to allocate more heap segments from the physical allocator, so there's no longer a 4MiB limitation on heap allocation.
-
 ## Virtual allocator
 
 The virtual allocator for higher-half memory can now be initialized as well.
 This allocator covers the entire 38-bit space, but will only ever have the RAM area marked as free.
+
+Once this is done, the heap allocator is able to allocate more heap segments from the physical allocator, so there's no longer a 4MiB limitation on heap allocation.

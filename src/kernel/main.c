@@ -27,20 +27,17 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   print("Running self-tests...");
   run_selftests();
 
-  struct devicetree_node *devicetree =
-      devicetree_parse_from_physical(devicetree_start);
+  struct devicetree_node *devicetree = devicetree_parse_from_physical(
+      devicetree_start, kernel_start, kernel_end);
   if (!devicetree)
     panic("Failed to parse Devicetree");
   devicetree_add_entropy(devicetree);
   devicetree_print(devicetree);
   devicetree_free(devicetree);
 
-  // devicetree_mm_init(kernel_start, kernel_end, &free_va_start, &free_va_end);
-  // mm_init_virtual(free_va_start, free_va_end);
-
-  // uptr a = mm_va_alloc(mm_kernel_virtual_buddy, 2 * 1024 * 1024);
-  // uptr b = mm_va_alloc(mm_kernel_virtual_buddy, 4096);
-  // print("{uptr} {uptr}", a, b);
+  uptr a = mm_va_alloc(mm_kernel_virtual_buddy, 2 * 1024 * 1024);
+  uptr b = mm_va_alloc(mm_kernel_virtual_buddy, 4096);
+  print("{uptr} {uptr}", a, b);
 
   TODO();
 }
