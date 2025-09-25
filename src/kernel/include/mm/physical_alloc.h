@@ -10,18 +10,16 @@
 #include <types.h>
 
 /**
- * Adds a chunk to the physical allocator. Enough memory has to be given to the
- * physical allocator with this function before calling `mm_init_physical` to
- * allocate the buddy bitmaps for physical and virtual memory. This should be
- * about 64MiB at most.
+ * Adds a chunk of memory to the physical allocator.
  */
 void mm_init_add_physical_chunk(paddr start, paddr end);
 
 /**
- * Sets up the physical memory allocator.
+ * Allocates a single page of memory from the physical allocator, storing its
+ * physical address in `*out`.
+ *
+ * Returns whether it succeeded.
  */
-void mm_init_physical(paddr devicetree_start, paddr devicetree_end,
-                      paddr kernel_start, paddr kernel_end, uptr *free_va_start,
-                      uptr *free_va_end);
+bool mm_alloc_physical(paddr *out);
 
 #endif // UKO_OS_KERNEL__MM_PHYSICAL_ALLOC_H

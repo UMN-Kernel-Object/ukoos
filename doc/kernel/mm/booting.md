@@ -8,27 +8,19 @@ This document describes that initialization.
 At build-time, we can request pages (as `.bss` or `.data`) that we're given before the kernel starts, saving us from having to implement allocation that early in boot.
 We use this to allocate initial page tables and some initial heap and stack memory.
 
+See `src/kernel/arch/riscv64/generate_bootstub.py` for the code that does this.
+
 The initial page tables are generated ahead-of-time and compiled into the kernel binary, so that virtual memory works immediately, before any allocators are up.
 These page tables have entries for:
 
-- The kernel.
+- The physical memory mapping.
+  - The entire mapping is made, using 1GiB pages.
 - The initial heap segment.
-  - This gets allocated as 4MiB of `.bss`.
-  - This is mapped to the RAM area.
-- Two pages for the boothart's trap handler stack.
-  - This gets allocated as 8KiB of `.bss`.
-  - This has a guard page beneath it.
-  - This is mapped to both the RAM area (without the guard page) and the mappable area (with it).
-- Two pages for the boothart's stack.
-  - This gets allocated as 8KiB of `.bss`.
-  - This has a guard page beneath it.
-  - This is mapped to both the RAM area (without the guard page) and the mappable area (with it).
-  - Once the mm subsystem is set up, the stack will grow automatically.
-- The root page table.
-  - This gets mapped to a fixed location.
-
-> **TODO**: The initial page tables should get mapped to RAM as well, at some point.
-> Currently, they do not, because mapping all the existing page tables might require more page tables.
+  - This is 4MiB, and gets mapped to the RAM area.
+- The boothart's stack.
+  - This is 2MiB, and gets mapped to the RAM area.
+  - After the physical memory allocator is set up, guard pages get set up.
+- The kernel.
 
 ## Heap allocator
 
@@ -51,18 +43,14 @@ Once it's parsed, we can easily extract the parts of it we need:
 - The `/chosen/rng-seed` node, as entropy to further initialize the entropy pool.
   This is usually enough to fully initialize the pool. 
 - `/memory` nodes, which describe the memory installed on the device.
-- Memory reservations to avoid, from the memory reservation block.
-- `/reserved-memory` nodes, which must also be avoided.
+- `/reserved-memory` nodes, which we avoid adding to the physical allocator.
 
-From the memory and reservations, we can find all the free regions of RAM.
-We use a buddy allocator to track them and map them into the RAM area.
+From the memory and reservations, we can find all the free regions of unreserved RAM.
+We use a simple free list to track them.
 
-There's a tiny bit of bootstrapping trickiness required, since making a mapping can require allocating from the physical allocator as well.
-If there's not enough memory to make a page table mapping for a page we're adding, then instead we take that page to allocate a page table, adding it to the buddy allocator as being in-use instead of free.
-
-Once this is done, the heap allocator is able to allocate more heap segments from it, lifting the 4MiB limitation.
+Once this is done, the heap allocator is able to allocate more heap segments from the physical allocator, so there's no longer a 4MiB limitation on heap allocation.
 
 ## Virtual allocator
 
-The virtual allocator for the mappable area can now be initialized as well.
-This is much simpler, since we don't immediately need to perform any allocations, and the allocator does not need to describe itself -- the unmapped parts of the mappable area are the only thing we need to store in it, and its state lives entirely in heap-allocated data structures.
+The virtual allocator for higher-half memory can now be initialized as well.
+This allocator covers the entire 38-bit space, but will only ever have the RAM area marked as free.
