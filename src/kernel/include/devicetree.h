@@ -96,6 +96,20 @@ struct devicetree_prop *devicetree_prop(struct devicetree_node *parent,
                                         const char *name);
 
 /**
+ * Retrieves the `#address-cells` and `#size-cells` properties of a node.
+ * Returns whether this succeeded.
+ */
+bool devicetree_address_size_cells(struct devicetree_node *node,
+                                   u32 *out_address_cells, u32 *out_size_cells);
+
+/**
+ * Retrieves the `i`th address and size pair from a property. This is useful
+ * for properties like `reg`. Returns whether this succeeded.
+ */
+bool devicetree_prop_reg(struct devicetree_prop *prop, usize i, paddr *out_addr,
+                         usize *out_size);
+
+/**
  * Prints the Devicetree.
  */
 void devicetree_print(struct devicetree_node *root);

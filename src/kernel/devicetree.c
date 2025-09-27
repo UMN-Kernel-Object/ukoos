@@ -508,6 +508,94 @@ struct devicetree_prop *devicetree_prop(struct devicetree_node *parent,
   return nullptr;
 }
 
+bool devicetree_address_size_cells(struct devicetree_node *node,
+                                   u32 *out_address_cells,
+                                   u32 *out_size_cells) {
+  struct devicetree_prop *address_cells_prop =
+                             devicetree_prop(node, "#address-cells"),
+                         *size_cells_prop =
+                             devicetree_prop(node, "#size-cells");
+  if (!address_cells_prop) {
+    print("Missing value for #address-cells");
+    return false;
+  }
+  if (!size_cells_prop) {
+    print("Missing value for #size-cells");
+    return false;
+  }
+  if (address_cells_prop->value_len != 4) {
+    print("Invalid value for #address-cells: too long");
+    return false;
+  }
+  if (size_cells_prop->value_len != 4) {
+    print("Invalid value for #size-cells: too long");
+    return false;
+  }
+
+  memcpy(out_address_cells, address_cells_prop->value,
+         address_cells_prop->value_len);
+  memcpy(out_size_cells, size_cells_prop->value, size_cells_prop->value_len);
+
+  *out_address_cells = big_to_native(*out_address_cells);
+  *out_size_cells = big_to_native(*out_size_cells);
+  return true;
+}
+
+bool devicetree_prop_reg(struct devicetree_prop *prop, usize i, paddr *out_addr,
+                         usize *out_size) {
+  u32 address_cells, size_cells;
+  if (!prop || !prop->node || !prop->node->parent)
+    return false;
+  if (!devicetree_address_size_cells(prop->node->parent, &address_cells,
+                                     &size_cells))
+    return false;
+  assert(address_cells == 1 || address_cells == 2);
+  assert(size_cells == 1 || size_cells == 2);
+
+  usize bytes_per_entry = (address_cells + size_cells) * 4;
+  if (prop->value_len % bytes_per_entry != 0)
+    return false;
+
+  u8 *entry = prop->value + (address_cells + size_cells) * 4 * i;
+  if (entry >= prop->value + prop->value_len)
+    return false;
+
+  switch (address_cells) {
+  case 1: {
+    u32 address32;
+    memcpy(&address32, entry, 4);
+    *out_addr = paddr_of_bits(big_to_native(address32));
+    entry += 4;
+  } break;
+  case 2: {
+    u64 address64;
+    memcpy(&address64, entry, 8);
+    *out_addr = paddr_of_bits(big_to_native(address64));
+    entry += 8;
+  } break;
+  default:
+    return false;
+  }
+  switch (size_cells) {
+  case 1: {
+    u32 size32;
+    memcpy(&size32, entry, 4);
+    *out_size = big_to_native(size32);
+    entry += 4;
+  } break;
+  case 2: {
+    u64 size64;
+    memcpy(&size64, entry, 8);
+    *out_size = big_to_native(size64);
+    entry += 8;
+  } break;
+  default:
+    return false;
+  }
+
+  return true;
+}
+
 void devicetree_print(struct devicetree_node *node) {
   if (!node) {
     print("nullptr");
