@@ -216,3 +216,15 @@ bool mm_alloc_physical(paddr *out) {
   *out = paddr_offset(head, link.length << 12);
   return true;
 }
+
+void mm_free_physical(paddr frame) {
+  // TODO: There should be a lock around essentially this whole function.
+  assert(bits_of_paddr(frame));
+
+  struct physical_free_list link = {
+      .next = free_list_head,
+      .length = 1,
+  };
+  copy_to_physical(frame, &link, sizeof(struct physical_free_list));
+  free_list_head = frame;
+}
