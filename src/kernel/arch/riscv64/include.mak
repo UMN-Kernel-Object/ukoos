@@ -44,14 +44,12 @@ gdb_bootstub: src/kernel/kernel.sym
 		-ex "break main"
 qemu: src/kernel/kernel.elf
 	qemu-system-riscv64 \
-		-m 1G \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
 		$(target-qemuflags) \
 		$(QEMUFLAGS)
 qemu-debug: src/kernel/kernel.elf
 	qemu-system-riscv64 \
-		-m 1G \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
 		-s -S \
