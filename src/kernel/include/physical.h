@@ -42,6 +42,11 @@ static inline usize paddr_diff(paddr end, paddr start) {
   return bits_of_paddr(end) - bits_of_paddr(start);
 }
 
+static inline bool paddr_in_range(paddr addr, paddr lo, paddr hi) {
+  return bits_of_paddr(lo) <= bits_of_paddr(addr) &&
+         bits_of_paddr(addr) < bits_of_paddr(hi);
+}
+
 static inline paddr paddr_offset(paddr paddr, usize offset) {
   uaddr addr = bits_of_paddr(paddr);
   assert(!ckd_add(&addr, addr, offset),
