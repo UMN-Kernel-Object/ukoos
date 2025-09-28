@@ -228,6 +228,32 @@ static void treap_insert(struct vma *vma, enum which_treap which) {
 }
 
 /**
+ * Removes a VMA from a treap.
+ */
+static void treap_remove(struct vma *vma, enum which_treap which) {
+  struct treap_head *node = &vma->treaps[which];
+  assert(node->priority);
+
+  if (!node->children[0] && !node->children[1]) {
+    // We're a leaf; we can simply remove ourselves without needing to
+    // rebalance.
+    if (node->parent) {
+      // We're not the root.
+      assert(node->parent->treaps[which].children[node->which_child] == vma);
+      node->parent->treaps[which].children[node->which_child] = nullptr;
+    } else {
+      // We're the root.
+      assert(vma->allocator->roots[which] == vma);
+      vma->allocator->roots[which] = nullptr;
+    }
+  } else {
+    TODO();
+  }
+
+  treap_init(node, node->value);
+}
+
+/**
  * Computes the bounds of a VMA.
  */
 static void vma_bounds(const struct vma *vma, uaddr *out_lo, uaddr *out_hi) {
@@ -320,4 +346,95 @@ void vma_allocator_print(struct vma_allocator *allocator) {
     print("  {uaddr}-{uaddr}: {cstr}", start, end,
           is_vma_free(vma) ? "FREE" : "USED");
   }
+}
+
+static struct vma *vma_find(struct vma_allocator *allocator, uaddr addr) {
+  struct vma *vma = allocator->roots[BY_ADDR];
+  while (vma) {
+    uaddr start, end;
+    vma_bounds(vma, &start, &end);
+    if (addr < start)
+      vma = vma->treaps[BY_ADDR].children[0];
+    else if (end <= addr)
+      vma = vma->treaps[BY_ADDR].children[1];
+    else
+      break;
+  }
+  return vma;
+}
+
+struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
+                              uaddr hi) {
+  assert((lo & 0xfff) == 0 && (hi & 0xfff) == 0);
+  assert(lo < hi);
+
+  struct vma *vma = vma_find(allocator, lo);
+  if (!vma)
+    return nullptr;
+
+  // If the VMA isn't free, we can't allocate.
+  if (!is_vma_free(vma))
+    return nullptr;
+
+  // If the same VMA doesn't contain the highest address, there must be another
+  // allocation inside the range.
+  uaddr vma_lo, vma_hi;
+  vma_bounds(vma, &vma_lo, &vma_hi);
+  if (vma_hi < hi)
+    return nullptr;
+
+  // Now, we want to split the VMA we found to contain the allocation.
+  //
+  // The simplest thing to do is to remove the VMA from the treaps, split it,
+  // and reinsert the split-out parts. We keep it in the list, so that we can
+  // avoid re-traversing it later.
+  //
+  // Before we do, we allocate memory for the new VMAs to be stored, so we don't
+  // have to "undo" work if allocation fails later.
+  struct vma *new_vma_lo = nullptr, *new_vma_hi = nullptr;
+  if (vma_lo != lo)
+    if (!(new_vma_lo = alloc(sizeof(struct vma))))
+      goto fail;
+  if (vma_hi != hi)
+    if (!(new_vma_hi = alloc(sizeof(struct vma))))
+      goto fail;
+
+  // Save a pointer to the previous VMA (or the allocator), so we can insert all
+  // the VMAs into the list without searching.
+  struct list_head *prev = vma->list_head.prev;
+
+  // Remove the VMA. This breaks invariants (the allocator may now be empty),
+  // but we restore them later.
+  list_remove(&vma->list_head);
+  treap_remove(vma, BY_ADDR);
+  if (is_vma_free(vma))
+    treap_remove(vma, BY_SIZE);
+
+  // Initialize the VMAs and insert them into the list and treaps.
+  if (new_vma_hi) {
+    vma_init(allocator, hi, vma_hi, new_vma_hi);
+    list_unshift(prev, &new_vma_hi->list_head);
+    treap_insert(new_vma_hi, BY_ADDR);
+    treap_insert(new_vma_hi, BY_SIZE);
+  }
+  vma_init(allocator, lo, hi, vma);
+  list_unshift(prev, &vma->list_head);
+  treap_insert(vma, BY_ADDR);
+  if (new_vma_lo) {
+    vma_init(allocator, vma_lo, lo, new_vma_lo);
+    list_unshift(prev, &new_vma_lo->list_head);
+    treap_insert(new_vma_lo, BY_ADDR);
+    treap_insert(new_vma_lo, BY_SIZE);
+  }
+
+  // Mark our VMA as used.
+  vma->treaps[BY_SIZE].priority = 0;
+
+  // Return the VMA.
+  return vma;
+
+fail:
+  free(new_vma_lo);
+  free(new_vma_hi);
+  return nullptr;
 }
