@@ -117,6 +117,24 @@ usize random(void) {
   return out;
 }
 
+u32 random_u32(void) {
+  u8 buf[sizeof(u32)];
+  getrandom(buf, sizeof(u32));
+
+  u32 out;
+  memcpy(&out, buf, sizeof(u32));
+  return out;
+}
+
+u64 random_u64(void) {
+  u8 buf[sizeof(u64)];
+  getrandom(buf, sizeof(u64));
+
+  u64 out;
+  memcpy(&out, buf, sizeof(u64));
+  return out;
+}
+
 void getrandom(u8 *buf, usize len) {
   rng_getrandom(ensure_hart_local_rng(), buf, len);
 }
