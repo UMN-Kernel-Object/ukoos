@@ -34,15 +34,9 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
     panic("Failed to parse Devicetree");
   devicetree_add_entropy(devicetree);
   mm_init_physical(devicetree);
-  devicetree_free(devicetree);
-
-  // uptr a = mm_va_alloc(mm_kernel_virtual_buddy, 2 * 1024 * 1024);
-  // uptr b = mm_va_alloc(mm_kernel_virtual_buddy, 4096);
-  // print("{uptr} {uptr}", a, b);
-  usize i = 0;
-  paddr addr;
-  while (mm_alloc_physical(&addr))
-    print("{usize} {paddr}", i++, addr);
+  struct vma_allocator *kernel_virtual_allocator =
+      vma_allocator_new(0xffffffe000000000, 0xffffffffc0000000);
+  vma_allocator_print(kernel_virtual_allocator);
 
   TODO();
 }
