@@ -44,6 +44,16 @@ void arch_entropy_pool_seed_early(void);
 usize random(void);
 
 /**
+ * Returns a single random u32.
+ */
+u32 random_u32(void);
+
+/**
+ * Returns a single random u64.
+ */
+u64 random_u64(void);
+
+/**
  * Blocks until the global entropy pool is initialized. If the local entropy
  * pool was initialized before the global entropy pool was, reinitializes the
  * local entropy pool.
