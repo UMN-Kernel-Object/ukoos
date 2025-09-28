@@ -14,7 +14,6 @@ ukoOS has multiple strategies for memory management, that manage memory at diffe
 
 - The kernel manages its own virtual memory, in the RAM region of the memory map.
 
-  This is a buddy allocator, and can serve power-of-two sized allocation requests.
   The allocator that handles these requests is called **the virtual memory allocator**.
 
 Each hart has its own root page table, since it can be running a different userspace process.
