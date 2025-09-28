@@ -37,6 +37,12 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   struct vma_allocator *kernel_virtual_allocator =
       vma_allocator_new(0xffffffe000000000, 0xffffffffc0000000);
   vma_allocator_print(kernel_virtual_allocator);
+  assert(vma_alloc_by_addr(kernel_virtual_allocator, 0xffffffe000000000,
+                           0xffffffe000400000));
+  vma_allocator_print(kernel_virtual_allocator);
+  assert(vma_alloc_by_addr(kernel_virtual_allocator, 0xffffffe000400000,
+                           0xffffffe000600000));
+  vma_allocator_print(kernel_virtual_allocator);
 
   TODO();
 }
