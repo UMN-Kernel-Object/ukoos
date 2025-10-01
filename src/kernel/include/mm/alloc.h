@@ -31,6 +31,27 @@ alloc(usize size);
 zalloc(usize size);
 
 /**
+ * Allocates a copy of an object.
+ */
+[[gnu::alloc_size(2), gnu::malloc, gnu::malloc(free, 1),
+  nodiscard]] static void *
+memdup(const void *ptr, usize len) {
+  char *out = alloc(len);
+  if (!out)
+    return nullptr;
+  return memcpy(out, ptr, len);
+}
+
+/**
+ * Allocates a string, which is the same length as `str` and initialized to have
+ * the same contents.
+ */
+[[gnu::malloc, gnu::malloc(free, 1), nodiscard]] static char *
+strdup(const char *str) {
+  return memdup(str, strlen(str) + 1);
+}
+
+/**
  * Allocates memory, initializing it with the contents of `ptr`, which is then
  * `free`d. On OOM, returns `nullptr` and does *not* free `ptr`.
  *

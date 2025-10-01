@@ -61,6 +61,8 @@ static void vfprint(struct formatter *fmt, const char *format, va_list ap);
 typedef void (*format_func)(struct formatter *fmt, const char *args_start,
                             const char *args_end, va_list *ap);
 
+const char *NUMBER_ALPHABET = "0123456789abcdef";
+
 static void format_number(struct formatter *fmt, const char *args_start,
                           const char *args_end, bool sign, u64 number) {
   // Parse arguments.
@@ -122,7 +124,6 @@ static void format_number(struct formatter *fmt, const char *args_start,
 
   // Format the number to the buffer, backwards. This needs a special case for
   // zero, which we'd otherwise terminate on.
-  const char *alphabet = "0123456789abcdef";
   char buf_rev[64];
   usize buf_len = 0;
   if (number == 0) {
@@ -130,7 +131,7 @@ static void format_number(struct formatter *fmt, const char *args_start,
     buf_len = 1;
   } else {
     while (number) {
-      buf_rev[buf_len++] = alphabet[number % base];
+      buf_rev[buf_len++] = NUMBER_ALPHABET[number % base];
       number /= base;
     }
   }
@@ -185,6 +186,25 @@ static void format_bool(struct formatter *fmt, const char *args_start,
   }
 
   write_str(fmt, va_arg(*ap, int) ? "true" : "false");
+}
+
+static void format_bytes(struct formatter *fmt, const char *args_start,
+                         const char *args_end, va_list *ap) {
+  if (args_start != args_end) {
+    write_str(fmt, "{{invalid arguments for type bytes: ");
+    write_stri(fmt, args_start, args_end);
+    write_str(fmt, "}}");
+    return;
+  }
+
+  const u8 *ptr = va_arg(*ap, const u8 *);
+  usize len = va_arg(*ap, usize);
+  for (usize i = 0; i < len; i++) {
+    if (i)
+      write_byte(fmt, ' ');
+    write_byte(fmt, NUMBER_ALPHABET[ptr[i] >> 4]);
+    write_byte(fmt, NUMBER_ALPHABET[ptr[i] & 15]);
+  }
 }
 
 static void format_cstr(struct formatter *fmt, const char *args_start,
@@ -343,6 +363,8 @@ static format_func find_format_func(const char *type_name_ptr,
       return format_uptr;
     break;
   case 5:
+    if (!memcmp(type_name_ptr, "bytes", 5))
+      return format_bytes;
     if (!memcmp(type_name_ptr, "isize", 5))
       return format_isize;
     if (!memcmp(type_name_ptr, "paddr", 5))

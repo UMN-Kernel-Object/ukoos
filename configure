@@ -7,7 +7,12 @@ usage() {
 	printf >&2 'Usage: ./configure [OPTION]...\n\n'
 	printf >&2 'Defaults for the options are specified in brackets.\n'
 	printf >&2 '\nSystem:\n'
-	printf >&2 '  --arch=ARCH             build a kernel for the given architecture [%s]\n' "$arch"
+	printf >&2 '  --arch=ARCH             build for the given architecture [%s]\n' "$arch"
+	printf >&2 '  --target=TARGET         build for the given target'
+	if [[ "$has_target" != 0 ]]; then
+		printf >&2 ' [%s]' "$target"
+	fi
+	printf >&2 '\n'
 	printf >&2 '\nInstallation directories:\n'
 	printf >&2 '  --prefix=PREFIX         install to this directory [%s]\n' "$prefix"
 	printf >&2 '\nDefaults:\n'
@@ -20,11 +25,13 @@ known_arches=(riscv64)
 # shellcheck disable=SC2034 # Only accessed indirectly.
 tool_prefixes_riscv64=(riscv64-none-elf- riscv-none-elf- riscv64-unknown-elf-)
 
-args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,prefix:' -- "$@")
+args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,prefix:,target:' -- "$@")
 eval set -- "$args"
 unset args
 
 arch=riscv64
+target=
+has_target=0
 default_cflags=1
 default_ldflags=1
 help=0
@@ -63,6 +70,11 @@ while true; do
 		prefix="$2"
 		shift 2
 		;;
+	--target)
+		target="$2"
+		has_target=1
+		shift 2
+		;;
 	--)
 		shift
 		break
@@ -80,10 +92,29 @@ if [[ "$help" != 0 ]]; then
 	usage
 fi
 
+# Check that the target option is present and valid.
+if [[ "$has_target" == 0 ]]; then
+	printf >&2 './configure: the --target option is required\n'
+	printf >&2 "./configure: use \`--target list' to get a list of available targets\n"
+	exit 1
+elif [[ "$target" == list ]]; then
+	for file in "$repo/src/targets/$arch/"*.mak; do
+		basename "$file" .mak
+	done
+	exit 0
+elif [[ ! -f "$repo/src/targets/$arch/$target.mak" ]]; then
+	printf >&2 "./configure: the target \`%s' did not exist for %s\n" "$target" "$arch"
+	printf >&2 "./configure: use \`--target list' to get a list of available targets\n"
+	exit 1
+fi
+
+# Print a warning about reconfiguring.
 if [[ -e Makefile ]]; then
 	if [[ "$(realpath Makefile)" != "$(realpath "$repo/Makefile")" ]]; then
 		printf >&2 './configure: a different Makefile already exists\n'
 		exit 1
+	else
+		printf >&2 "./configure: already configured; you probably want to run \`make clean' to get rid of old build artifacts\n"
 	fi
 else
 	ln -s "$repo/Makefile" Makefile
@@ -101,33 +132,50 @@ tool_prefixes_var="tool_prefixes_${arch}[@]"
 find_tool() {
 	# Intentionally using -z, since it's not rare for people to e.g. set
 	# CC= instead of unsetting it.
-	if [[ -z "${!1:-}" ]]; then
-		for tool_prefix in "${!tool_prefixes_var}"; do
-			if command -v "$tool_prefix$2" >/dev/null 2>/dev/null; then
-				printf -v "$1" '%s%s' "$tool_prefix" "$2"
+	tool_name="$1"
+	shift
+	if [[ -z "${!tool_name:-}" ]]; then
+		for tool in "$@"; do
+			if command -v "$tool" >/dev/null 2>/dev/null; then
+				printf -v "$tool_name" '%s' "$tool"
 				break
 			fi
 		done
 	fi
-	if [[ -z "${!1:-}" ]]; then
-		printf >&2 './configure: could not find a tool for $%s\n' "$1"
+	if [[ -z "${!tool_name:-}" ]]; then
+		printf >&2 './configure: could not find a tool for $%s\n' "$tool_name"
 		exit 1
 	fi
+}
+find_tool_with_prefix() {
+	tools=()
+	for tool_prefix in "${!tool_prefixes_var}"; do
+		tools+=("$tool_prefix$2")
+	done
+	find_tool "$1" "${tools[@]}"
 }
 
 # Detect tools. Since we're expecting a freestanding compiler, we _don't_
 # assume that e.g. the default gcc is a reasonable compiler to use.
-find_tool CC gcc
-find_tool STRIP strip
+find_tool_with_prefix CC gcc
+find_tool_with_prefix OBJDUMP objdump
+find_tool_with_prefix STRIP strip
+find_tool GDB gdb-multiarch gdb
+find_tool PYTHON3 pypy3 python3
 
 # Generate the config.mak.
 cat >config.mak <<EOF
 arch = $(printf %q "$arch")
 prefix = $(printf %q "$prefix")
 srcdir = $(printf %q "$repo")
+target = $(printf %q "$target")
 
 CC = $(printf %q "$CC")
+GDB = $(printf %q "$GDB")
+OBJDUMP = $(printf %q "$OBJDUMP")
+PYTHON3 = $(printf %q "$PYTHON3")
 STRIP = $(printf %q "$STRIP")
+
 CFLAGS = $(printf %s "${CFLAGS:-}")
 LDFLAGS = $(printf %s "${LDFLAGS:-}")
 

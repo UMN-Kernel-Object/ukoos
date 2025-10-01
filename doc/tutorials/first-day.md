@@ -23,7 +23,7 @@ Once we have the code and tools, we can compile the code from the dev container
 ```shell
 mkdir build
 cd build
-../configure
+../configure --target qemu-riscv64
 make
 ```
 
