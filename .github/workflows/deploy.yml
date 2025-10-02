@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - trunk
+  pull_request:
 jobs:
   build:
     runs-on: 'ubuntu-latest'
@@ -16,6 +17,7 @@ jobs:
             binutils-riscv-none-elf \
             coreutils \
             gcc-riscv-none-elf \
+            gdb-multiarch \
             git \
             make \
             mdbook \
@@ -45,6 +47,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/trunk'
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
