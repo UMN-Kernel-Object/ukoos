@@ -2,7 +2,6 @@ kernel-cflags += \
 	-DARCH_RISCV64 \
 	-fno-omit-frame-pointer \
 	-mabi=lp64 \
-	-march=rv64imac_zicsr_zicntr_zihpm_zba_zbb_zbs_zihintpause_zicbom_zicbop_zicboz \
 	-mcmodel=medany
 kernel-objs-asm += arch/riscv64/start
 kernel-objs-c += arch/riscv64/backtrace arch/riscv64/hart_locals arch/riscv64/paging arch/riscv64/panic arch/riscv64/sbi
@@ -26,15 +25,16 @@ $(call defcleanable, \
 
 # Targets for booting and debugging the kernel.
 gdb: src/kernel/kernel.sym
-	gdb-multiarch src/kernel/kernel.sym \
+	$(GDB) src/kernel/kernel.sym \
 		-ex "set substitute-path / $(srcdir)/" \
 		-ex "layout src" \
 		-ex "focus cmd" \
 		-ex "target remote :1234" \
 		-ex "break main" \
-		-ex "break _panic_halt"
+		-ex "break _panic_halt" \
+		-ex "break unrecoverable_exception"
 gdb_bootstub: src/kernel/kernel.sym
-	gdb-multiarch src/kernel/kernel.sym \
+	$(GDB) src/kernel/kernel.sym \
 		-ex "set substitute-path / $(srcdir)/" \
 		-ex "layout asm" \
 		-ex "layout regs" \
@@ -44,24 +44,23 @@ gdb_bootstub: src/kernel/kernel.sym
 		-ex "break main"
 qemu: src/kernel/kernel.elf
 	qemu-system-riscv64 \
-		--machine virt \
-		--cpu rva22s64 \
-		--smp 1 \
-		-m 1G \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
+		$(target-qemuflags) \
 		$(QEMUFLAGS)
 qemu-debug: src/kernel/kernel.elf
 	qemu-system-riscv64 \
-		--machine virt \
-		--cpu rva22s64 \
-		--smp 1 \
-		-m 1G \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
 		-s -S \
+		$(target-qemuflags) \
 		$(QEMUFLAGS)
 .PHONY: gdb gdb_bootstub qemu qemu-debug
+
+# A target for dumping the kernel.
+objdump: src/kernel/arch/riscv64/kernel-unstripped.elf
+	$(OBJDUMP) -d src/kernel/arch/riscv64/kernel-unstripped.elf | less
+.PHONY: objdump
 
 # Link the kernel. This kernel will have debug symbols, and not actually be
 # bootable -- it depends on being loaded by and having the boot environment set
@@ -89,7 +88,7 @@ src/kernel/kernel.sym: src/kernel/arch/riscv64/kernel-unstripped.elf
 src/kernel/arch/riscv64/bootstub_generated.S: $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel.elf
 	@mkdir -p $(dir $@)
 	@echo "GEN     $@"
-	$(Q)python3 $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel-unstripped.elf $@
+	$(Q)$(PYTHON3) $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel-unstripped.elf $@
 
 # Compile the bootstub.
 src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_generated.S

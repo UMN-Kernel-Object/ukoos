@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          ../configure
+          ../configure --target qemu-riscv64
           make doc/book
       - name: Upload documentation
         uses: actions/upload-pages-artifact@v3

@@ -7,6 +7,12 @@ jobs:
     runs-on: 'ubuntu-latest'
     container:
       image: docker.io/alpine:3.21
+    strategy:
+      matrix:
+        target:
+          - milkv-duos
+          - milkv-jupiter
+          - qemu-riscv64
     steps:
       - name: Install dependencies
         run: |
@@ -15,6 +21,7 @@ jobs:
             binutils-riscv-none-elf \
             coreutils \
             gcc-riscv-none-elf \
+            gdb-multiarch \
             git \
             make \
             mdbook \
@@ -32,25 +39,26 @@ jobs:
           shortrev=$(git rev-parse --short HEAD)
           mkdir build
           cd build
-          ../configure
+          ../configure --target ${{ matrix.target }}
           make -j$(nproc) -l$(nproc)
-          mkdir ukoos-git-$shortrev
-          make DESTDIR=$(realpath ukoos-git-$shortrev) install
-          tar --create --file ukoos-git-$shortrev.tar \
+          name=ukoos-${{ matrix.target }}-git-$shortrev
+          mkdir $name
+          make DESTDIR=$(realpath $name) install
+          tar --create --file $name.tar \
             --format posix \
             --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime \
             --mtime "@$SOURCE_DATE_EPOCH" \
             --sort name \
             --owner 0 --group 0 --numeric-owner \
-            ukoos-git-$shortrev
-          zstd -19 --threads=0 ukoos-git-$shortrev.tar
-          sha256sum ukoos-git-$shortrev.tar ukoos-git-$shortrev.tar.zst
-          cp ukoos-git-$shortrev.tar.zst ../ukoos-git.tar.zst
+            $name
+          zstd -19 --threads=0 $name.tar
+          sha256sum $name.tar $name.tar.zst
+          cp $name.tar.zst ../ukoos-${{ matrix.target }}-git.tar.zst
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ukoos-git.tar.zst
-          path: ukoos-git.tar.zst
+          name: ukoos-${{ matrix.target }}-git.tar.zst
+          path: ukoos-${{ matrix.target }}-git.tar.zst
           compression-level: 0
   build-dev-image:
     runs-on: ubuntu-latest

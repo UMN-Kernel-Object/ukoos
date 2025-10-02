@@ -36,11 +36,18 @@ endef
 include $(srcdir)/doc/include.mak
 include $(srcdir)/src/kernel/include.mak
 
+# Load the target.
+ifeq ($(realpath $(srcdir)/src/targets/$(arch)/$(target).mak),)
+$(error The target $(target) did not exist; rerun ./configure)
+endif
+include $(srcdir)/src/targets/$(arch)/$(target).mak
+
 # Common rules.
 all::
 $(call defcleanable,compile_commands.json)
 distclean: clean
-	@if [[ -e config.mak ]]; then echo "CLEAN config.mak"; rm config.mak; fi
+	@if [[ -e config.mak ]]; then echo "CLEAN   config.mak"; rm config.mak; fi
+	@if [[ -e Makefile ]]; then echo "CLEAN   Makefile"; rm Makefile; fi
 install::
 watch:
 	watchexec \
