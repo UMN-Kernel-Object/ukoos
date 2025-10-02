@@ -1,6 +1,5 @@
 name: Deploy documentation
 on:
-on:
   pull_request:
     branches:
       - trunk
