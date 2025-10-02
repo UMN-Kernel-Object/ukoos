@@ -8,6 +8,9 @@ endif
 .DEFAULT_GOAL = all
 MAKEFLAGS += -rR
 
+# Set bash as the shell
+SHELL = /bin/bash
+
 # Helpers.
 ifeq ($(V),1)
   Q =
