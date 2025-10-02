@@ -18,5 +18,6 @@ RUN apk add --no-interactive \
             perl \
             python3 \
             qemu-system-riscv64 \
+            reuse \
             tar \
             zstd
