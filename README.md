@@ -14,3 +14,5 @@ Files may be marked individually, but broadly speaking (in a non-binding and imp
 - The code is offered under the GPL 3.0 or later, the same as GNU coreutils.
 - Documentation is dual-licensed under the GFDL and CC-BY-SA, the same as Wikipedia.
 - CI configurations and similar "miscellanous files" are licensed CC0-1.0, which is approximately public-domain.
+
+This can be checked with `reuse lint`, with the [REUSE tool](https://reuse.software/).
