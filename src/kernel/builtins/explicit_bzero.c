@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include <types.h>
 
 [[gnu::access(write_only, 1), gnu::nonnull(1)]]

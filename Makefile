@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # Include config.mak, and make sure that it is present.
 -include config.mak
 ifndef config_mak_present

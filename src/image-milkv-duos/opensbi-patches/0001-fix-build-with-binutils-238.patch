@@ -1,3 +1,7 @@
+SPDX-FileCopyrightText: 2022 Aurelien Jarno <aurelien@aurel32.net>
+
+SPDX-License-Identifier: GPL-2.0-or-later
+
 commit e4be3e25eeedf8f96787625a4c585dbbdeaaf950
 Author: Aurelien Jarno <aurelien@aurel32.net>
 Date:   Fri Jan 28 18:33:46 2022 +0100

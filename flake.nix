@@ -33,6 +33,7 @@
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
               pkgs.python3
+              pkgs.reuse
             ];
 
             dontUnpack = true;

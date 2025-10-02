@@ -1,3 +1,7 @@
+SPDX-FileCopyrightText: 2025 ukoOS Contributors
+
+SPDX-License-Identifier: GPL-2.0-or-later
+
 diff --git i/lib/cpu/riscv/bl1_entrypoint.S w/lib/cpu/riscv/bl1_entrypoint.S
 index dd85be9..c16b3d4 100644
 --- i/lib/cpu/riscv/bl1_entrypoint.S
