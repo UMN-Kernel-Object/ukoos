@@ -16,6 +16,7 @@ jobs:
             binutils-riscv-none-elf \
             coreutils \
             gcc-riscv-none-elf \
+            gdb-multiarch \
             git \
             make \
             mdbook \
