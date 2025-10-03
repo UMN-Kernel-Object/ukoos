@@ -3,11 +3,20 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 {
-  inputs.u-boot-milkv-duos-sd = {
-    url = "github:UMN-Kernel-Object/u-boot/milkv-duos-sd";
-    inputs = {
-      flake-utils.follows = "flake-utils";
-      nixpkgs.follows = "nixpkgs";
+  inputs = {
+    u-boot-milkv-duos-sd = {
+      url = "github:UMN-Kernel-Object/u-boot/milkv-duos-sd";
+      inputs = {
+        flake-utils.follows = "flake-utils";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
+    u-boot-spacemit-k1 = {
+      url = "github:UMN-Kernel-Object/u-boot/spacemit-k1";
+      inputs = {
+        flake-utils.follows = "flake-utils";
+        nixpkgs.follows = "nixpkgs";
+      };
     };
   };
   outputs =
@@ -16,6 +25,7 @@
       flake-utils,
       nixpkgs,
       u-boot-milkv-duos-sd,
+      u-boot-spacemit-k1,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -137,6 +147,16 @@
             dev = false;
             u-boot-milkv-duos-sd = u-boot-milkv-duos-sd.packages.${system}.default;
             ukoos-milkv-duos = packages."ukoos/milkv-duos";
+          };
+          "dev-image/milkv-jupiter" = pkgs.callPackage ./src/image-milkv-jupiter {
+            dev = true;
+            u-boot-milkv-jupiter = u-boot-spacemit-k1.packages.${system}.default;
+            ukoos-milkv-jupiter = packages."ukoos/milkv-jupiter";
+          };
+          "image/milkv-jupiter" = pkgs.callPackage ./src/image-milkv-jupiter {
+            dev = false;
+            u-boot-milkv-jupiter = u-boot-spacemit-k1.packages.${system}.default;
+            ukoos-milkv-jupiter = packages."ukoos/milkv-jupiter";
           };
         };
       }

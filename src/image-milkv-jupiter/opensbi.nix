@@ -1,0 +1,60 @@
+{
+  fetchgit,
+  pkgsCross,
+  stdenvNoCC,
+  python3,
+}:
+
+stdenvNoCC.mkDerivation {
+  pname = "opensbi";
+  version = "2.2.27";
+
+  src = fetchgit {
+    url = "https://gitee.com/bianbu-linux/opensbi.git";
+    hash = "sha256-Vd/a1gIP3bBqLpmz5HAU6HyrK5SuFDnI2m1T2DrtkwE=";
+  };
+  patches = [
+    ./opensbi-patches/0001-include-sbi-Fix-compiling-with-C23-enabled-compilers.patch
+  ];
+
+  nativeBuildInputs = [
+    pkgsCross.riscv64-musl.stdenv.cc.bintools.bintools
+    pkgsCross.riscv64-musl.stdenv.cc.cc
+    python3
+  ];
+
+  patchPhase = ''
+    runHook prePatch
+
+    patchShebangs .
+
+    runHook postPatch
+  '';
+
+  buildPhase = ''
+    runHook preBuild
+
+    make \
+      ''${enableParallelBuilding:+-j''${NIX_BUILD_CORES}} \
+      ARCH=riscv \
+      CROSS_COMPILE=riscv64-unknown-linux-musl- \
+      PLATFORM=generic \
+      PLATFORM_DEFCONFIG=k1_defconfig
+      # CHIP_ARCH=CV181X \
+      # FW_FDT_PATH=
+      # OPENSBI_PATH=$PWD \
+      # PLATFORM=generic
+
+    runHook postBuild
+  '';
+
+  installPhase = ''
+    runHook preInstall
+
+    install -Dt $out -m 0644 build/platform/generic/firmware/fw_dynamic.itb
+
+    runHook postInstall
+  '';
+
+  enableParallelBuilding = true;
+}
