@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 kernel-cflags += \
 	-DARCH_RISCV64 \
 	-fno-omit-frame-pointer \

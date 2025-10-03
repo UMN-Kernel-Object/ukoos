@@ -1,0 +1,19 @@
+name: REUSE linting
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+    container:
+      image: docker.io/alpine:3.21
+    steps:
+      - name: Install dependencies
+        run: |
+          apk add --no-interactive \
+            reuse
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check REUSE
+        run: |
+          reuse lint

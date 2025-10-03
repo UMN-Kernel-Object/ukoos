@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 components += kernel
 kernel-cflags = $(CFLAGS) \
 	-ffile-prefix-map=$(srcdir)= \

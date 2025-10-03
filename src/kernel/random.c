@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include <crypto/subtle/random_internals.h>
 #include <crypto/subtle/rfc7539.h>
 #include <crypto/subtle/rfc7693.h>
