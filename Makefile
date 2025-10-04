@@ -12,8 +12,8 @@ endif
 .DEFAULT_GOAL = all
 MAKEFLAGS += -rR
 
-# Set bash as the shell
-SHELL = /bin/bash
+# Set bash as the shell.
+SHELL := $(shell command -v bash)
 
 # Helpers.
 ifeq ($(V),1)
