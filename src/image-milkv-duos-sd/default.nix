@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 {
   dev ? false,
   u-boot-milkv-duos-sd,
