@@ -45,8 +45,11 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   vma_allocator_print(kernel_virtual_allocator);
 
   struct vma *a = vma_alloc(kernel_virtual_allocator, 512);
+  print("a = {uptr}", a);
   struct vma *b = vma_alloc(kernel_virtual_allocator, 512);
+  print("b = {uptr}", b);
   struct vma *c = vma_alloc(kernel_virtual_allocator, 512);
+  print("c = {uptr}", c);
   vma_allocator_print(kernel_virtual_allocator);
   vma_free(b);
   vma_free(c);
