@@ -548,12 +548,53 @@ fail:
   return nullptr;
 }
 
-void vma_free(struct vma *vma) {
-  uaddr hi, lo;
+/**
+ * Merges vma with its successor.
+ */
+static void vma_merge(struct vma *vma) {
+  struct vma *next = container_of(vma->list_head.next, struct vma, list_head);
+  assert(is_vma_free(vma));
+  assert(is_vma_free(next));
 
+  uaddr lo, hi;
+  vma_bounds(vma, &lo, nullptr);
+  vma_bounds(next, nullptr, &hi);
+
+  // Remove the successor from the treaps and list.
+  list_remove(&next->list_head);
+  treap_remove(next, BY_ADDR);
+  treap_remove(next, BY_SIZE);
+
+  // Free the successor.
+  free(next);
+
+  // Adjust vma's size.
+  treap_remove(vma, BY_SIZE);
+  vma->treaps[BY_SIZE].value = (u32)(((hi - lo) >> 12) - 1);
+  treap_insert(vma, BY_SIZE);
+}
+
+void vma_free(struct vma *vma) {
   if (!vma)
     return;
+  assert(!is_vma_free(vma));
 
-  vma_bounds(vma, &hi, &lo);
-  TODO("vma_free {uaddr}-{uaddr}", hi, lo);
+  // Free this VMA.
+  treap_insert(vma, BY_SIZE);
+
+  // Get the neighbors of the VMA.
+  struct vma *prev =
+      (vma->list_head.prev != &vma->allocator->vmas)
+          ? container_of(vma->list_head.prev, struct vma, list_head)
+          : nullptr;
+  struct vma *next =
+      (vma->list_head.next != &vma->allocator->vmas)
+          ? container_of(vma->list_head.next, struct vma, list_head)
+          : nullptr;
+
+  // Consider merging with each neighbor.
+  if (next && is_vma_free(next))
+    vma_merge(vma);
+  if (prev && is_vma_free(prev))
+    vma_merge(prev);
 }
