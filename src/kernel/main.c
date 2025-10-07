@@ -44,5 +44,14 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
                            0xffffffe000600000));
   vma_allocator_print(kernel_virtual_allocator);
 
+  struct vma *a = vma_alloc(kernel_virtual_allocator, 512);
+  struct vma *b = vma_alloc(kernel_virtual_allocator, 512);
+  struct vma *c = vma_alloc(kernel_virtual_allocator, 512);
+  vma_allocator_print(kernel_virtual_allocator);
+  vma_free(b);
+  vma_free(c);
+  vma_free(a);
+  vma_allocator_print(kernel_virtual_allocator);
+
   TODO();
 }

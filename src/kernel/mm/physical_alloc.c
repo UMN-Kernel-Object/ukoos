@@ -116,6 +116,7 @@ static bool reserved_memory_to_array(struct devicetree_node *devicetree,
     struct devicetree_prop *reg = devicetree_prop(node, "reg");
     if (!reg) {
       print("Missing required property reg on a /reserved-memory node");
+      devicetree_print(node);
       continue;
     }
 
@@ -134,10 +135,8 @@ static bool reserved_memory_to_array(struct devicetree_node *devicetree,
     struct devicetree_node *node =
         container_of(child, struct devicetree_node, parent_children_head);
     struct devicetree_prop *reg = devicetree_prop(node, "reg");
-    if (!reg) {
-      print("Missing required property reg on a /reserved-memory node");
+    if (!reg)
       continue;
-    }
 
     for (usize j = 0;; j++) {
       paddr addr;
