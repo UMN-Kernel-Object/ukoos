@@ -550,6 +550,10 @@ fail:
 
 void vma_free(struct vma *vma) {
   uaddr hi, lo;
+
+  if (!vma)
+    return;
+
   vma_bounds(vma, &hi, &lo);
-  TODO("{uaddr}-{uaddr}", hi, lo);
+  TODO("vma_free {uaddr}-{uaddr}", hi, lo);
 }
