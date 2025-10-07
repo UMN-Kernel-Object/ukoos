@@ -32,8 +32,18 @@ struct vma_allocator *vma_allocator_new(uaddr lo, uaddr hi);
 void vma_allocator_print(struct vma_allocator *allocator);
 
 /**
- * Attempts to allocate the address range lo to hi. Returns a used VMA that
- * covers exactly that range on success, or nullptr on failure.
+ * Attempts to allocate an contiguous address range of `num_pages` pages.
+ * Returns a used VMA of that size on success, or nullptr on failure.
+ *
+ * Note that this does not (currently) create page table entries.
+ */
+struct vma *vma_alloc(struct vma_allocator *allocator, usize num_pages);
+
+/**
+ * Attempts to allocate the address range `lo` to `hi`. Returns a used VMA
+ * that covers exactly that range on success, or nullptr on failure.
+ *
+ * Note that this does not (currently) create page table entries.
  *
  * TODO: This should indicate "virtual memory already in use" separately from
  * "OOM when trying to allocate a VMA."
@@ -42,19 +52,10 @@ struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
                               uaddr hi);
 
 /**
- * Allocates a range of virtual address space from the given allocator.
+ * Frees a VMA.
  *
- * `size` must not be zero.
+ * Note that this does not (currently) remove page table entries.
  */
-[[gnu::nonnull(1)]] uptr mm_va_alloc(struct virtual_buddy *allocator,
-                                     usize size);
-
-/**
- * Frees a range of virtual address space allocated with `mm_va_alloc`.
- *
- * `size` must be the size that was originally allocated.
- */
-[[gnu::nonnull(1)]] void mm_va_free(struct virtual_buddy *allocator, uptr ptr,
-                                    usize size);
+void vma_free(struct vma *vma);
 
 #endif // UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H

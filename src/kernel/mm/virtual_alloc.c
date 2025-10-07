@@ -36,6 +36,9 @@ enum which_treap {
  *
  * - No two VMAs in the allocator overlap.
  * - All operations preserve the total area covered by VMAs.
+ *
+ * If you're not already familiar with treaps, there's a Julia Evans piece about
+ * them: https://jvns.ca/blog/2017/09/09/data-structure--the-treap-/
  */
 struct vma_allocator {
   /**
@@ -146,6 +149,45 @@ static void treap_init(struct treap_head *treap, u32 value) {
 }
 
 /**
+ * Performs a tree rotation. Visually, this transformation is:
+ *
+ *         P               P
+ *         │               │
+ *       ╭ D ╮           ╭ B ╮
+ *     ╭ B ╮ E    <=>    A ╭ D ╮
+ *     A   C               C   E
+ *
+ * When the `which_child` argument is `LEFT_CHILD`, the `vma` argument is the
+ * `D` node, and the rotation goes from the left figure to the right figure.
+ *
+ * When the `which_child` argument is `RIGHT_CHILD`, the `vma` argument is the
+ * `B` node, and the rotation goes from the right figure to the left figure.
+ */
+static void treap_rotate(struct vma *vma, enum which_treap which,
+                         enum which_child which_child) {
+  struct vma *d_b = vma;
+  struct treap_head *d_b_treap = &d_b->treaps[which];
+  struct vma *b_d = d_b_treap->children[which_child];
+  struct treap_head *b_d_treap = &b_d->treaps[which];
+  struct vma *p = d_b_treap->parent;
+
+  struct vma *c = b_d_treap->children[!which_child];
+  d_b_treap->children[which_child] = c;
+  if (c) {
+    struct treap_head *c_treap = &c->treaps[which];
+    c_treap->parent = d_b;
+    c_treap->which_child = which_child;
+  }
+
+  b_d_treap->children[!which_child] = d_b;
+  b_d_treap->parent = p;
+  b_d_treap->which_child = d_b_treap->which_child;
+
+  d_b_treap->parent = b_d;
+  d_b_treap->which_child = !which_child;
+}
+
+/**
  * Inserts a VMA into a treap.
  */
 static void treap_insert(struct vma *vma, enum which_treap which) {
@@ -193,30 +235,8 @@ static void treap_insert(struct vma *vma, enum which_treap which) {
     if (parent_treap->priority >= treap->priority)
       break;
 
-    // Otherwise, rotate the tree to fix up the property locally. In the
-    // LEFT_CHILD case (w.l.o.g.), this looks like:
-    //
-    //       ╭ P ╮          ╭ T ╮
-    //     ╭ T ╮ C    =>    A ╭ P ╮
-    //     A   B              B   C
-    //
-    // This maintains the binary search tree invariant; in both cases, the
-    // invariant is `A <= T <= B <= P <= C`.
-    struct vma *b = treap->children[!which_child];
-
-    treap->which_child = parent_treap->which_child;
-    treap->parent = parent_treap->parent;
-
-    parent_treap->children[which_child] = b;
-    if (b) {
-      struct treap_head *b_treap = &b->treaps[which];
-      b_treap->which_child = which_child;
-      b_treap->parent = parent;
-    }
-
-    treap->children[!which_child] = parent;
-    parent_treap->which_child = !which_child;
-    parent_treap->parent = vma;
+    // Rotate down the parent.
+    treap_rotate(parent, which, which_child);
 
     // Update the parent.
     parent = treap->parent;
@@ -231,26 +251,47 @@ static void treap_insert(struct vma *vma, enum which_treap which) {
  * Removes a VMA from a treap.
  */
 static void treap_remove(struct vma *vma, enum which_treap which) {
-  struct treap_head *node = &vma->treaps[which];
-  assert(node->priority);
+  struct treap_head *treap = &vma->treaps[which];
+  assert(treap->priority);
 
-  if (!node->children[0] && !node->children[1]) {
-    // We're a leaf; we can simply remove ourselves without needing to
-    // rebalance.
-    if (node->parent) {
-      // We're not the root.
-      assert(node->parent->treaps[which].children[node->which_child] == vma);
-      node->parent->treaps[which].children[node->which_child] = nullptr;
+  // Break invariants(!) -- set our priority to zero. Then, perform tree
+  // rotations until we're a leaf.
+  treap->priority = 0;
+  for (;;) {
+    enum which_child which_child;
+    if (treap->children[LEFT_CHILD]) {
+      which_child = LEFT_CHILD;
+    } else if (treap->children[RIGHT_CHILD]) {
+      which_child = RIGHT_CHILD;
     } else {
-      // We're the root.
-      assert(vma->allocator->roots[which] == vma);
-      vma->allocator->roots[which] = nullptr;
+      break;
     }
-  } else {
-    TODO();
+
+    treap_rotate(vma, which, which_child);
   }
 
-  treap_init(node, node->value);
+  // Once we're a leaf, we can simply remove ourselves without needing to
+  // rebalance.
+  if (treap->parent) {
+    // We're not the root.
+    assert(treap->parent->treaps[which].children[treap->which_child] == vma);
+    treap->parent->treaps[which].children[treap->which_child] = nullptr;
+  } else {
+    // We're the root.
+    assert(vma->allocator->roots[which] == vma);
+    vma->allocator->roots[which] = nullptr;
+  }
+
+  // Reinitialize ourselves.
+  treap_init(treap, treap->value);
+}
+
+/**
+ * Returns the size of a VMA.
+ */
+static usize vma_size(const struct vma *vma) {
+  u32 size_compressed = vma->treaps[BY_SIZE].value;
+  return ((usize)size_compressed + 1) << 12;
 }
 
 /**
@@ -258,11 +299,9 @@ static void treap_remove(struct vma *vma, enum which_treap which) {
  */
 static void vma_bounds(const struct vma *vma, uaddr *out_lo, uaddr *out_hi) {
   uaddr base_address = vma->allocator->base_address;
-  u32 addr_compressed = vma->treaps[BY_ADDR].value,
-      size_compressed = vma->treaps[BY_SIZE].value;
-
+  u32 addr_compressed = vma->treaps[BY_ADDR].value;
   uaddr addr = base_address + ((uaddr)addr_compressed << 12);
-  usize size = ((usize)size_compressed + 1) << 12;
+  usize size = vma_size(vma);
 
   if (out_lo)
     *out_lo = addr;
@@ -354,12 +393,57 @@ static struct vma *vma_find(struct vma_allocator *allocator, uaddr addr) {
     uaddr start, end;
     vma_bounds(vma, &start, &end);
     if (addr < start)
-      vma = vma->treaps[BY_ADDR].children[0];
+      vma = vma->treaps[BY_ADDR].children[LEFT_CHILD];
     else if (end <= addr)
-      vma = vma->treaps[BY_ADDR].children[1];
+      vma = vma->treaps[BY_ADDR].children[RIGHT_CHILD];
     else
       break;
   }
+  return vma;
+}
+
+// TODO: There's a circularity here we need to break. When we split a VMA, we
+// need to allocate memory. If we need to grow the heap while doing so, the
+// allocator needs to allocate virtual memory.
+struct vma *vma_alloc(struct vma_allocator *allocator, usize num_pages) {
+  assert(0 < num_pages && num_pages <= (1 << 26));
+  usize wanted_size = num_pages << 12;
+
+  // Find the smallest VMA that fits.
+  struct vma *vma = allocator->roots[BY_SIZE];
+  bool needs_to_split;
+  while (vma) {
+    usize size = vma_size(vma);
+    if (size < wanted_size) {
+      vma = vma->treaps[BY_SIZE].children[RIGHT_CHILD];
+    } else if (size > wanted_size) {
+      // Check if we _can_ go smaller; if not, return this one.
+      struct vma *smaller_vma = vma->treaps[BY_SIZE].children[LEFT_CHILD];
+      if (smaller_vma) {
+        vma = smaller_vma;
+      } else {
+        needs_to_split = true;
+        break;
+      }
+    } else {
+      needs_to_split = false;
+      break;
+    }
+  }
+
+  // If we couldn't find a VMA that fits, return an OOM.
+  if (!vma)
+    return nullptr;
+
+  if (needs_to_split) {
+    // If we need to split the VMA in two to get something that fits, do that.
+    struct vma *new_vma = alloc(sizeof(struct vma));
+    if (!new_vma)
+      return nullptr;
+
+    TODO("{usize} {usize}", wanted_size, vma_size(vma));
+  }
+
   return vma;
 }
 
@@ -437,4 +521,10 @@ fail:
   free(new_vma_lo);
   free(new_vma_hi);
   return nullptr;
+}
+
+void vma_free(struct vma *vma) {
+  uaddr hi, lo;
+  vma_bounds(vma, &hi, &lo);
+  TODO("{uaddr}-{uaddr}", hi, lo);
 }
