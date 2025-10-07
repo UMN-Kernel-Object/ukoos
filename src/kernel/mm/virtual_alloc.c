@@ -295,9 +295,9 @@ static usize vma_size(const struct vma *vma) {
 }
 
 /**
- * Computes the bounds of a VMA.
+ * Writes the bounds of a VMA to out_lo and out_hi.
  */
-static void vma_bounds(const struct vma *vma, uaddr *out_lo, uaddr *out_hi) {
+void vma_bounds(const struct vma *vma, uaddr *out_lo, uaddr *out_hi) {
   uaddr base_address = vma->allocator->base_address;
   u32 addr_compressed = vma->treaps[BY_ADDR].value;
   uaddr addr = base_address + ((uaddr)addr_compressed << 12);

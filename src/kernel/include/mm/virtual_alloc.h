@@ -58,4 +58,9 @@ struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
  */
 void vma_free(struct vma *vma);
 
+/**
+ * Writes the bounds of a VMA to out_lo and out_hi.
+ */
+void vma_bounds(const struct vma *vma, uaddr *out_lo, uaddr *out_hi);
+
 #endif // UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H
