@@ -185,6 +185,12 @@ static void treap_rotate(struct vma *vma, enum which_treap which,
 
   d_b_treap->parent = b_d;
   d_b_treap->which_child = !which_child;
+
+  if (p) {
+    p->treaps[which].children[b_d_treap->which_child] = b_d;
+  } else {
+    b_d->allocator->roots[which] = b_d;
+  }
 }
 
 /**
@@ -441,10 +447,33 @@ struct vma *vma_alloc(struct vma_allocator *allocator, usize num_pages) {
     if (!new_vma)
       return nullptr;
 
-    TODO("{usize} {usize}", wanted_size, vma_size(vma));
-  }
+    // We'll shrink the VMA we already had to fit the wanted size, and put the
+    // remaining range in the new VMA. We get the current bounds, so we can size
+    // the new VMA to fit.
+    uaddr old_lo, old_hi, new_lo, new_hi;
+    vma_bounds(vma, &old_lo, &old_hi);
 
-  return vma;
+    // Remove the VMA from the free treap and resize it, computing the new
+    // bounds.
+    treap_remove(vma, BY_SIZE);
+    vma->treaps[BY_SIZE].value = (u32)((wanted_size >> 12) - 1);
+    vma_bounds(vma, &new_lo, &new_hi);
+
+    // Now we can initialize the new VMA and insert it into the list and both
+    // treaps.
+    vma_init(allocator, new_hi, old_hi, new_vma);
+    list_unshift(&vma->list_head, &new_vma->list_head);
+    treap_insert(new_vma, BY_ADDR);
+    treap_insert(new_vma, BY_SIZE);
+
+    // The old VMA is now marked as used, and the new VMA is marked as free. The
+    // same range of addresses are be covered.
+    return vma;
+  } else {
+    // Otherwise, just remove the VMA from the free treap and return it.
+    treap_remove(vma, BY_SIZE);
+    return vma;
+  }
 }
 
 struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
@@ -491,8 +520,7 @@ struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
   // but we restore them later.
   list_remove(&vma->list_head);
   treap_remove(vma, BY_ADDR);
-  if (is_vma_free(vma))
-    treap_remove(vma, BY_SIZE);
+  treap_remove(vma, BY_SIZE);
 
   // Initialize the VMAs and insert them into the list and treaps.
   if (new_vma_hi) {
@@ -510,9 +538,6 @@ struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
     treap_insert(new_vma_lo, BY_ADDR);
     treap_insert(new_vma_lo, BY_SIZE);
   }
-
-  // Mark our VMA as used.
-  vma->treaps[BY_SIZE].priority = 0;
 
   // Return the VMA.
   return vma;
