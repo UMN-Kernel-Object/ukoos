@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 {
   inputs.u-boot-milkv-duos-sd = {
     url = "github:UMN-Kernel-Object/u-boot/milkv-duos-sd";
