@@ -60,7 +60,7 @@ jobs:
           name: ukoos-${{ matrix.target }}-git.tar.zst
           path: ukoos-${{ matrix.target }}-git.tar.zst
           compression-level: 0
-  build-dev-image:
+  build-images:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,12 +71,14 @@ jobs:
         with:
           name: ukoos
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      - name: Build
+      - name: Run checks
         run: |
-          nix build -L .#dev-image-milkv-duos
-          cp result/sdcard.img dev-image-milkv-duos-sdcard.img
-      - name: Upload Artifact
+          nix flake check -L
+      - name: Build images
+        run: |
+          nix build -L .#all-images
+      - name: Upload images
         uses: actions/upload-artifact@v4
         with:
-          name: dev-image-milkv-duos-sdcard.img
-          path: dev-image-milkv-duos-sdcard.img
+          name: images
+          path: result/

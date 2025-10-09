@@ -1,10 +1,10 @@
 {
+  u-boot,
+
   fetchFromGitHub,
   fetchpatch,
   pkgsCross,
   stdenvNoCC,
-
-  u-boot-milkv-duos,
 }:
 
 stdenvNoCC.mkDerivation {
@@ -57,7 +57,7 @@ stdenvNoCC.mkDerivation {
       ''${enableParallelBuilding:+-j''${NIX_BUILD_CORES}} \
       CHIP_ARCH=CV181X \
       CROSS_COMPILE=riscv64-unknown-linux-musl- \
-      FW_FDT_PATH=${u-boot-milkv-duos}/u-boot.dtb \
+      FW_FDT_PATH=${u-boot}/u-boot.dtb \
       OPENSBI_PATH=$PWD \
       PLATFORM=generic
 
