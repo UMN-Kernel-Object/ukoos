@@ -1,7 +1,7 @@
 version = 1
 
 [[annotations]]
-path = [".devcontainer/devcontainer.json", "src/image-milkv-duos-sd/u-boot.txt"]
+path = [".devcontainer/devcontainer.json", "src/image-milkv-duos-sd/u-boot.txt" "src/image-milkv-jupiter/u-boot.txt"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2025 ukoOS Contributors"
 SPDX-License-Identifier = "GPL-3.0-or-later"
