@@ -1,3 +1,7 @@
+SPDX-FileCopyrightText: 2024 Michael Neuling <michaelneuling@tenstorrent.com>
+
+SPDX-License-Identifier: BSD-2-Clause
+
 From 9d9464268a0bb3a627240197575609eb9e02ca42 Mon Sep 17 00:00:00 2001
 From: Michael Neuling <michaelneuling@tenstorrent.com>
 Date: Sat, 21 Dec 2024 21:38:50 +0530
