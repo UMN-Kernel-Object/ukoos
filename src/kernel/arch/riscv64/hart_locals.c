@@ -17,15 +17,6 @@ struct hart_locals boothart_hart_locals;
  */
 static struct mm_alloc_heap boothart_heap;
 
-/**
- * The segment used in the initial pages.
- */
-static union [[gnu::aligned(1 << MM_ALLOC_SEGMENT_SHIFT)]] {
-
-  struct mm_alloc_segment segment;
-  char bytes[1 << MM_ALLOC_SEGMENT_SHIFT];
-} boothart_heap_segment;
-
 struct hart_locals *get_hart_locals(void) {
   return (struct hart_locals *)csrr(RISCV64_CSR_SSCRATCH);
 }
@@ -37,7 +28,13 @@ void init_boothart_hart_locals(u64 hart_id) {
       .heap = &boothart_heap,
       .rng = {},
   };
-  mm_alloc_boothart_heap_init(&boothart_heap, &boothart_heap_segment.segment);
+
+  // TODO: Bogus provenance, but this is the only easy way to not have issues
+  // with relocation sizes...
+  struct mm_alloc_segment *boothart_heap_segment =
+      (struct mm_alloc_segment *)0xffffffe000000000;
+
+  mm_alloc_boothart_heap_init(&boothart_heap, boothart_heap_segment);
 }
 
 void init_hart_locals(u64 hart_id);
