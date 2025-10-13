@@ -148,19 +148,23 @@ struct mm_alloc_page {
   struct list_head list;
 
   /**
-   * The free list that can be allocated from.
+   * The address of the head of the free list that can be allocated from, XORred
+   * by the `xor_cookie` from the page.
    */
-  struct mm_alloc_block *free;
+  uaddr free;
 
   /**
-   * The free list that `free()` pushes to when called from the hart that owns
+   * The address of the head of the free list that `free()` pushes to when
+   * called from the hart that owns the page, XORred by the `xor_cookie` from
    * the page.
    */
-  struct mm_alloc_block *local_free;
+  uaddr local_free;
 
   /**
    * The data that needs to be atomically accessed when `free()` is called from
    * a remote hart (a hart other than the one that owns the page).
+   *
+   * TODO: This should be XORred too.
    */
   atomic union mm_alloc_page_remote remote;
 
@@ -268,7 +272,7 @@ struct mm_alloc_heap {
    * - 13: 64KiB
    * - 14: 128KiB
    * - 15: 256KiB
-   * - 16: 512KiB
+   * - 16: >=512KiB
    */
   struct list_head pages[17];
 
