@@ -5,9 +5,13 @@
  */
 
 #include <hart_locals.h>
+#include <minmax.h>
 #include <mm/alloc.h>
 #include <panic.h>
 #include <random.h>
+
+// TODO: DEBUG
+#include <print.h>
 
 static usize size_class_of_size(usize size) {
   assert(size <= 512 * 1024);
@@ -80,17 +84,23 @@ static void get_page_bounds(struct mm_alloc_page *page, uptr *out_start,
  * returns `nullptr`.
  */
 static struct mm_alloc_block *page_free_pop(struct mm_alloc_page *page) {
-  struct mm_alloc_block *block = page->free;
+  struct mm_alloc_block *block =
+      ptr_with_addr(page, page->free ^ page->xor_cookie);
   if (block) {
     uptr page_start, page_end;
     get_page_bounds(page, &page_start, &page_end);
     assert(addr_of_ptr(page_start) <= addr_of_ptr(block) &&
            addr_of_ptr(block) < addr_of_ptr(page_end));
 
-    uaddr next_addr = block->next ^ page->xor_cookie;
-    page->free = ptr_with_addr(segment_of_ptr(page), next_addr);
+    assert((block->next & 7) == 7);
+    assert((page->free & 7) == 7);
+
+    page->free = block->next;
     block->next = 0;
   }
+
+  assert((page->free & 7) == 7);
+
   return block;
 }
 
@@ -99,9 +109,14 @@ static struct mm_alloc_block *page_free_pop(struct mm_alloc_page *page) {
  */
 static void page_free_push(struct mm_alloc_page *page,
                            struct mm_alloc_block *block, usize block_size) {
-  block->next = addr_of_ptr(page->free) ^ page->xor_cookie;
+  assert((page->free & 7) == 7);
+
+  block->next = page->free;
   bzero((void *)block + 8, block_size - 8);
-  page->free = block;
+  page->free = addr_of_ptr(block) ^ page->xor_cookie;
+
+  assert((block->next & 7) == 7);
+  assert((page->free & 7) == 7);
 }
 
 /**
@@ -109,8 +124,13 @@ static void page_free_push(struct mm_alloc_page *page,
  */
 static void page_local_free_push(struct mm_alloc_page *page,
                                  struct mm_alloc_block *block) {
-  block->next = addr_of_ptr(page->local_free) ^ page->xor_cookie;
-  page->local_free = block;
+  assert((page->local_free & 7) == 7);
+
+  block->next = page->local_free;
+  page->local_free = addr_of_ptr(block) ^ page->xor_cookie;
+
+  assert((block->next & 7) == 7);
+  assert((page->local_free & 7) == 7);
 }
 
 /**
@@ -132,9 +152,20 @@ static void new_page_for_small_size_class(struct mm_alloc_heap *heap,
   struct mm_alloc_page *page =
       container_of(list_shift(&heap->unused_pages), struct mm_alloc_page, list);
 
-  // Clear out the fields to indicate that the page is empty.
-  page->free = nullptr; // We initialize the free list below.
-  page->local_free = nullptr;
+  // Initialize the page's XOR cookie.
+  //
+  // As a hack for debugging: blocks in the linked lists will always be aligned
+  // to at least 8 bytes, so the low 3 bits will always be equal to those bits
+  // in the XOR cookie. Since we're not getting much actual security from them,
+  // we can at least use them to find bugs.
+  //
+  // We always set those bits to be high in the XOR cookie, so we can use
+  // "anything in any linked list should have those bits set" as an invariant.
+  page->xor_cookie = random() | 7;
+
+  // Clear out the other fields to indicate that the page is empty.
+  page->free = page->xor_cookie; // We initialize the free list below.
+  page->local_free = page->xor_cookie;
   page->remote = (union mm_alloc_page_remote){
       .needs_delayed_free = false,
       .remote_free = 0,
@@ -143,9 +174,6 @@ static void new_page_for_small_size_class(struct mm_alloc_heap *heap,
   page->remote_free_length = 0;
   page->size_class = size_class & 0x7f;
   page->in_full_list = false;
-
-  // Initialize the page's XOR cookie.
-  page->xor_cookie = random();
 
   // Figure out the range of addresses that need to be initialized.
   uptr page_start, page_end;
@@ -160,7 +188,7 @@ static void new_page_for_small_size_class(struct mm_alloc_heap *heap,
     blocks[i] = (struct mm_alloc_block *)page_start;
     page_start += block_size;
   }
-  assert(page_start != page_end);
+  assert(page_start < page_end);
   while (page_start != page_end) {
     assert(page_start < page_end);
 
@@ -188,8 +216,72 @@ static void new_page_for_small_size_class(struct mm_alloc_heap *heap,
   }
 }
 
+static struct mm_alloc_page *page_alloc(usize size_class,
+                                        struct mm_alloc_heap *heap) {
+  TODO("page_alloc({usize}, {uptr})", size_class, heap);
+}
+
+static void page_free(struct mm_alloc_page *page, struct mm_alloc_heap *heap) {
+  assert(!page->used_blocks);
+
+  // Dirty trick: don't actually free the page if it's the only one in the
+  // `pages` list.
+  if (page->list.prev == page->list.next)
+    return;
+
+  // Clear the contents of the page.
+  uptr page_start, page_end;
+  get_page_bounds(page, &page_start, &page_end);
+  bzero((void *)page_start, page_end - page_start);
+
+  // Unlink the page from its list.
+  list_remove(&page->list);
+  assert(!list_is_empty(&heap->pages[page->size_class]));
+
+  // Add the page to the heap's `unused_pages` list.
+  list_push(&heap->unused_pages, &page->list);
+
+  // If the page's size was such that it could've been in the pages_direct
+  // array, replace those entries with whatever the new head of the list is.
+  usize size = 1 << page->size_class;
+  if (size <= 1024) {
+    struct mm_alloc_page *first_page = container_of(
+        heap->pages[page->size_class].next, struct mm_alloc_page, list);
+    for (usize i = size; i < 2 * size; i += 8)
+      heap->pages_direct[i >> 3] = first_page;
+  }
+}
+
 static void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
-  TODO("alloc_generic");
+  assert(size != 0);
+  // Huge objects get handled separately, since they always get dedicated
+  // segments.
+  if (size <= 512 * 1024) {
+    usize size_class = size_class_of_size(size);
+
+    // TODO: If we support deferred freeing, this is where that would go.
+
+    struct mm_alloc_page *page;
+    for (struct list_head *page_head = heap->pages[size_class].next;
+         page_head != &heap->pages[size_class]; page_head = page_head->next) {
+      page = container_of(page_head, struct mm_alloc_page, list);
+
+      // Collect free objects in the page.
+      TODO("page_collect {uptr}", page);
+
+      // Free the page if it's empty.
+      TODO("page_free {uptr}", page);
+
+      // If there are any free objects, go back to generic allocation.
+      TODO("alloc {uptr}", page);
+    }
+
+    // We couldn't find any pages with free memory, so grab a page.
+    page = page_alloc(size_class, heap);
+    TODO("alloc_generic {usize} {usize}", size_class, size);
+  } else {
+    TODO("alloc_generic huge {usize}", size);
+  }
 }
 
 [[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), gnu::nonnull(2),
@@ -208,8 +300,8 @@ alloc_small(usize size, struct mm_alloc_heap *heap) {
   struct mm_alloc_page *page = heap->pages_direct[pages_direct_index];
   assert(page);
 
-  // Try to pop an item from the free list. If we fail, bail out to the generic
-  // routine.
+  // Try to pop an item from the free list. If we fail, bail out to the
+  // generic routine.
   struct mm_alloc_block *block = page_free_pop(page);
   if (!block)
     return alloc_generic(size, heap);
@@ -230,19 +322,6 @@ alloc(usize size) {
     return alloc_small(size, heap);
   else
     return alloc_generic(size, heap);
-}
-
-static void page_free(struct mm_alloc_page *page, struct mm_alloc_heap *heap) {
-  // Clear the contents of the page.
-  uptr page_start, page_end;
-  get_page_bounds(page, &page_start, &page_end);
-  bzero((void *)page_start, page_end - page_start);
-
-  // Unlink the page from its list.
-  list_remove(&page->list);
-
-  // Add the page to the heap's `unused_pages` list.
-  list_push(&heap->unused_pages, &page->list);
 }
 
 void free(void *ptr) {
@@ -287,9 +366,10 @@ static void segment_init_small(struct mm_alloc_heap *heap,
   for (usize i = 0; i < 64; i++) {
     segment->pages[i] = (struct mm_alloc_page){
         .list = LIST_INIT(segment->pages[i].list),
-        .free = nullptr,
-        .local_free = nullptr,
+        .free = 0,
+        .local_free = 0,
         .remote = (union mm_alloc_page_remote){.bits = 0},
+        .xor_cookie = 0,
         .used_blocks = 0,
         .remote_free_length = 0,
         .size_class = 0,
@@ -301,8 +381,8 @@ static void segment_init_small(struct mm_alloc_heap *heap,
 
 void mm_alloc_boothart_heap_init(struct mm_alloc_heap *heap,
                                  struct mm_alloc_segment *segment) {
-  // Inititalize the heap. pages_direct is full of null pointers, though, which
-  // is normally illegal -- we fix that below.
+  // Inititalize the heap. pages_direct is full of null pointers, though,
+  // which is normally illegal -- we fix that below.
   *heap = (struct mm_alloc_heap){
       .hart_id = get_hart_locals()->hart_id,
       .pages_direct = {0},
