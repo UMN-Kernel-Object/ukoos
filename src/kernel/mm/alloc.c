@@ -134,6 +134,29 @@ static void page_local_free_push(struct mm_alloc_page *page,
 }
 
 /**
+ * Recreates the pages_direct entries for the size class.
+ */
+static void update_pages_direct(struct mm_alloc_heap *heap, usize size_class) {
+  usize size = size_of_size_class(size_class);
+  if (size <= 1024) {
+    assert(!list_is_empty(&heap->pages[size_class]));
+    struct mm_alloc_page *page =
+        container_of(heap->pages[size_class].next, struct mm_alloc_page, list);
+
+    if (size_class == 0) {
+      heap->pages_direct[0] = page;
+    } else {
+      usize i = (size_of_size_class(size_class - 1) >> 3);
+      usize j = (size_of_size_class(size_class) >> 3);
+      while (i < j) {
+        assert(size_class_of_size((i + 1) << 3) == size_class);
+        heap->pages_direct[i++] = page;
+      }
+    }
+  }
+}
+
+/**
  * Allocates a new page for the size class, pushing it to the end of the
  * appropriate `pages` list.
  */
@@ -208,12 +231,7 @@ static void new_page_for_small_size_class(struct mm_alloc_heap *heap,
   list_push(&heap->pages[size_class], &page->list);
 
   // If the page is small enough to have `pages_direct` entries, make them too.
-  if (size_class == 0) {
-    heap->pages_direct[0] = page;
-  } else if (size_class < 8) {
-    for (usize i = (1 << (size_class - 1)); i < (1 << size_class); i++)
-      heap->pages_direct[i] = page;
-  }
+  update_pages_direct(heap, size_class);
 }
 
 static struct mm_alloc_page *page_alloc(usize size_class,
@@ -222,7 +240,7 @@ static struct mm_alloc_page *page_alloc(usize size_class,
 }
 
 static void page_free(struct mm_alloc_page *page, struct mm_alloc_heap *heap) {
-  assert(!page->used_blocks);
+  assert(page->used_blocks == page->remote_free_length);
 
   // Dirty trick: don't actually free the page if it's the only one in the
   // `pages` list.
@@ -236,20 +254,13 @@ static void page_free(struct mm_alloc_page *page, struct mm_alloc_heap *heap) {
 
   // Unlink the page from its list.
   list_remove(&page->list);
-  assert(!list_is_empty(&heap->pages[page->size_class]));
 
   // Add the page to the heap's `unused_pages` list.
   list_push(&heap->unused_pages, &page->list);
 
   // If the page's size was such that it could've been in the pages_direct
   // array, replace those entries with whatever the new head of the list is.
-  usize size = 1 << page->size_class;
-  if (size <= 1024) {
-    struct mm_alloc_page *first_page = container_of(
-        heap->pages[page->size_class].next, struct mm_alloc_page, list);
-    for (usize i = size; i < 2 * size; i += 8)
-      heap->pages_direct[i >> 3] = first_page;
-  }
+  update_pages_direct(heap, page->size_class);
 }
 
 static void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
@@ -270,7 +281,8 @@ static void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
       TODO("page_collect {uptr}", page);
 
       // Free the page if it's empty.
-      TODO("page_free {uptr}", page);
+      if (page->used_blocks == page->remote_free_length)
+        page_free(page, heap);
 
       // If there are any free objects, go back to generic allocation.
       TODO("alloc {uptr}", page);
@@ -381,7 +393,7 @@ static void segment_init_small(struct mm_alloc_heap *heap,
 
 void mm_alloc_boothart_heap_init(struct mm_alloc_heap *heap,
                                  struct mm_alloc_segment *segment) {
-  // Inititalize the heap. pages_direct is full of null pointers, though,
+  // Initialize the heap. pages_direct is full of null pointers, though,
   // which is normally illegal -- we fix that below.
   *heap = (struct mm_alloc_heap){
       .hart_id = get_hart_locals()->hart_id,
@@ -401,4 +413,11 @@ void mm_alloc_boothart_heap_init(struct mm_alloc_heap *heap,
   // array.
   for (usize size_class = 0; size_class < 8; size_class++)
     new_page_for_small_size_class(heap, size_class);
+
+  // Check that we did actually initialize the entire pages_direct array.
+  for (usize i = 0; i < 128; i++) {
+    usize size_class = size_class_of_size((i + 1) * 8);
+    assert(heap->pages_direct[i], "i={usize}", i);
+    assert(heap->pages_direct[i]->size_class == size_class);
+  }
 }
