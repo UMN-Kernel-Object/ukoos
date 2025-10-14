@@ -150,12 +150,12 @@
           };
           "dev-image/milkv-jupiter" = pkgs.callPackage ./src/image-milkv-jupiter {
             dev = true;
-            u-boot-milkv-jupiter = u-boot-spacemit-k1.packages.${system}.default;
+            u-boot-spacemit-k1 = u-boot-spacemit-k1.packages.${system}.default;
             ukoos-milkv-jupiter = packages."ukoos/milkv-jupiter";
           };
           "image/milkv-jupiter" = pkgs.callPackage ./src/image-milkv-jupiter {
             dev = false;
-            u-boot-milkv-jupiter = u-boot-spacemit-k1.packages.${system}.default;
+            u-boot-spacemit-k1 = u-boot-spacemit-k1.packages.${system}.default;
             ukoos-milkv-jupiter = packages."ukoos/milkv-jupiter";
           };
         };
