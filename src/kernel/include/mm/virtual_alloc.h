@@ -21,6 +21,17 @@ struct vma;
 struct vma_allocator;
 
 /**
+ * The VMA allocator used for higher-half memory.
+ */
+extern struct vma_allocator kernel_virtual_allocator;
+
+/**
+ * Attempts to initialize a VMA allocator to cover the given address range.
+ * Returns whether it succeded.
+ */
+bool vma_allocator_init(struct vma_allocator *allocator, uaddr lo, uaddr hi);
+
+/**
  * Creates a new instance of the virtual memory allocator, set to cover the
  * given address range.
  */

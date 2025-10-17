@@ -12,6 +12,8 @@
  * The virtual memory allocator.
  */
 
+struct vma_allocator kernel_virtual_allocator;
+
 /**
  * An enum to describe which treap is being accessed.
  */
@@ -340,7 +342,7 @@ static void vma_init(struct vma_allocator *allocator, uaddr lo, uaddr hi,
   bzero(out->padding, sizeof(out->padding));
 }
 
-struct vma_allocator *vma_allocator_new(uaddr lo, uaddr hi) {
+bool vma_allocator_init(struct vma_allocator *allocator, uaddr lo, uaddr hi) {
   assert((lo & 0xfff) == 0 && (hi & 0xfff) == 0);
   assert(lo < hi);
   assert(hi <= 0x0000004000000000 || 0xffffffc000000000 <= lo);
@@ -349,10 +351,9 @@ struct vma_allocator *vma_allocator_new(uaddr lo, uaddr hi) {
   // bits.
   assert((hi - lo) <= ((usize)1 << (32 + 12)));
 
-  struct vma_allocator *allocator = alloc(sizeof(struct vma_allocator));
   struct vma *vma = alloc(sizeof(struct vma));
-  if (!allocator || !vma)
-    goto fail;
+  if (!vma)
+    return false;
 
   *allocator = (struct vma_allocator){
       .vmas = LIST_INIT(allocator->vmas),
@@ -363,10 +364,18 @@ struct vma_allocator *vma_allocator_new(uaddr lo, uaddr hi) {
   list_push(&allocator->vmas, &vma->list_head);
   treap_insert(vma, BY_ADDR);
   treap_insert(vma, BY_SIZE);
+  return true;
+}
+
+struct vma_allocator *vma_allocator_new(uaddr lo, uaddr hi) {
+  struct vma_allocator *allocator = alloc(sizeof(struct vma_allocator));
+  if (!allocator)
+    goto fail;
+  if (!vma_allocator_init(allocator, lo, hi))
+    goto fail;
   return allocator;
 
 fail:
-  free(vma);
   free(allocator);
   return nullptr;
 }
