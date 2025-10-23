@@ -278,6 +278,7 @@ struct mm_alloc_heap {
 
   /**
    * The list heads for pages that are unused, i.e. not part of any size class.
+   * These pages are all for small objects (i.e., the pages are 64KiB).
    */
   struct list_head unused_pages;
 

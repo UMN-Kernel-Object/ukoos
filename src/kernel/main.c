@@ -25,37 +25,26 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   arch_entropy_pool_seed_early();
   init_boothart_hart_locals(hart_id);
 
-  print("Running self-tests...");
-  run_selftests();
-
+  // Parse the Devicetree.
   struct devicetree_node *devicetree = devicetree_parse_from_physical(
       devicetree_start, kernel_start, kernel_end);
   if (!devicetree)
     panic("Failed to parse Devicetree");
   devicetree_add_entropy(devicetree);
+
+  // Initialize the allocator.
   mm_init_physical(devicetree);
   if (!vma_allocator_init(&kernel_virtual_allocator, 0xffffffe000000000,
                           0xffffffffc0000000))
     panic("Failed to initialize kernel VMA allocator");
-  vma_allocator_print(&kernel_virtual_allocator);
   assert(vma_alloc_by_addr(&kernel_virtual_allocator, 0xffffffe000000000,
                            0xffffffe000400000));
-  vma_allocator_print(&kernel_virtual_allocator);
   assert(vma_alloc_by_addr(&kernel_virtual_allocator, 0xffffffe000400000,
                            0xffffffe000600000));
   vma_allocator_print(&kernel_virtual_allocator);
 
-  struct vma *a = vma_alloc(&kernel_virtual_allocator, 512);
-  print("a = {uptr}", a);
-  struct vma *b = vma_alloc(&kernel_virtual_allocator, 512);
-  print("b = {uptr}", b);
-  struct vma *c = vma_alloc(&kernel_virtual_allocator, 512);
-  print("c = {uptr}", c);
-  vma_allocator_print(&kernel_virtual_allocator);
-  vma_free(b);
-  vma_free(c);
-  vma_free(a);
-  vma_allocator_print(&kernel_virtual_allocator);
+  print("Running self-tests...");
+  run_selftests();
 
   TODO();
 }

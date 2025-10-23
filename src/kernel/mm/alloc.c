@@ -7,6 +7,7 @@
 #include <hart_locals.h>
 #include <minmax.h>
 #include <mm/alloc.h>
+#include <mm/virtual_alloc.h>
 #include <panic.h>
 #include <random.h>
 
@@ -160,8 +161,8 @@ static void update_pages_direct(struct mm_alloc_heap *heap, usize size_class) {
  * Allocates a new page for the size class, pushing it to the end of the
  * appropriate `pages` list.
  */
-static void new_page_for_small_size_class(struct mm_alloc_heap *heap,
-                                          usize size_class) {
+static struct mm_alloc_page *
+new_page_for_small_size_class(struct mm_alloc_heap *heap, usize size_class) {
   assert(size_class < 10);
   usize block_size = size_of_size_class(size_class);
   assert(size_class_of_size(block_size) == size_class);
@@ -232,11 +233,18 @@ static void new_page_for_small_size_class(struct mm_alloc_heap *heap,
 
   // If the page is small enough to have `pages_direct` entries, make them too.
   update_pages_direct(heap, size_class);
+
+  return page;
 }
 
-static struct mm_alloc_page *page_alloc(usize size_class,
-                                        struct mm_alloc_heap *heap) {
-  TODO("page_alloc({usize}, {uptr})", size_class, heap);
+static struct mm_alloc_page *new_page(struct mm_alloc_heap *heap,
+                                      usize size_class) {
+  assert(size_class < 17);
+
+  if (size_class < 10)
+    return new_page_for_small_size_class(heap, size_class);
+  else
+    TODO("new_page large ({usize}, {uptr})", size_class, heap);
 }
 
 static void page_free(struct mm_alloc_page *page, struct mm_alloc_heap *heap) {
@@ -265,6 +273,7 @@ static void page_free(struct mm_alloc_page *page, struct mm_alloc_heap *heap) {
 
 static void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
   assert(size != 0);
+
   // Huge objects get handled separately, since they always get dedicated
   // segments.
   if (size <= 512 * 1024) {
@@ -289,8 +298,21 @@ static void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
     }
 
     // We couldn't find any pages with free memory, so grab a page.
-    page = page_alloc(size_class, heap);
-    TODO("alloc_generic {usize} {usize}", size_class, size);
+    page = new_page(heap, size_class);
+
+    // If we still couldn't find a free page, we're out of memory.
+    if (!page)
+      return nullptr;
+
+    // Pop an item from the page's free list.
+    struct mm_alloc_block *block = page_free_pop(page);
+    assert(block);
+
+    // Increment the counter of used objects.
+    page->used_blocks++;
+
+    // Return the popped block.
+    return block;
   } else {
     TODO("alloc_generic huge {usize}", size);
   }
@@ -412,7 +434,7 @@ void mm_alloc_boothart_heap_init(struct mm_alloc_heap *heap,
   // Allocate pages of the right size classes to initialize the pages_direct
   // array.
   for (usize size_class = 0; size_class < 8; size_class++)
-    new_page_for_small_size_class(heap, size_class);
+    assert(new_page_for_small_size_class(heap, size_class));
 
   // Check that we did actually initialize the entire pages_direct array.
   for (usize i = 0; i < 128; i++) {
