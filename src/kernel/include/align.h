@@ -18,9 +18,15 @@ static inline uaddr uaddr_align_up(uaddr addr, usize bits) {
   return uaddr_align_down(addr + (((uaddr)1 << bits) - 1), bits);
 }
 
+static inline bool uaddr_is_aligned(uaddr addr, usize bits) {
+  return uaddr_align_down(addr, bits) == addr;
+}
+
 #define align_down(ADDR, BITS)                                                 \
   (_Generic(ADDR, paddr: paddr_align_down, uaddr: uaddr_align_down)(ADDR, BITS))
 #define align_up(ADDR, BITS)                                                   \
   (_Generic(ADDR, paddr: paddr_align_up, uaddr: uaddr_align_up)(ADDR, BITS))
+#define is_aligned(ADDR, BITS)                                                 \
+  (_Generic(ADDR, paddr: paddr_is_aligned, uaddr: uaddr_is_aligned)(ADDR, BITS))
 
 #endif // UKO_OS_KERNEL__ALIGN_H
