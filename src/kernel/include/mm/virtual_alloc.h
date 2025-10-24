@@ -51,6 +51,16 @@ void vma_allocator_print(struct vma_allocator *allocator);
 struct vma *vma_alloc(struct vma_allocator *allocator, usize num_pages);
 
 /**
+ * Attempts to allocate an contiguous address range of `num_pages` pages, at an
+ * address aligned to `align_bits`. Returns a used VMA of that size on success,
+ * or nullptr on failure.
+ *
+ * Note that this does not (currently) create page table entries.
+ */
+struct vma *vma_alloc_aligned(struct vma_allocator *allocator, usize num_pages,
+                              usize align_bits);
+
+/**
  * Attempts to allocate the address range `lo` to `hi`. Returns a used VMA
  * that covers exactly that range on success, or nullptr on failure.
  *

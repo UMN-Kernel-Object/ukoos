@@ -38,6 +38,7 @@ struct mm_alloc_segment;
  * objects.
  */
 static constexpr usize MM_ALLOC_SEGMENT_SHIFT = 22;
+static_assert((1 << MM_ALLOC_SEGMENT_SHIFT) == (4 * 1024 * 1024));
 
 /* Each segment is composed of one or more "pages." These should not be confused
  * with hardware pages; while hardware pages are typically 4KiB, allocator pages
