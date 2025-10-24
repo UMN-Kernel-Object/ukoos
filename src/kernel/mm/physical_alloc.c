@@ -195,24 +195,24 @@ void mm_init_physical(struct devicetree_node *devicetree) {
 
 bool mm_alloc_physical(paddr *out) {
   // TODO: There should be a lock around essentially this whole function.
-  paddr head = free_list_head;
-  if (!bits_of_paddr(head))
+  *out = free_list_head;
+  if (!bits_of_paddr(*out))
     return false;
 
   struct physical_free_list link;
-  copy_from_physical(&link, head, sizeof(struct physical_free_list));
+  copy_from_physical(&link, *out, sizeof(struct physical_free_list));
   assert(link.length > 0);
-  link.length--;
   if (link.length) {
-    // There were multiple pages in the link. We'll use the last one, so we
-    // can write back the link.
+    // There were multiple pages in the link. We'll use the first one, so we
+    // write back the link to the next one.
+    free_list_head = paddr_offset(free_list_head, 1 << 12);
+    link.length--;
     copy_to_physical(free_list_head, &link, sizeof(struct physical_free_list));
   } else {
     // This is the only page in the link, so update the head pointer to point
     // at the next link.
     free_list_head = link.next;
   }
-  *out = paddr_offset(head, link.length << 12);
   return true;
 }
 
