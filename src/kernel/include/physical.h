@@ -63,6 +63,10 @@ static inline paddr paddr_align_up(paddr paddr, usize bits) {
   return paddr_align_down(paddr_offset(paddr, ((usize)1 << bits) - 1), bits);
 }
 
+static inline bool paddr_is_aligned(paddr addr, usize bits) {
+  return bits_of_paddr(paddr_align_down(addr, bits)) == bits_of_paddr(addr);
+}
+
 u8 physical_read_u8(paddr);
 u16 physical_read_u16le(paddr);
 u32 physical_read_u32le(paddr);
