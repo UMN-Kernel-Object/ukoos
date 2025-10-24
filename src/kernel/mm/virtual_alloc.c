@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <align.h>
 #include <mm/virtual_alloc.h>
 #include <print.h>
 #include <random.h>
@@ -323,7 +324,7 @@ static bool is_vma_free(const struct vma *vma) {
 
 static void vma_init(struct vma_allocator *allocator, uaddr lo, uaddr hi,
                      struct vma *out) {
-  assert((lo & 0xfff) == 0 && (hi & 0xfff) == 0);
+  assert(is_aligned(lo, 12) && is_aligned(hi, 12));
   assert(lo < hi);
   assert(allocator->base_address <= lo);
 
@@ -343,7 +344,7 @@ static void vma_init(struct vma_allocator *allocator, uaddr lo, uaddr hi,
 }
 
 bool vma_allocator_init(struct vma_allocator *allocator, uaddr lo, uaddr hi) {
-  assert((lo & 0xfff) == 0 && (hi & 0xfff) == 0);
+  assert(is_aligned(lo, 12) && is_aligned(hi, 12));
   assert(lo < hi);
   assert(hi <= 0x0000004000000000 || 0xffffffc000000000 <= lo);
 
@@ -487,7 +488,7 @@ struct vma *vma_alloc(struct vma_allocator *allocator, usize num_pages) {
 
 struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
                               uaddr hi) {
-  assert((lo & 0xfff) == 0 && (hi & 0xfff) == 0);
+  assert(is_aligned(lo, 12) && is_aligned(hi, 12));
   assert(lo < hi);
 
   struct vma *vma = vma_find(allocator, lo);
