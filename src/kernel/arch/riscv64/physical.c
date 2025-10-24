@@ -39,6 +39,10 @@ void copy_to_physical(paddr dst, const void *src, usize len) {
   memcpy(ptr_of_paddr(dst, len), src, len);
 }
 
+void bzero_physical(paddr dst, usize len) {
+  bzero(ptr_of_paddr(dst, len), len);
+}
+
 u8 physical_read_u8(paddr paddr) {
   u8 out;
   copy_from_physical(&out, paddr, 1);

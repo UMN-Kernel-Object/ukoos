@@ -83,6 +83,7 @@ void physical_write_u16be(paddr, u16);
 void physical_write_u32be(paddr, u32);
 void physical_write_u64be(paddr, u64);
 
+void bzero_physical(paddr dst, usize len);
 void copy_from_physical(void *dst, paddr src, usize len);
 void copy_to_physical(paddr dst, const void *src, usize len);
 
