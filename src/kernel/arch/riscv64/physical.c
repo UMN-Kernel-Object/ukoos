@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <align.h>
 #include <endian.h>
-#include <physical.h>
 
 /**
  * The start address of the mapped region of physical memory.
@@ -50,30 +50,34 @@ void physical_write_u8(paddr paddr, u8 value) {
 }
 
 #define DEFINE_PHYSICAL_RW(BITS)                                               \
-  u##BITS physical_read_u##BITS##le(paddr paddr) {                             \
-    assert(!(paddr.offset & ((BITS / 8) - 1)), "paddr={paddr}", paddr);        \
+  u##BITS physical_read_u##BITS##le(paddr addr) {                              \
+    assert(is_aligned(addr, stdc_trailing_zeros((usize)(BITS / 8))),           \
+           "paddr={paddr}", addr);                                             \
     u##BITS out;                                                               \
-    copy_from_physical(&out, paddr, sizeof(out));                              \
+    copy_from_physical(&out, addr, sizeof(out));                               \
     return little_to_native(out);                                              \
   }                                                                            \
                                                                                \
-  u##BITS physical_read_u##BITS##be(paddr paddr) {                             \
-    assert(!(paddr.offset & ((BITS / 8) - 1)), "paddr={paddr}", paddr);        \
+  u##BITS physical_read_u##BITS##be(paddr addr) {                              \
+    assert(is_aligned(addr, stdc_trailing_zeros((usize)(BITS / 8))),           \
+           "paddr={paddr}", addr);                                             \
     u##BITS out;                                                               \
-    copy_from_physical(&out, paddr, sizeof(out));                              \
+    copy_from_physical(&out, addr, sizeof(out));                               \
     return big_to_native(out);                                                 \
   }                                                                            \
                                                                                \
-  void physical_write_u##BITS##le(paddr paddr, u##BITS value) {                \
-    assert(!(paddr.offset & ((BITS / 8) - 1)), "paddr={paddr}", paddr);        \
+  void physical_write_u##BITS##le(paddr addr, u##BITS value) {                 \
+    assert(is_aligned(addr, stdc_trailing_zeros((usize)(BITS / 8))),           \
+           "paddr={paddr}", addr);                                             \
     value = native_to_little(value);                                           \
-    copy_to_physical(paddr, &value, sizeof(value));                            \
+    copy_to_physical(addr, &value, sizeof(value));                             \
   }                                                                            \
                                                                                \
-  void physical_write_u##BITS##be(paddr paddr, u##BITS value) {                \
-    assert(!(paddr.offset & ((BITS / 8) - 1)), "paddr={paddr}", paddr);        \
+  void physical_write_u##BITS##be(paddr addr, u##BITS value) {                 \
+    assert(is_aligned(addr, stdc_trailing_zeros((usize)(BITS / 8))),           \
+           "paddr={paddr}", addr);                                             \
     value = native_to_big(value);                                              \
-    copy_to_physical(paddr, &value, sizeof(value));                            \
+    copy_to_physical(addr, &value, sizeof(value));                             \
   }
 
 DEFINE_PHYSICAL_RW(16)
