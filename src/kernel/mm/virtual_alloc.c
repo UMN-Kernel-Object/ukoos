@@ -486,6 +486,37 @@ struct vma *vma_alloc(struct vma_allocator *allocator, usize num_pages) {
   }
 }
 
+// TODO: This can "spuriously" fail when we're low on physical memory; we should
+// probably look harder for aligned VMAs of the right size.
+struct vma *vma_alloc_aligned(struct vma_allocator *allocator, usize num_pages,
+                              usize align_bits) {
+  struct vma *vma;
+  uaddr addr;
+  assert(align_bits >= 12);
+
+  // First, try just allocating a VMA of the size we want. Hey, maybe it'll be
+  // aligned.
+  vma = vma_alloc(allocator, num_pages);
+  if (!vma)
+    return nullptr;
+  vma_bounds(vma, &addr, nullptr);
+  if (is_aligned(addr, align_bits))
+    return vma;
+  vma_free(vma);
+
+  // Otherwise, allocate something that's guaranteed to be big enough to carve
+  // an aligned chunk of the right size out.
+  vma = vma_alloc(allocator, num_pages + (1 << (align_bits - 12)));
+  if (!vma)
+    return nullptr;
+  vma_bounds(vma, &addr, nullptr);
+  vma_free(vma);
+  addr = align_up(addr, align_bits);
+  vma = vma_alloc_by_addr(allocator, addr, addr + (num_pages << 12));
+  assert(vma);
+  return vma;
+}
+
 struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
                               uaddr hi) {
   assert(is_aligned(lo, 12) && is_aligned(hi, 12));
