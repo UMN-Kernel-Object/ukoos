@@ -189,3 +189,25 @@ bool mm_paging_map(uaddr va, paddr pa, enum page_permissions perms) {
   copy_to_physical(pte_addr, &pte, sizeof(struct pte));
   return true;
 }
+
+bool mm_paging_unmap(uaddr va, paddr *pa) {
+  assert(is_aligned(va, 12), "va={uaddr}", va);
+  assert((uaddr)(((iaddr)va >> 39) + 1) <= 1, "va={uaddr}", va);
+  assert(pa);
+  *pa = paddr_of_bits(0);
+
+  paddr pte_addr;
+  if (!mm_paging_walk(va, &pte_addr, false))
+    return false;
+
+  struct pte pte;
+  copy_from_physical(&pte, pte_addr, sizeof(struct pte));
+  if (!pte.valid)
+    return false;
+
+  pa->ppn = pte.ppn;
+  pte = (struct pte){0};
+  copy_to_physical(pte_addr, &pte, sizeof(struct pte));
+
+  return true;
+}
