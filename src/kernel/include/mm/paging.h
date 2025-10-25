@@ -64,4 +64,14 @@ enum page_permissions : u8 {
  */
 bool mm_paging_map(uaddr va, paddr pa, enum page_permissions perms);
 
+/**
+ * Unmaps a physical page from a virtual address.
+ *
+ * Returns whether it succeeded, and writes the physical address to `*pa`.
+ *
+ * This function may not take effect immediately -- call `mm_paging_fence` to
+ * wait until it has taken effect.
+ */
+bool mm_paging_unmap(uaddr va, paddr *pa);
+
 #endif // UKO_OS_KERNEL__MM_PAGING_H
