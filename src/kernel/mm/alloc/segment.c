@@ -91,6 +91,46 @@ void segment_init_huge(struct mm_alloc_segment *segment) {
   segment->pages[0].list = LIST_INIT(segment->pages[0].list);
 }
 
+void segment_free(struct mm_alloc_segment *segment) {
+  assert(!segment->used_pages);
+
+  // There's a weird invariant here; exactly one page won't be in a list. Check
+  // that while removing the others from their lists.
+  usize page_count = (segment->page_shift == PAGE_SMALL_SHIFT) ? 64 : 1;
+  bool found_unlinked_page = false;
+  for (usize i = 0; i < page_count; i++) {
+    struct mm_alloc_page *page = &segment->pages[i];
+    if (list_is_empty(&page->list)) {
+      assert(!found_unlinked_page);
+      found_unlinked_page = true;
+    } else {
+      list_remove(&page->list);
+    }
+  }
+  assert(found_unlinked_page);
+
+  // Find the VMA for this segment.
+  struct vma *vma = vma_find(&kernel_virtual_allocator, addr_of_ptr(segment));
+  assert(vma);
+  uaddr vma_lo, vma_hi;
+  vma_bounds(vma, &vma_lo, &vma_hi);
+  assert(vma_lo == addr_of_ptr(segment));
+  assert(size_is_huge(vma_hi - vma_lo));
+  if (segment->page_shift != PAGE_HUGE_SHIFT)
+    assert(vma_hi - vma_lo == (1 << SEGMENT_SHIFT));
+
+  // Unmap and free every frame in the VMA.
+  for (uaddr va = vma_lo; va < vma_hi; va += 1 << 12) {
+    paddr pa;
+    assert(mm_paging_unmap(va, &pa));
+    mm_free_physical(pa);
+  }
+  mm_paging_fence();
+
+  // Free the VMA itself.
+  vma_free(vma);
+}
+
 struct mm_alloc_segment *segment_of_ptr(uptr ptr) {
   return (struct mm_alloc_segment *)align_down((uptr)ptr, SEGMENT_SHIFT);
 }

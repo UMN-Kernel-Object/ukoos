@@ -42,8 +42,7 @@ void heap_update_pages_direct(struct mm_alloc_heap *heap, usize size_class) {
   struct mm_alloc_page *page =
       container_of(heap->pages[size_class].next, struct mm_alloc_page, list);
 
-  usize size = size_of_size_class(size_class);
-  if (size > 1024)
+  if (!size_class_in_pages_direct(size_class))
     return;
 
   // Get the size of the smallest object of this size class.
@@ -55,7 +54,8 @@ void heap_update_pages_direct(struct mm_alloc_heap *heap, usize size_class) {
 
   // Find the index of the smallest and largest object of this size class.
   usize smallest_index = pages_direct_index_of_size(smallest_size);
-  usize largest_index = pages_direct_index_of_size(size);
+  usize largest_index =
+      pages_direct_index_of_size(size_of_size_class(size_class));
 
   // Set each entry.
   for (usize i = smallest_index; i <= largest_index; i++) {
