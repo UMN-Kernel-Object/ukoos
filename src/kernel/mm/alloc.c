@@ -10,8 +10,33 @@
 #include <panic.h>
 #include <stdatomic.h>
 
-#include <print.h> // TODO: debug
-void free(void *ptr) { print("TODO: free {uptr}", ptr); }
+void free(void *ptr) {
+  if (!ptr)
+    return;
+
+  struct mm_alloc_segment *segment = segment_of_ptr((uptr)ptr);
+  struct mm_alloc_page *page = page_of_ptr((uptr)ptr);
+  struct mm_alloc_block *block = ptr;
+  if (segment->hart_id == get_hart_locals()->hart_id) {
+    // This is a local free; i.e., we're running on the hart that owns the page.
+    struct mm_alloc_heap *heap = get_hart_locals()->heap;
+
+    page_local_free_push(page, block);
+    if (page_is_empty(page)) {
+      page_free(page, heap);
+    } else if (page->in_full_list) {
+      // TODO: Does something have to be done with delayed freeing?
+      list_remove(&page->list);
+      list_push(&heap->pages[page->size_class], &page->list);
+      atomic uaddr *remote = (atomic uaddr *)&page->remote;
+      atomic_fetch_and(remote, ~1);
+      page->in_full_list = false;
+    }
+  } else {
+    // This is a remote free.
+    TODO("remote free");
+  }
+}
 
 void *alloc_small(usize size, struct mm_alloc_heap *heap) {
   assert(0 < size && size <= 1024);

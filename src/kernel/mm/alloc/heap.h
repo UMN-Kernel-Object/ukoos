@@ -112,6 +112,14 @@ void heap_push_unused_page(struct mm_alloc_heap *heap,
                            struct mm_alloc_page *page);
 
 /**
+ * Returns whether the size class is one that shows up in the pages_direct
+ * array.
+ */
+static inline bool size_class_in_pages_direct(usize size_class) {
+  return size_of_size_class(size_class) <= 1024;
+}
+
+/**
  * Given an allocation size, returns the index into the pages_direct of a heap
  * corresponding to a page for objects of a given size.
  */

@@ -208,12 +208,45 @@ struct mm_alloc_page *page_new_huge(struct mm_alloc_heap *heap, usize size) {
 }
 
 void page_free(struct mm_alloc_page *page, struct mm_alloc_heap *heap) {
-  TODO();
+  assert(page_is_empty(page));
+
+  // Remove the page from whichever list it's in in the heap, making sure the
+  // pages_direct array is maintained.
+  if (size_class_is_valid(page->size_class) &&
+      size_class_in_pages_direct(page->size_class)) {
+    // If this is the only page in the size class, don't actually free it. If we
+    // did, we'd have to allocate a new page to use for the pages_direct entries
+    // anyway.
+    if (page->list.prev == page->list.next)
+      return;
+
+    // Otherwise, update the pages_direct array.
+    list_remove(&page->list);
+    heap_update_pages_direct(heap, page->size_class);
+  } else {
+    list_remove(&page->list);
+  }
+
+  struct mm_alloc_segment *segment = page_segment(page);
+  assert(segment->used_pages);
+  if (--segment->used_pages) {
+    // There are still more pages in use, so we can't free the segment, and we
+    // know this is a page for small objects, so it should end up in the
+    // unused_pages list.
+    heap_push_unused_page(heap, page);
+  } else {
+    // This was the last page in use, so we can free the entire segment.
+    segment_free(segment);
+  }
 }
 
 struct mm_alloc_page *page_of_ptr(uptr ptr) {
   struct mm_alloc_segment *segment = segment_of_ptr(ptr);
-  TODO("{uptr}", segment);
+  usize offset = addr_of_ptr(ptr) - addr_of_ptr(segment);
+  usize page_index = offset >> segment->page_shift;
+  if (page_index)
+    assert(segment->page_shift == PAGE_SMALL_SHIFT);
+  return &segment->pages[page_index];
 }
 
 void page_bounds(const struct mm_alloc_page *page, uptr *out_start,
@@ -248,15 +281,26 @@ void page_collect(struct mm_alloc_page *page) {
     TODO("swap the remote free list");
 }
 
+static void page_push(struct mm_alloc_page *page, struct mm_alloc_block *block,
+                      struct mm_alloc_block_ref *list) {
+  assert(page_in_bounds(page, addr_of_ptr(block)));
+  assert(block_ref_is_valid(*list));
+  block->next = *list;
+  *list = block_ref_make(page, block);
+}
+
 void page_free_push(struct mm_alloc_page *page, struct mm_alloc_block *block,
                     usize block_size) {
-  assert(page_in_bounds(page, addr_of_ptr(block)));
-  assert(block_ref_is_valid(page->free));
   assert(block_size >= sizeof(struct mm_alloc_block));
-  block->next = page->free;
-  bzero((void *)block + sizeof(struct mm_alloc_block),
-        block_size - sizeof(struct mm_alloc_block));
-  page->free = block_ref_make(page, block);
+  bzero(block, block_size);
+  page_push(page, block, &page->free);
+}
+
+void page_local_free_push(struct mm_alloc_page *page,
+                          struct mm_alloc_block *block) {
+  assert(!page_is_empty(page));
+  page_push(page, block, &page->local_free);
+  page->used_blocks--;
 }
 
 usize page_index(const struct mm_alloc_page *page) {
@@ -283,9 +327,6 @@ bool page_is_full(const struct mm_alloc_page *page) {
   assert(block_ref_is_valid(page->free));
   return !block_ref_deref(page, page->free);
 }
-
-void page_local_free_push(struct mm_alloc_page *page,
-                          struct mm_alloc_block *block);
 
 struct mm_alloc_segment *page_segment(struct mm_alloc_page *page) {
   return segment_of_ptr((uptr)page);
