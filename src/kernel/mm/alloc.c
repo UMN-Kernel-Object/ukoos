@@ -151,4 +151,19 @@ void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
   return alloc_generic_from_page(page, heap);
 }
 
-void *realloc(void *ptr, usize new_size);
+void *realloc(void *ptr, usize new_size) {
+  struct mm_alloc_page *page = page_of_ptr((uptr)ptr);
+  usize new_size_class = size_class_of_size(new_size);
+  if (page->size_class == new_size_class) {
+    // We're already the right size class, so just return the same pointer.
+    return ptr;
+  } else {
+    usize old_size = size_of_size_class(page->size_class);
+    void *out = alloc(new_size);
+    if (!out)
+      return nullptr;
+    memcpy(out, ptr, old_size);
+    free(ptr);
+    return out;
+  }
+}
