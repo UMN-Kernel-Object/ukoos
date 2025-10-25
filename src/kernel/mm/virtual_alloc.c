@@ -427,35 +427,32 @@ struct vma *vma_alloc(struct vma_allocator *allocator, usize num_pages) {
 
   // Find the smallest VMA that fits.
   struct vma *vma = allocator->roots[BY_SIZE];
-  bool needs_to_split;
+  struct vma *best_fit = nullptr;
   while (vma) {
     usize size = vma_size(vma);
     if (size < wanted_size) {
       vma = vma->treaps[BY_SIZE].children[RIGHT_CHILD];
     } else if (size > wanted_size) {
-      // Check if we _can_ go smaller; if not, return this one.
-      struct vma *smaller_vma = vma->treaps[BY_SIZE].children[LEFT_CHILD];
-      if (smaller_vma) {
-        vma = smaller_vma;
-      } else {
-        needs_to_split = true;
-        break;
-      }
+      best_fit = vma;
+      vma = vma->treaps[BY_SIZE].children[LEFT_CHILD];
     } else {
-      needs_to_split = false;
+      best_fit = vma;
       break;
     }
   }
 
   // If we couldn't find a VMA that fits, return an OOM.
-  if (!vma)
+  if (!best_fit)
     return nullptr;
+  vma = best_fit;
 
-  if (needs_to_split) {
+  if (vma_size(vma) > wanted_size) {
     // If we need to split the VMA in two to get something that fits, do that.
     struct vma *new_vma = alloc(sizeof(struct vma));
-    if (!new_vma)
+    if (!new_vma) {
+      TODO("Fix the circularity here");
       return nullptr;
+    }
 
     // We'll shrink the VMA we already had to fit the wanted size, and put the
     // remaining range in the new VMA. We get the current bounds, so we can size
