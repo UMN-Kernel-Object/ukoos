@@ -16,7 +16,7 @@
 
 struct physical_free_list {
   paddr next;
-  // The length of the free list, including this link.
+  // The length of the chunk in pages, including the page containing this link.
   usize length;
 };
 
@@ -200,18 +200,18 @@ bool mm_alloc_physical(paddr *out) {
     return false;
 
   struct physical_free_list link;
-  copy_from_physical(&link, *out, sizeof(struct physical_free_list));
+  copy_from_physical(&link, free_list_head, sizeof(struct physical_free_list));
   assert(link.length > 0);
-  if (link.length) {
+  if (link.length == 1) {
+    // This is the only page in the link, so update the head pointer to point
+    // at the next link.
+    free_list_head = link.next;
+  } else {
     // There were multiple pages in the link. We'll use the first one, so we
     // write back the link to the next one.
     free_list_head = paddr_offset(free_list_head, 1 << 12);
     link.length--;
     copy_to_physical(free_list_head, &link, sizeof(struct physical_free_list));
-  } else {
-    // This is the only page in the link, so update the head pointer to point
-    // at the next link.
-    free_list_head = link.next;
   }
   return true;
 }
