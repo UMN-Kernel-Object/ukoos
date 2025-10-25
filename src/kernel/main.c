@@ -24,6 +24,7 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   entropy_pool_init();
   arch_entropy_pool_seed_early();
   init_boothart_hart_locals(hart_id);
+  mm_alloc_init();
 
   // Parse the Devicetree.
   struct devicetree_node *devicetree = devicetree_parse_from_physical(
