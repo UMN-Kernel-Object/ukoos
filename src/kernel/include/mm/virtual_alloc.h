@@ -84,4 +84,10 @@ void vma_free(struct vma *vma);
  */
 void vma_bounds(const struct vma *vma, uaddr *out_lo, uaddr *out_hi);
 
+/**
+ * Finds the VMA that contains the given address. Panics if the address is out
+ * of range.
+ */
+struct vma *vma_find(struct vma_allocator *allocator, uaddr addr);
+
 #endif // UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H
