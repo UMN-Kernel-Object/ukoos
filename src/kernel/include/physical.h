@@ -54,17 +54,17 @@ static inline paddr paddr_offset(paddr paddr, usize offset) {
   return paddr_of_bits(addr);
 }
 
-static inline paddr paddr_align_down(paddr paddr, usize bits) {
+static inline paddr _align_down_paddr(paddr paddr, usize bits) {
   usize low_mask = ((usize)1 << bits) - 1;
   return paddr_of_bits(bits_of_paddr(paddr) & ~low_mask);
 }
 
-static inline paddr paddr_align_up(paddr paddr, usize bits) {
-  return paddr_align_down(paddr_offset(paddr, ((usize)1 << bits) - 1), bits);
+static inline paddr _align_up_paddr(paddr paddr, usize bits) {
+  return _align_down_paddr(paddr_offset(paddr, ((usize)1 << bits) - 1), bits);
 }
 
-static inline bool paddr_is_aligned(paddr addr, usize bits) {
-  return bits_of_paddr(paddr_align_down(addr, bits)) == bits_of_paddr(addr);
+static inline bool _is_aligned_paddr(paddr addr, usize bits) {
+  return bits_of_paddr(_align_down_paddr(addr, bits)) == bits_of_paddr(addr);
 }
 
 u8 physical_read_u8(paddr);
