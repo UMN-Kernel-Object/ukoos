@@ -160,10 +160,13 @@ static inline const uptr _ptr_with_addr_uptr(const uptr ptr_uptr, uaddr addr) {
 
 /**
  * Returns a pointer with the same provenance as `PTR` and the address `ADDR`.
+ *
+ * Note it is UB if `ADDR` is zero and `PTR` is not `nullptr`.
  */
 #define ptr_with_addr(PTR, ADDR)                                               \
   ({                                                                           \
     const auto __ptr_with_addr_PTR = (PTR);                                    \
+    const auto __ptr_with_addr_ADDR = (ADDR);                                  \
     constexpr auto __ptr_with_addr_PTR_type =                                  \
         __builtin_classify_type(__ptr_with_addr_PTR);                          \
     const auto __ptr_with_addr_PTR_or_null = __builtin_choose_expr(            \
@@ -174,7 +177,7 @@ static inline const uptr _ptr_with_addr_uptr(const uptr ptr_uptr, uaddr addr) {
         const typeof(*__ptr_with_addr_PTR_or_null) *: _ptr_with_addr_const,    \
         nullptr_t: _ptr_with_addr,                                             \
         uptr: _ptr_with_addr_uptr);                                            \
-    __ptr_with_addr_func(__ptr_with_addr_PTR, (ADDR));                         \
+    __ptr_with_addr_func(__ptr_with_addr_PTR, __ptr_with_addr_ADDR);           \
   })
 
 /**

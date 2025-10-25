@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <align.h>
 #include <devicetree.h>
 #include <endian.h>
 #include <mm/alloc.h>
-#include <physical.h>
 #include <print.h>
 #include <random.h>
 
@@ -107,7 +107,7 @@ devicetree_parse_structure_block(paddr devicetree_start,
       current_node = node;
 
       // Advance to the next token.
-      here = paddr_align_up(paddr_offset(here, name_len + 1), 2);
+      here = align_up(paddr_offset(here, name_len + 1), 2);
     } break;
 
     case FDT_END_NODE: {
@@ -145,7 +145,7 @@ devicetree_parse_structure_block(paddr devicetree_start,
 
       // Skip the value.
       paddr value_start = here;
-      here = paddr_align_up(paddr_offset(here, value_len), 2);
+      here = align_up(paddr_offset(here, value_len), 2);
 
       // Allocate the property.
       struct devicetree_prop *prop = alloc(sizeof(struct devicetree_prop));
