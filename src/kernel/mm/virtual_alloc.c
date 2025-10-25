@@ -53,7 +53,12 @@ struct vma_allocator {
    * The address the allocator starts at. This is used to compress the bounds of
    * the `value` field in `treap_head`, allowing for better alignment.
    */
-  uaddr base_address;
+  uaddr lo_address;
+
+  /**
+   * The maximum address of the allocator.
+   */
+  uaddr hi_address;
 
   /**
    * The root nodes of the treaps. Indexed with `enum which_treap`.
@@ -307,7 +312,7 @@ static usize vma_size(const struct vma *vma) {
  * Writes the bounds of a VMA to out_lo and out_hi.
  */
 void vma_bounds(const struct vma *vma, uaddr *out_lo, uaddr *out_hi) {
-  uaddr base_address = vma->allocator->base_address;
+  uaddr base_address = vma->allocator->lo_address;
   u32 addr_compressed = vma->treaps[BY_ADDR].value;
   uaddr addr = base_address + ((uaddr)addr_compressed << 12);
   usize size = vma_size(vma);
@@ -326,9 +331,9 @@ static void vma_init(struct vma_allocator *allocator, uaddr lo, uaddr hi,
                      struct vma *out) {
   assert(is_aligned(lo, 12) && is_aligned(hi, 12));
   assert(lo < hi);
-  assert(allocator->base_address <= lo);
+  assert(allocator->lo_address <= lo);
 
-  uaddr addr = lo - allocator->base_address;
+  uaddr addr = lo - allocator->lo_address;
   usize size = hi - lo;
   assert((addr >> 12) <= U32_MAX);
   assert(((size >> 12) - 1) <= U32_MAX);
@@ -358,7 +363,8 @@ bool vma_allocator_init(struct vma_allocator *allocator, uaddr lo, uaddr hi) {
 
   *allocator = (struct vma_allocator){
       .vmas = LIST_INIT(allocator->vmas),
-      .base_address = lo,
+      .lo_address = lo,
+      .hi_address = hi,
       .roots = {nullptr, nullptr}, // Initialized below.
   };
   vma_init(allocator, lo, hi, vma);
@@ -403,7 +409,9 @@ void vma_allocator_print(struct vma_allocator *allocator) {
   }
 }
 
-static struct vma *vma_find(struct vma_allocator *allocator, uaddr addr) {
+struct vma *vma_find(struct vma_allocator *allocator, uaddr addr) {
+  assert(allocator->lo_address <= addr && addr < allocator->hi_address);
+
   struct vma *vma = allocator->roots[BY_ADDR];
   while (vma) {
     uaddr start, end;
@@ -415,6 +423,7 @@ static struct vma *vma_find(struct vma_allocator *allocator, uaddr addr) {
     else
       break;
   }
+  assert(vma);
   return vma;
 }
 
