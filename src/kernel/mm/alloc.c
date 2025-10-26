@@ -111,12 +111,14 @@ void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
     page = container_of(page_head, struct mm_alloc_page, list);
     page_head = page_head->next;
 
+    // Free the page if it's empty.
+    if (page_is_empty(page)) {
+      page_free(page, heap);
+      continue;
+    }
+
     // Collect free objects in the page.
     page_collect(page);
-
-    // Free the page if it's empty.
-    if (page_is_empty(page))
-      page_free(page, heap);
 
     // If there are any free objects, use them.
     if (!page_is_full(page))

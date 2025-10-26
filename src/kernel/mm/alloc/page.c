@@ -271,8 +271,11 @@ void page_bounds(const struct mm_alloc_page *page, uptr *out_start,
 }
 
 void page_collect(struct mm_alloc_page *page) {
+  // If we can allocate an object from the page, don't bother collecting it.
+  if (block_ref_deref(page, page->free))
+    return;
+
   // Since our hart owns the local free list, we can just move it over.
-  assert(!block_ref_deref(page, page->free));
   page->free = page->local_free;
   page->local_free = block_ref_make(page, nullptr);
 
