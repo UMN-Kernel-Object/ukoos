@@ -16,7 +16,7 @@ NOTE - Your cable colors may be different.
 
 ![duo](../img/duo.jpg)
 
-Once you have these connected, you will need to serial into the board, as described below.
+Once you have these connected, you will need to connect to the board over serial, as described below.
 
 ## Accessing the board via serial (We are assuming you are using Linux)
 
