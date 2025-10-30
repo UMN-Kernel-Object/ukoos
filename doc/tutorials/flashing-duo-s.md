@@ -1,0 +1,57 @@
+# Set Up
+
+Connect to the board via an ethernet cable.
+Connect to the board via serial.
+To do this, plug in the included USB UART adaptor to your host system, and then plug in the UART cables to the board as described below.
+If you do not plug in to the right pins, you run the risk of frying the board, so please follow these instructions carefully!
+
+You will want to locate the pin on the UART board labeled `+5V`, above that will be `GND`, `RXD`, and `TXD` (shown below).
+We will not be using the `3V3` pin (some of the boards have a cable coming out of `3V3`, ignore it).
+
+![uart-board](../img/uart-board.jpg)
+
+The `+5V` cable will be attached to the second to top pin on the right side of the board, on the column of pins on the outward side, as shown below (black cable).
+The `GND`, `RXD`, and `TXD` will then be plugged into the board below the `+5V`, in order of how they are listed on the UART board, as shown below.
+NOTE - Your cable colors may be different.
+
+![duo](../img/duo.jpg)
+
+Once you have these connected, you will need to serial into the board, as described below.
+
+## Accessing the board via serial (We are assuming you are using Linux)
+
+Make sure you have the `minicom` and `busybox (tftp)` packages installed.
+Run the following command (this should be your serial device, unless you have another serial device already connected):
+
+`sudo minicom -D /dev/ttyUSB0`
+
+The board should boot into u-boot, and start its tftp server by default.
+
+Now, connect an ethernet cable from the board to your laptop.
+Reboot the board if the board is stuck or already booted in to a kernel.
+If the board did boot into a kernel, spam the down arrow on your laptop in the serial console while the board is rebooting and select the network boot option in the menu once it appears.
+Wait for the board to give up on connecting via BOOTP and take note of the linklocal address it prints.
+
+To send files to the board over tftp, you first need to assign your host device an IP address (if you are on macOS or Windows, no extra work should be required for this to work, you should already have a working linklocal connection).
+If you are on Linux, follow the below steps:
+
+Open your network settings, go into the ethernet connection, and create a new connection, as shown below.
+
+![network](../img/network-settings.png)
+
+Make the IP address one above the address of the board (the board's address will be shown in the serial connection).
+Make the subnet mask `255.255.255.0`.
+Gateway does not matter, just use the board's IP.
+
+You can now send the kernel over tftp with the following command:
+
+```
+tftp -p -l <path to built kernel.elf> <board's linklocal IP>
+```
+
+## Troubleshooting
+
+- Verify that you HAVE 5v connected and do NOT have 3.3v connected
+- 5v pin cable lines up with second red, the rest of the pin cables connect going down, in order
+- Button closest to edge reboots the board
+- Verify your ethernet cable is fully functional
