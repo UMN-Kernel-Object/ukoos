@@ -1,10 +1,15 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 {
+  opensbi,
+  u-boot,
+
   fetchFromGitHub,
   pkgsCross,
   stdenvNoCC,
 
-  opensbi-milkv-duos,
-  u-boot-milkv-duos,
   python3,
 }:
 
@@ -70,8 +75,8 @@ stdenvNoCC.mkDerivation (self: {
       CROSS_COMPILE=riscv64-unknown-linux-musl- \
       DDR_CFG=ddr3_1866_x16 \
       LDFLAGS="--no-warn-rwx-segments $LDFLAGS" \
-      LOADER_2ND_PATH=${u-boot-milkv-duos}/u-boot.bin \
-      MONITOR_PATH=${opensbi-milkv-duos}/fw_dynamic.bin \
+      LOADER_2ND_PATH=${u-boot}/u-boot.bin \
+      MONITOR_PATH=${opensbi}/fw_dynamic.bin \
       OD_CLK_SEL=y \
       RTOS_ENABLE_FREERTOS=y
 

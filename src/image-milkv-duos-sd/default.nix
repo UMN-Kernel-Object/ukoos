@@ -1,6 +1,11 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 {
   dev ? false,
-  u-boot-milkv-duos,
+  u-boot-milkv-duos-sd,
+  ukoos-milkv-duos,
 
   callPackage,
   lib,
@@ -10,18 +15,17 @@
   dosfstools,
   genimage,
   mtools,
-  ukoos-riscv64,
 }:
 
 stdenvNoCC.mkDerivation (self: {
   pname = "image-milkv-duos" + (if dev then "-dev" else "");
-  inherit (ukoos-riscv64) version;
+  inherit (ukoos-milkv-duos) version;
 
   nativeBuildInputs = [
     dosfstools
     genimage
     mtools
-    u-boot-milkv-duos
+    u-boot-milkv-duos-sd
   ];
 
   dontUnpack = true;
@@ -29,9 +33,9 @@ stdenvNoCC.mkDerivation (self: {
     runHook preBuild
 
     ${lib.optionalString (!dev) ''
-      install -Dt root/boot ${ukoos-riscv64}/sys/kernel.elf
+      install -Dt root/boot ${ukoos-milkv-duos}/sys/kernel.elf
     ''}
-    install -Dt root/boot ${self.passthru.fsbl-milkv-duos}/fip.bin
+    install -Dt root/boot ${self.passthru.fsbl}/fip.bin
     mkenvimage -s 0x20000 -o root/boot/uboot.env ${./u-boot.txt}
     genimage --config ${./genimage.cfg}
 
@@ -40,18 +44,18 @@ stdenvNoCC.mkDerivation (self: {
   installPhase = ''
     runHook preInstall
 
-    install -Dt $out -m 0644 images/sdcard.img
+    install -Dt $out -m 0644 images/ukoos.img
 
     runHook postInstall
   '';
 
   passthru = {
-    fsbl-milkv-duos = callPackage ./fsbl.nix {
-      inherit (self.passthru) opensbi-milkv-duos;
-      inherit u-boot-milkv-duos;
+    fsbl = callPackage ./fsbl.nix {
+      inherit (self.passthru) opensbi u-boot;
     };
-    opensbi-milkv-duos = pkgsCross.riscv64-musl.callPackage ./opensbi.nix {
-      inherit u-boot-milkv-duos;
+    opensbi = pkgsCross.riscv64-musl.callPackage ./opensbi.nix {
+      inherit (self.passthru) u-boot;
     };
+    u-boot = u-boot-milkv-duos-sd;
   };
 })

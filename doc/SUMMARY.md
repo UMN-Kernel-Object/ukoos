@@ -10,7 +10,7 @@
 - [Kernel]()
   - [The `print()` and `format()` functions](./kernel/print.md)
   - [Threads and Harts](./kernel/threads-and-harts.md)
-- [Targets]()
+- [Targets](./targets.md)
 - [Tutorials](./tutorials/tutorials.md)
   - [First Day](./tutorials/first-day.md)
   - [Flashing Duo S](./tutorials/flashing-duo-s.md)

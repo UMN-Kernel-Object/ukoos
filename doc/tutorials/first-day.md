@@ -7,7 +7,7 @@ Start by setting up a dev container for [Linux](../getting-started/linux.md), [M
 
 ## Troubleshooting
 
-If there are any issues, check out the [troubleshooting guide](/getting-started/troubleshooting.md) and ask us questions.
+If there are any issues, check out the [troubleshooting guide](../getting-started/troubleshooting.md) and ask us questions.
 
 ## Checkout code
 
@@ -23,13 +23,13 @@ Once we have the code and tools, we can compile the code from the dev container
 ```shell
 mkdir build
 cd build
-../configure
+../configure --target qemu-riscv64
 make
 ```
 
 ## Running
 
-Once the kernel is built, we can run the code inside a virutal machine (qemu)
+Once the kernel is built, we can run the code inside a virtual machine (qemu)
 ```shell
 make qemu
 ```
@@ -53,7 +53,7 @@ The first terminal, running `make qemu-debug` will look similar to the video bel
 And the second, running `make gdb`
 <script src="https://asciinema.org/a/kto7njh7ulCJ62ueOpL5mFZ3d.js" id="asciicast-kto7njh7ulCJ62ueOpL5mFZ3d" async="true"></script>
 
-The gdb window will be how you will control the OS (with the controls below) but the output will show up in the first. There is a [more detailed guide](/getting-started/using-gdb.md) on using gdb, but here are the basics:
+The gdb window will be how you will control the OS (with the controls below) but the output will show up in the first. There is a [more detailed guide](../getting-started/using-gdb.md) on using gdb, but here are the basics:
 | Command     | Meaning                                                   |
 |-------------|-----------------------------------------------------------|
 | n           | next line                                                 |
@@ -72,6 +72,9 @@ Switch to the tutorial code
 ```shell
 git checkout tutorials/first-day
 ```
+
+Please note, do not run the `./configure` script from the `tutorials/first-day` branch, it will make the following commands not work.
+
 and rebuild
 ```shell
 cd build

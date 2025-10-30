@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef UKO_OS_KERNEL__CRYPTO_SUBTLE_RANDOM_INTERNALS_H
 #define UKO_OS_KERNEL__CRYPTO_SUBTLE_RANDOM_INTERNALS_H 1
 

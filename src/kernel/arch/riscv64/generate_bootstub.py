@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path

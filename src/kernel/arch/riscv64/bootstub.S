@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 .section .text
 
 # The entrypoint to the bootstub.

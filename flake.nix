@@ -1,5 +1,9 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 {
-  inputs.u-boot-milkv-duos = {
+  inputs.u-boot-milkv-duos-sd = {
     url = "github:UMN-Kernel-Object/u-boot/milkv-duos-sd";
     inputs = {
       flake-utils.follows = "flake-utils";
@@ -11,36 +15,27 @@
       self,
       flake-utils,
       nixpkgs,
-      u-boot-milkv-duos,
+      u-boot-milkv-duos-sd,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "git-${self.shortRev or self.dirtyShortRev or "unknown"}";
-      in
-      rec {
-        devShells.default = pkgs.mkShell {
-          inputsFrom = [
-            packages.ukoos-riscv64
-          ];
-          nativeBuildInputs = [
-            pkgs.bear
-            pkgs.dtc
-            pkgs.minicom
-            pkgs.qemu
-          ];
-          shellHook = ''
-            export CC=riscv64-none-elf-gcc
-            export STRIP=riscv64-none-elf-strip
-          '';
-        };
+        version = "g${self.shortRev or self.dirtyShortRev or "unknown"}";
 
-        packages = {
-          default = packages.ukoos-riscv64;
+        all-targets = [
+          "milkv-duos"
+          "milkv-jupiter"
+          "qemu-riscv64"
+        ];
+        all-image-targets = [
+          "milkv-duos-sd"
+        ];
 
-          ukoos-riscv64 = pkgs.stdenvNoCC.mkDerivation {
-            pname = "ukoos-riscv64";
+        ukoos =
+          target:
+          pkgs.stdenvNoCC.mkDerivation {
+            pname = "ukoos-${target}";
             inherit version;
 
             src = ./.;
@@ -59,7 +54,7 @@
 
               mkdir build
               cd build
-              bash $src/configure
+              GDB=false bash $src/configure --target ${target}
 
               runHook postConfigure
             '';
@@ -71,17 +66,69 @@
               runHook postInstall
             '';
           };
+        ukoos-packages = builtins.listToAttrs (
+          builtins.map (target: {
+            name = "ukoos/${target}";
+            value = ukoos target;
+          }) all-targets
+        );
+      in
+      rec {
+        checks = {
+          build-ukoos-for-all-targets = pkgs.linkFarm "ukoos-all-targets" (
+            builtins.map (target: {
+              name = target;
+              path = packages."ukoos/${target}";
+            }) all-targets
+          );
+          build-images-for-all-targets = packages.all-images;
+        };
 
-          dev-image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
+        devShells.default = pkgs.mkShell {
+          inputsFrom = [
+            packages."ukoos/qemu-riscv64"
+          ];
+          nativeBuildInputs = [
+            pkgs.bear
+            pkgs.dtc
+            pkgs.gdb
+            pkgs.minicom
+            pkgs.qemu
+            pkgs.reuse
+          ];
+          shellHook = ''
+            export CC=riscv64-none-elf-gcc
+            export OBJDUMP=riscv64-none-elf-objdump
+            export STRIP=riscv64-none-elf-strip
+          '';
+        };
+
+        packages = ukoos-packages // {
+          default = packages."ukoos/milkv-duos";
+
+          all-images = pkgs.linkFarm "ukoos-images" (
+            builtins.concatMap (image-target: [
+              {
+                name = "dev-image-${image-target}.img";
+                path = "${packages."dev-image/${image-target}"}/ukoos.img";
+              }
+              {
+                name = "image-${image-target}.img";
+                path = "${packages."image/${image-target}"}/ukoos.img";
+              }
+            ]) all-image-targets
+          );
+
+          "dev-image/milkv-duos-sd" = pkgs.callPackage ./src/image-milkv-duos-sd {
             dev = true;
-            inherit (packages) ukoos-riscv64 u-boot-milkv-duos;
+            u-boot-milkv-duos-sd = u-boot-milkv-duos-sd.packages.${system}.default;
+            ukoos-milkv-duos = packages."ukoos/milkv-duos";
           };
-          image-milkv-duos = pkgs.callPackage ./src/image-milkv-duos {
+          "image/milkv-duos-sd" = pkgs.callPackage ./src/image-milkv-duos-sd {
             dev = false;
-            inherit (packages) ukoos-riscv64 u-boot-milkv-duos;
+            u-boot-milkv-duos-sd = u-boot-milkv-duos-sd.packages.${system}.default;
+            ukoos-milkv-duos = packages."ukoos/milkv-duos";
           };
-          u-boot-milkv-duos = u-boot-milkv-duos.packages.${system}.default;
-          inherit (packages.image-milkv-duos) fsbl-milkv-duos opensbi-milkv-duos;
         };
       }
     );

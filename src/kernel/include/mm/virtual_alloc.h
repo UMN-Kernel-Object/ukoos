@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H
 #define UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H 1
 

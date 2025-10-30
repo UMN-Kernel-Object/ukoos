@@ -35,7 +35,7 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
-        "u-boot-milkv-duos": "u-boot-milkv-duos"
+        "u-boot-milkv-duos-sd": "u-boot-milkv-duos-sd"
       }
     },
     "systems": {
@@ -53,7 +53,7 @@
         "type": "github"
       }
     },
-    "u-boot-milkv-duos": {
+    "u-boot-milkv-duos-sd": {
       "inputs": {
         "flake-utils": [
           "flake-utils"
@@ -63,11 +63,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1756498490,
-        "narHash": "sha256-/9gbxpjBu9wT1DsAcO5UaQyq7pzQKb60t7yeQc/3Tj8=",
+        "lastModified": 1758996538,
+        "narHash": "sha256-6z5h63WwMqJ4Rk76JFTAnpRHUFanFb0H0g2CGkwwRMo=",
         "owner": "UMN-Kernel-Object",
         "repo": "u-boot",
-        "rev": "0444d47200950ffa5a8766873f5d20a77c4bffb1",
+        "rev": "056f6b8ea3667470562486ccda79f71ec5acf1eb",
         "type": "github"
       },
       "original": {

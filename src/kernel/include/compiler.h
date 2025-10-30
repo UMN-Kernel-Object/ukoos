@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef UKO_OS_KERNEL__COMPILER_H
 #define UKO_OS_KERNEL__COMPILER_H 1
 
@@ -138,6 +144,9 @@ void *memset(void *restrict dst, int byte, __SIZE_TYPE__ len);
 
 [[gnu::nonnull(1, 2), gnu::pure]]
 int memcmp(const void *s1, const void *s2, __SIZE_TYPE__ n);
+
+[[gnu::nonnull(1, 2), gnu::pure]]
+int strcmp(const char *s1, const char *s2);
 
 [[gnu::nonnull(1), gnu::pure]]
 __SIZE_TYPE__ strlen(const char *s);

@@ -1,5 +1,10 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: CC0-1.0
+
 *.d
 *.o
+doc/book/
 
 .cache/
 .direnv/
