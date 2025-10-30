@@ -39,9 +39,7 @@ Open your network settings, go into the ethernet connection, and create a new co
 
 ![network](../img/network-settings.png)
 
-Make the IP address one above the address of the board (the board's address will be shown in the serial connection).
-Make the subnet mask `255.255.255.0`.
-Gateway does not matter, just use the board's IP.
+Make sure to set the mode of the network interface to `Link-Local`
 
 You can now send the kernel over tftp with the following command:
 
