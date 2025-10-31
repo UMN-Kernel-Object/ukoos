@@ -54,6 +54,7 @@ stdenvNoCC.mkDerivation (self: {
 
   passthru = {
     opensbi-milkv-jupiter = pkgsCross.riscv64-musl.callPackage ./opensbi.nix {
+      u-boot = u-boot-spacemit-k1;
     };
   };
 })

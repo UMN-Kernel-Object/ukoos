@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 {
+  u-boot,
+
+  dtc,
   fetchgit,
   pkgsCross,
   stdenvNoCC,
@@ -22,9 +25,11 @@ stdenvNoCC.mkDerivation {
   ];
 
   nativeBuildInputs = [
+    dtc
     pkgsCross.riscv64-musl.stdenv.cc.bintools.bintools
     pkgsCross.riscv64-musl.stdenv.cc.cc
     python3
+    u-boot
   ];
 
   patchPhase = ''
