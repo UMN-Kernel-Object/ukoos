@@ -37,11 +37,13 @@ sudo usermod -aG dialout ${USER}
 
 Then, via the dev container, run the following command (this should be your serial device, unless you have another serial device already connected):
 
-`sudo minicom -D /dev/ttyUSB0`
+```
+sudo minicom -D /dev/ttyUSB0
+```
 
 The board should boot into u-boot, and start its tftp server by default.
 
-Now, connect an ethernet cable from the board to your laptop.
+Now, connect an Ethernet cable from the board to your laptop.
 Reboot the board if the board is stuck or already booted in to a kernel.
 If the board did boot into a kernel, spam the down arrow on your laptop in the serial console while the board is rebooting and select the network boot option in the menu once it appears.
 Wait for the board to give up on connecting via BOOTP and take note of the linklocal address it prints.
@@ -49,7 +51,7 @@ Wait for the board to give up on connecting via BOOTP and take note of the linkl
 To send files to the board over tftp, you first need to assign your host device an IP address (if you are on macOS or Windows, no extra work should be required for this to work, you should already have a working linklocal connection).
 If you are on Linux, follow the below steps:
 
-Open your network settings, go into the ethernet connection, and create a new connection, as shown below.
+Open your network settings, go into the Ethernet connection, and create a new connection, as shown below.
 
 ![network](../img/network-settings.png)
 
@@ -59,6 +61,14 @@ You can now send the kernel over tftp with the following command:
 
 ```
 tftp -p -l <path to built kernel.elf> <board's linklocal IP>
+```
+## macOS instructions
+
+On macOS, you much cannot use the dev container.
+Make sure you have [homebrew](https://brew.sh/) installed on your machine, then run the following command:
+
+```
+brew install minicom
 ```
 
 ## Troubleshooting
