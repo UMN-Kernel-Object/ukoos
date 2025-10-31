@@ -16,12 +16,20 @@ NOTE - Your cable colors may be different.
 
 ![duo](../img/duo.jpg)
 
-Once you have these connected, you will need to connect to the board over serial, as described below.
+Once you have these connected, you will need to connect to the board over serial. We will describe how to connect to this via the dev container below.
 
-## Accessing the board via serial (We are assuming you are using Linux)
+## Accessing the board via serial through the dev container (We are assuming you are using Linux)
 
-Make sure you have the `minicom` and `busybox (tftp)` packages installed.
-Run the following command (this should be your serial device, unless you have another serial device already connected):
+Before entering the dev container, you must add yourself to the correct group in order to pass the USB device through to the container.
+
+Most distributions use the `dialout` group. If this does not work for you, ask an officer.
+Run the following command:
+
+```
+sudo usermod -aG dialout ${USER}
+```
+
+Then, via the dev container, run the following command (this should be your serial device, unless you have another serial device already connected):
 
 `sudo minicom -D /dev/ttyUSB0`
 
@@ -53,3 +61,4 @@ tftp -p -l <path to built kernel.elf> <board's linklocal IP>
 - 5v pin cable lines up with second red, the rest of the pin cables connect going down, in order
 - Button closest to edge reboots the board
 - Verify your ethernet cable is fully functional
+- Make sure the dev container is up to date
