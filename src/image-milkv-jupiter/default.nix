@@ -47,7 +47,7 @@ stdenvNoCC.mkDerivation (self: {
   installPhase = ''
     runHook preInstall
 
-    install -Dt $out -m 0644 images/sdcard.img
+    install -Dt $out -m 0644 images/ukoos.img
 
     runHook postInstall
   '';
