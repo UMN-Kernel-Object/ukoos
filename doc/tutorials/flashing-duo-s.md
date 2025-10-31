@@ -2,7 +2,7 @@
 
 Connect to the board via an ethernet cable.
 Connect to the board via serial.
-To do this, plug in the included USB UART adaptor to your host system, and then plug in the UART cables to the board as described below.
+To do this, plug in the included USB UART adapter to your host system, and then plug in the UART cables to the board as described below.
 If you do not plug in to the right pins, you run the risk of frying the board, so please follow these instructions carefully!
 
 You will want to locate the pin on the UART board labeled `+5V`, above that will be `GND`, `RXD`, and `TXD` (shown below).
