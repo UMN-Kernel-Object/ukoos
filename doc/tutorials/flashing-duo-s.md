@@ -1,6 +1,6 @@
 # Set Up
 
-Connect to the board via an ethernet cable.
+Connect to the board via an Ethernet cable.
 Connect to the board via serial.
 To do this, plug in the included USB UART adapter to your host system, and then plug in the UART cables to the board as described below.
 If you do not plug in to the right pins, you run the risk of frying the board, so please follow these instructions carefully!
