@@ -40,6 +40,7 @@
         ];
         all-image-targets = [
           "milkv-duos-sd"
+          "milkv-jupiter"
         ];
 
         ukoos =
