@@ -16,7 +16,8 @@ NOTE - Your cable colors may be different.
 
 ![duo](../img/duo.jpg)
 
-Once you have these connected, you will need to connect to the board over serial. We will describe how to connect to this via the dev container below.
+Once you have these connected, you will need to connect to the board over serial.
+We will describe how to connect to this via the dev container below.
 
 ## Accessing the board via serial through the dev container (We are assuming you are using Linux)
 
@@ -27,7 +28,7 @@ This includes Ubuntu, NixOS, and Debian.
 You can check what your distro uses with `ls -g /dev/ttyUSB0`.
 This will print something like `crw-rw---- 1 dialout 188, 0 Oct 30 21:35 /dev/ttyUSB0`.
 If another word is there instead of `dialout`, that is the group you should use for the rest of the instructions.
-(If the group is `root`, ask an officer -- you probably need to do something different.)
+If the group is `root`, ask an officer -- you probably need to do something different.
 
 Run the following command outside of the dev container:
 
@@ -45,7 +46,7 @@ sudo minicom -D /dev/ttyUSB0
 
 Note, to exit the board, press `Ctrl + A`, then enter `q`, then press `Enter`.
 
-The board should boot into u-boot, and start its TFTP server by default.
+The board should boot into U-Boot, and start its TFTP server by default.
 
 Now, connect an Ethernet cable from the board to your laptop.
 Reboot the board if the board is stuck or already booted in to a kernel.
@@ -59,12 +60,12 @@ Open your network settings, go into the Ethernet connection, and create a new co
 
 ![network](../img/network-settings.png)
 
-Make sure to set the mode of the network interface to `Link-Local`
+Make sure to set the mode of the network interface to `Link-Local`.
 
 You can now send the kernel over TFTP with the following command:
 
 ```
-tftp -p -l <path to built kernel.elf> <board's link-local IP>
+busybox tftp -p -l <path to built kernel.elf> <board's link-local IP>
 ```
 
 ## Troubleshooting
@@ -72,5 +73,5 @@ tftp -p -l <path to built kernel.elf> <board's link-local IP>
 - Verify that you HAVE 5v connected and do NOT have 3.3v connected
 - 5v pin cable lines up with second red, the rest of the pin cables connect going down, in order
 - Button closest to edge reboots the board
-- Verify your ethernet cable is fully functional
+- Verify your Ethernet cable is fully functional
 - Make sure the dev container is up to date
