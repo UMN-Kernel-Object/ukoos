@@ -66,14 +66,6 @@ You can now send the kernel over tftp with the following command:
 ```
 tftp -p -l <path to built kernel.elf> <board's linklocal IP>
 ```
-## macOS instructions
-
-On macOS, you much cannot use the dev container.
-Make sure you have [homebrew](https://brew.sh/) installed on your machine, then run the following command:
-
-```
-brew install minicom
-```
 
 ## Troubleshooting
 
