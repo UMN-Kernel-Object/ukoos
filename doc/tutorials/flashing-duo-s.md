@@ -45,14 +45,14 @@ sudo minicom -D /dev/ttyUSB0
 
 Note, to exit the board, press `Ctrl + A`, then enter `q`, then press `Enter`.
 
-The board should boot into u-boot, and start its tftp server by default.
+The board should boot into u-boot, and start its TFTP server by default.
 
 Now, connect an Ethernet cable from the board to your laptop.
 Reboot the board if the board is stuck or already booted in to a kernel.
 If the board did boot into a kernel, spam the down arrow on your laptop in the serial console while the board is rebooting and select the network boot option in the menu once it appears.
-Wait for the board to give up on connecting via BOOTP and take note of the linklocal address it prints.
+Wait for the board to give up on connecting via BOOTP and take note of the link-local address it prints.
 
-To send files to the board over tftp, you first need to assign your host device an IP address (if you are on macOS or Windows, no extra work should be required for this to work, you should already have a working linklocal connection).
+To send files to the board over TFTP, you first need to assign your host device an IP address (if you are on macOS or Windows, no extra work should be required for this to work, you should already have a working link-local connection).
 If you are on Linux, follow the below steps:
 
 Open your network settings, go into the Ethernet connection, and create a new connection, as shown below.
@@ -61,10 +61,10 @@ Open your network settings, go into the Ethernet connection, and create a new co
 
 Make sure to set the mode of the network interface to `Link-Local`
 
-You can now send the kernel over tftp with the following command:
+You can now send the kernel over TFTP with the following command:
 
 ```
-tftp -p -l <path to built kernel.elf> <board's linklocal IP>
+tftp -p -l <path to built kernel.elf> <board's link-local IP>
 ```
 
 ## Troubleshooting
