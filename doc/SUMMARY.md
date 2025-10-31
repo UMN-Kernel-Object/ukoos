@@ -13,3 +13,4 @@
 - [Targets](./targets.md)
 - [Tutorials](./tutorials/tutorials.md)
   - [First Day](./tutorials/first-day.md)
+  - [Flashing Duo S](./tutorials/flashing-duo-s.md)
