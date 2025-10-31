@@ -43,6 +43,8 @@ Then, via the dev container, run the following command (this should be your seri
 sudo minicom -D /dev/ttyUSB0
 ```
 
+Note, to exit the board, press `Ctrl + A`, then enter `q`, then press `Enter`.
+
 The board should boot into u-boot, and start its tftp server by default.
 
 Now, connect an Ethernet cable from the board to your laptop.
