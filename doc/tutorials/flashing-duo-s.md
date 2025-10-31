@@ -22,7 +22,13 @@ Once you have these connected, you will need to connect to the board over serial
 
 Before entering the dev container, you must add yourself to the correct group in order to pass the USB device through to the container.
 
-Most distributions use the `dialout` group. If this does not work for you, ask an officer.
+Most distributions use the `dialout` group.
+This includes Ubuntu, NixOS, and Debian.
+You can check what your distro uses with `ls -g /dev/ttyUSB0`.
+This will print something like `crw-rw---- 1 dialout 188, 0 Oct 30 21:35 /dev/ttyUSB0`.
+If another word is there instead of `dialout`, that is the group you should use for the rest of the instructions.
+(If the group is `root`, ask an officer -- you probably need to do something different.)
+
 Run the following command:
 
 ```
