@@ -35,6 +35,8 @@ Run the following command outside of the dev container:
 sudo usermod -aG dialout ${USER}
 ```
 
+Note, you may need to log out and log back in for this to take full effect.
+
 Then, via the dev container, run the following command (this should be your serial device, unless you have another serial device already connected):
 
 ```
