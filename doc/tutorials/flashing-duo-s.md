@@ -29,7 +29,7 @@ This will print something like `crw-rw---- 1 dialout 188, 0 Oct 30 21:35 /dev/tt
 If another word is there instead of `dialout`, that is the group you should use for the rest of the instructions.
 (If the group is `root`, ask an officer -- you probably need to do something different.)
 
-Run the following command:
+Run the following command outside of the dev container:
 
 ```
 sudo usermod -aG dialout ${USER}
