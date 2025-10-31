@@ -8,7 +8,7 @@ If you do not plug in to the right pins, you run the risk of frying the board, s
 You will want to locate the pin on the UART board labeled `+5V`, above that will be `GND`, `RXD`, and `TXD` (shown below).
 We will not be using the `3V3` pin (some of the boards have a cable coming out of `3V3`, ignore it).
 
-![uart-board](../img/uart-board.jpg)
+![uart-board](../img/wiring-of-uart-board.jpg)
 
 The `+5V` cable will be attached to the second to top pin on the right side of the board, on the column of pins on the outward side, as shown below (black cable).
 The `GND`, `RXD`, and `TXD` will then be plugged into the board below the `+5V`, in order of how they are listed on the UART board, as shown below.
