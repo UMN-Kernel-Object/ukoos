@@ -17,7 +17,5 @@
       }
     }
   },
-  "runArgs": [
-    "--network=host"
-  ]
+  "runArgs": ["--network=host", "--privileged"]
 }
