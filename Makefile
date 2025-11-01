@@ -67,24 +67,24 @@ watch:
 .SUFFIXES:
 
 define common_rules_for_dir
-$(2)%.o: $(srcdir)/$(2)%.c
+$(2)%.o: $(srcdir)/$(2)%.c config.mak
 	@mkdir -p $$(dir $$@)
 	@echo "CC      $$@"
 	$(Q)$(CC) -c -o $$@ $$($(1)-cflags) $$<
 
-$(2)%.o: $(srcdir)/$(2)%.S
+$(2)%.o: $(srcdir)/$(2)%.S config.mak
 	@mkdir -p $$(dir $$@)
 	@echo "AS      $$@"
 	$(Q)$(CC) -c -o $$@ $$($(1)-cflags) $$<
 
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
-$(2)%.d: $(srcdir)/$(2)%.c
+$(2)%.d: $(srcdir)/$(2)%.c config.mak
 	@mkdir -p $$(dir $$@)
 	@set -e; rm -f $$@; \
 	trap 'rm -f $$@.$$$$$$$$' EXIT; \
 	$(CC) -M $$($(1)-cflags) $$< > $$@.$$$$$$$$; \
 	sed 's,$$(notdir $$(@:%.d=%.o))[ :]*,$$(@:%.d=%.o) $$@ : ,g' < $$@.$$$$$$$$ > $$@
-$(2)%.d: $(srcdir)/$(2)%.S
+$(2)%.d: $(srcdir)/$(2)%.S config.mak
 	@mkdir -p $$(dir $$@)
 	@set -e; rm -f $$@; \
 	trap 'rm -f $$@.$$$$$$$$' EXIT; \
