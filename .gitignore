@@ -14,6 +14,7 @@ result-*
 
 /build/
 /compile_commands.json
+/src/kernel/arch/riscv64/bootstub_generated.ld
 /src/kernel/arch/riscv64/bootstub_generated.S
 /src/kernel/arch/riscv64/kernel-unstripped.elf
 /src/kernel/arch/riscv64/kernel.elf

@@ -20,6 +20,7 @@ install:: src/kernel/kernel.elf src/kernel/kernel.sym
 $(call defcleanable, \
 	src/kernel/arch/riscv64/bootstub.d \
 	src/kernel/arch/riscv64/bootstub.o \
+	src/kernel/arch/riscv64/bootstub_generated.ld \
 	src/kernel/arch/riscv64/bootstub_generated.o \
 	src/kernel/arch/riscv64/bootstub_generated.S \
 	src/kernel/arch/riscv64/kernel-unstripped.elf \
