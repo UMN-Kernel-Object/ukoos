@@ -4,7 +4,10 @@ A small RISC-V operating system for learning OS development.
 
 ## Getting Started
 
-View the full [ukoOS Docs](https://umn-kernel-object.github.io/ukoos/). For setup, see the [Linux](https://umn-kernel-object.github.io/ukoos/getting-started/linux.html), [MacOS](https://umn-kernel-object.github.io/ukoos/getting-started/macos.html), or [Windows](https://umn-kernel-object.github.io/ukoos/getting-started/windows.html) guides.
+View the full [ukoOS Docs](https://umn-kernel-object.github.io/ukoos/).
+For setup, see the [Linux](https://umn-kernel-object.github.io/ukoos/getting-started/linux.html), [MacOS](https://umn-kernel-object.github.io/ukoos/getting-started/macos.html), or [Windows](https://umn-kernel-object.github.io/ukoos/getting-started/windows.html) guides.
+
+If you're looking for a good first issue, see the [`!: good first issue`](https://github.com/UMN-Kernel-Object/ukoos/issues?q=is%3Aopen%20label%3A%22!%3A%20good%20first%20issue%22) label.
 
 ## Licenses
 
