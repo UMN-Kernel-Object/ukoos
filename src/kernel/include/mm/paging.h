@@ -74,4 +74,18 @@ bool mm_paging_map(uaddr va, paddr pa, enum page_permissions perms);
  */
 bool mm_paging_unmap(uaddr va, paddr *pa);
 
+/**
+ * Maps a region of memory for memory-mapped IO. This may involve special flags
+ * or other setup to prevent accesses from being cached.
+ *
+ * Returns a pointer to the virtual address for the region. Returns `nullptr` on
+ * error.
+ */
+void *iomem_map(paddr addr, usize size);
+
+/**
+ * Unmaps memory mapped with `iomem_map`.
+ */
+void iomem_unmap(void *ptr, usize size);
+
 #endif // UKO_OS_KERNEL__MM_PAGING_H
