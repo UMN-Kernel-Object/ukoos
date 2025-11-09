@@ -49,6 +49,9 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   // Run initializers, which include e.g. registering drivers.
   run_initializers();
 
+  // Enumerate devices in the devicetree.
+  devicetree_enumerate(devicetree);
+
   // Print the devices that have been created.
   print_devices();
 

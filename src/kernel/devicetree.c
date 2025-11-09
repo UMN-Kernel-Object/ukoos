@@ -10,6 +10,7 @@
 #include <mm/alloc.h>
 #include <print.h>
 #include <random.h>
+#include <symbolicate.h>
 
 struct fdt_header {
   u32 magic;
@@ -458,6 +459,7 @@ static void devicetree_prop_free(struct devicetree_prop *prop) {
 }
 
 void devicetree_free(struct devicetree_node *node) {
+  assert(!node || !node->parent);
   while (node) {
     // Free every property.
     while (!list_is_empty(&node->props))
@@ -488,6 +490,7 @@ void devicetree_free(struct devicetree_node *node) {
 
 struct devicetree_node *devicetree_child(struct devicetree_node *parent,
                                          const char *name) {
+  assert(parent);
   for (struct list_head *child = parent->children.next;
        child != &parent->children; child = child->next) {
     struct devicetree_node *node =
@@ -500,6 +503,7 @@ struct devicetree_node *devicetree_child(struct devicetree_node *parent,
 
 struct devicetree_prop *devicetree_prop(struct devicetree_node *parent,
                                         const char *name) {
+  assert(parent);
   for (struct list_head *child = parent->props.next; child != &parent->props;
        child = child->next) {
     struct devicetree_prop *prop =
@@ -541,6 +545,12 @@ bool devicetree_address_size_cells(struct devicetree_node *node,
   *out_address_cells = big_to_native(*out_address_cells);
   *out_size_cells = big_to_native(*out_size_cells);
   return true;
+}
+
+bool devicetree_reg(struct devicetree_node *node, usize i, paddr *out_addr,
+                    usize *out_size) {
+  return devicetree_prop_reg(devicetree_prop(node, "reg"), i, out_addr,
+                             out_size);
 }
 
 bool devicetree_prop_reg(struct devicetree_prop *prop, usize i, paddr *out_addr,
@@ -677,4 +687,123 @@ void devicetree_add_entropy(struct devicetree_node *root) {
   entropy_pool_mix(rng_seed->value, rng_seed->value_len);
   entropy_pool_credit(8 * rng_seed->value_len);
   devicetree_prop_free(rng_seed);
+}
+
+struct devicetree_handler {
+  const char *compatible;
+  usize compatible_len;
+  struct device *(*handler)(struct devicetree_node *node);
+};
+
+/**
+ * A vector of handlers.
+ *
+ * TODO: Replace this with a hashtable of vectors or similar.
+ */
+static struct devicetree_handler *handlers = nullptr;
+static usize handlers_cap = 0, handlers_len = 0;
+
+static void devicetree_enumerate_one(struct devicetree_node *node) {
+  assert(node);
+
+  struct devicetree_prop *prop = devicetree_prop(node, "compatible");
+  if (!prop)
+    return;
+
+  const u8 *str = prop->value;
+  usize len = prop->value_len;
+
+  while (len) {
+    usize item_len = strlen((const char *)str);
+
+    for (usize i = 0; i < handlers_len; i++) {
+      if (handlers[i].compatible_len != item_len)
+        continue;
+      if (memcmp(handlers[i].compatible, str, item_len) != 0)
+        continue;
+
+      struct device *device = handlers[i].handler(node);
+      if (device) {
+        device_add(&root_device, device);
+        return;
+      } else {
+        struct symbolicated symbolicated;
+        if (symbolicate(&symbolicated, addr_of_ptr(handlers[i].handler))) {
+          print("Devicetree handler <{cstr}+{usize}> failed to initialize a "
+                "device",
+                symbolicated.name, symbolicated.offset);
+        } else {
+          print("Devicetree handler <{uaddr}> failed to initialize a device",
+                addr_of_ptr(handlers[i].handler));
+        }
+      }
+    }
+
+    str += item_len + 1;
+    len -= item_len + 1;
+  }
+}
+
+void devicetree_enumerate(struct devicetree_node *root) {
+  assert(root);
+
+  struct devicetree_node *node = root;
+  for (;;) {
+    // Traverse down and to the left as far as we can.
+    if (!list_is_empty(&node->children)) {
+      node = container_of(node->children.next, struct devicetree_node,
+                          parent_children_head);
+      continue;
+    }
+
+    // At this point, we're at a leaf.
+    assert(list_is_empty(&node->children));
+
+    // While we're the right-most child, go up. This counts as leaving the node,
+    // so check the node for a `compatible` prop before doing so.
+    while (node->parent &&
+           node->parent_children_head.next == &node->parent->children) {
+      devicetree_enumerate_one(node);
+      node = node->parent;
+    }
+
+    // If we left the root, we're done.
+    if (!node->parent)
+      break;
+
+    // We now have a right sibling, which we can go to. This count as leaving
+    // the node, so we'll check the node for a `compatible` prop. Next
+    // iteration, we'll descend.
+    assert(node->parent_children_head.next != &node->parent->children);
+    devicetree_enumerate_one(node);
+    node = container_of(node->parent_children_head.next, struct devicetree_node,
+                        parent_children_head);
+  }
+}
+
+void devicetree_register(
+    const char *compatible,
+    struct device *(*handler)(struct devicetree_node *node)) {
+  assert(compatible && handler);
+
+  if (!handlers) {
+    assert(!handlers_len);
+    handlers_cap = 16;
+    handlers = alloc(sizeof(struct devicetree_handler) * handlers_cap);
+    assert(handlers, "Failed to allocate handlers vector");
+  }
+
+  if (handlers_cap == handlers_len) {
+    handlers_cap *= 2;
+    struct devicetree_handler *new_handlers =
+        realloc(handlers, sizeof(struct devicetree_handler) * handlers_cap);
+    assert(new_handlers, "Failed to reallocate handlers vector");
+    handlers = new_handlers;
+  }
+
+  handlers[handlers_len++] = (struct devicetree_handler){
+      .compatible = compatible,
+      .compatible_len = strlen(compatible),
+      .handler = handler,
+  };
 }
