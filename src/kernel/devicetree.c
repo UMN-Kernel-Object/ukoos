@@ -598,13 +598,32 @@ bool devicetree_prop_reg(struct devicetree_prop *prop, usize i, paddr *out_addr,
   return true;
 }
 
+static char *devicetree_path(struct devicetree_node *node) {
+  if (!node->parent)
+    return format("/");
+
+  char *out = format("{cstr}", node->name);
+
+  while (node->parent) {
+    node = node->parent;
+    char *next = format("{cstr}/{cstr}", node->name, out);
+    free(out);
+    out = next;
+  }
+
+  return out;
+}
+
 void devicetree_print(struct devicetree_node *node) {
   if (!node) {
     print("nullptr");
     return;
   }
 
-  print("/ {{");
+  char *path = devicetree_path(node);
+  print("{cstr} {{", path);
+  free(path);
+
   usize depth = 2;
   while (depth && node) {
     // Print each property.
