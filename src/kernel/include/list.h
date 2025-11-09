@@ -65,8 +65,8 @@ struct list_head {
  * void init_parent(struct parent *p) { p->children = LIST_INIT(p->children); }
  * ```
  */
-#define LIST_INIT(name)                                                        \
-  (struct list_head) { .prev = &(name), .next = &(name) }
+#define LIST_INIT(LIST)                                                        \
+  (struct list_head) { .prev = &(LIST), .next = &(LIST) }
 
 /**
  * Returns whether `list` is empty.
