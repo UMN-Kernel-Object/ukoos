@@ -31,6 +31,7 @@ kernel-objs-c += builtins/strlen
 kernel-objs-c += crypto/subtle/rfc7539
 kernel-objs-c += crypto/subtle/rfc7693
 kernel-objs-c += device
+kernel-objs-c += devices/uart
 kernel-objs-c += devicetree
 kernel-objs-c += init
 kernel-objs-c += main
