@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Linting
+on:
+  push:
+  pull_request:
+jobs:
+  lint:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: ukoos
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check REUSE
+        run: |
+          nix develop --command reuse lint
+      - name: Check formatting
+        run: |
+          nix fmt -- --ci
+          nix develop --command \
+            find -name '*.c' -or -name '*.h' \
+              -exec clang-format --dry-run -Werror -- {} +
+      - name: Lint configure script
+        run: |
+          # TODO: Any other shell scripts should end up here.
+          nix develop --command \
+            shellcheck configure
