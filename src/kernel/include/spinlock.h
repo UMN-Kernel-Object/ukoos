@@ -12,13 +12,13 @@
  * @name: Name of the lock (for debugging).
  */
 struct spinlock {
-	volatile atomic_flag lock;
-	struct hart_locals *hart;
-	const char *name;
+  volatile atomic_flag lock;
+  struct hart_locals *hart;
+  const char *name;
 };
 
 /**
- * initlock - Initializes a spinlock.
+ * spinlock_init - Initializes a spinlock.
  * @sp: Pointer to the spinlock structure.
  * @name: Name of the lock.
  *
@@ -27,7 +27,7 @@ struct spinlock {
 void spinlock_init(struct spinlock *sp, const char *name);
 
 /**
- * acquire - Acquire a spinlock.
+ * spinlock_acquire - Acquire a spinlock.
  * @sp: Pointer to the spinlock structure.
  *
  * Acquires the specified spinlock. If the lock is already held,
@@ -36,7 +36,7 @@ void spinlock_init(struct spinlock *sp, const char *name);
 void spinlock_acquire(struct spinlock *sp);
 
 /**
- * release - Release a spinlock.
+ * spinlock_release - Release a spinlock.
  * @sp: Pointer to the spinlock structure.
  *
  * Releases the previously acquired spinlock. The lock must have
@@ -45,4 +45,3 @@ void spinlock_acquire(struct spinlock *sp);
 void spinlock_release(struct spinlock *sp);
 
 #endif // UKO_OS_KERNEL__SPINLOCK_H
-

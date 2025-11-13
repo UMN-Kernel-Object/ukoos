@@ -16,12 +16,12 @@ struct hart_locals {
   /**
    * Number of times interrupts have been disabled.
    */
-  u32 irq_nesting_depth;
+  u32 interrupt_disabled_depth;
 
   /**
-   * Were interrupts enabled before interrupt disable nesting?
+   * If interrupts request were previously enabled.
    */
-  bool prev_irq_enabled;
+  bool prev_interrupt_enabled;
 
   /**
    * The current heap.

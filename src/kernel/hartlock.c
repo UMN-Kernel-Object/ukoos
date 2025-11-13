@@ -5,31 +5,30 @@
 #include <types.h>
 
 void hartlock_acquire(void) {
-	bool prev_irq_enabled = are_irq_enabled();
-	irq_disable();
-	struct hart_locals *hart = get_hart_locals();
-	if (hart->irq_nesting_depth == 0) {
-		hart->prev_irq_enabled = prev_irq_enabled;
-	}
-	hart->irq_nesting_depth += 1;
+  bool prev_interrupt_enabled = are_interrupts_enabled();
+  disable_interrupts();
+  struct hart_locals *hart = get_hart_locals();
+  if (hart->interrupt_disabled_depth == 0) {
+    hart->prev_interrupt_enabled = prev_interrupt_enabled;
+  }
+  hart->interrupt_disabled_depth += 1;
 }
 
 void hartlock_release(void) {
-	if (are_irq_enabled()) {
-		panic("hartlock_release: interrupts are enabled when they should be disabled");
-	}
-	struct hart_locals *hart = get_hart_locals();
-	if (hart->irq_nesting_depth < 1) {
-		panic("hartlock_release: called without matching hartlock_acquire");
-	}
-	hart->irq_nesting_depth -= 1;
-	if (hart->irq_nesting_depth == 0 && hart->prev_irq_enabled) {
-		irq_enable();
-	}
+  if (are_interrupts_enabled()) {
+    panic("hartlock_release: interrupts are enabled when they should be disabled");
+  }
+  struct hart_locals *hart = get_hart_locals();
+  if (hart->interrupt_disabled_depth < 1) {
+    panic("hartlock_release: called without matching hartlock_acquire");
+  }
+  hart->interrupt_disabled_depth -= 1;
+  if (hart->interrupt_disabled_depth == 0 && hart->prev_interrupt_state) {
+    enable_interrupts();
+  }
 }
 
 bool is_hart_locked(void) {
-	// Currently, a hartlock is just enabling/disabling interrupts
-	return !are_irq_enabled();
+  // Currently, a hartlock is just enabling/disabling interrupts
+  return !are_interrupts_enabled();
 }
-

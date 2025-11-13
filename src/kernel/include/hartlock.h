@@ -28,4 +28,3 @@ void hartlock_release(void);
 bool is_hart_locked(void);
 
 #endif  // UKO_OS_KERNEL__HARTLOCK_H
-
