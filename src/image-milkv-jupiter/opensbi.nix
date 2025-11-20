@@ -49,10 +49,6 @@ stdenvNoCC.mkDerivation {
       CROSS_COMPILE=riscv64-unknown-linux-musl- \
       PLATFORM=generic \
       PLATFORM_DEFCONFIG=k1_defconfig
-      # CHIP_ARCH=CV181X \
-      # FW_FDT_PATH=
-      # OPENSBI_PATH=$PWD \
-      # PLATFORM=generic
 
     runHook postBuild
   '';
