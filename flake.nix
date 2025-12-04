@@ -90,11 +90,15 @@
           ];
           nativeBuildInputs = [
             pkgs.bear
+            pkgs.clang-tools
             pkgs.dtc
             pkgs.gdb
             pkgs.minicom
+            pkgs.nixfmt-rfc-style
             pkgs.qemu
             pkgs.reuse
+            pkgs.shellcheck
+            pkgs.tio
           ];
           shellHook = ''
             export CC=riscv64-none-elf-gcc
@@ -102,6 +106,8 @@
             export STRIP=riscv64-none-elf-strip
           '';
         };
+
+        formatter = pkgs.nixfmt-tree;
 
         packages = ukoos-packages // {
           default = packages."ukoos/milkv-duos";
