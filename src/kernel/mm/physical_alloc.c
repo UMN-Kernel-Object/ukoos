@@ -170,7 +170,8 @@ void mm_init_physical(struct devicetree_node *devicetree) {
        child != &devicetree->children; child = child->next) {
     struct devicetree_node *node =
         container_of(child, struct devicetree_node, parent_children_head);
-    if (strlen(node->name) < 7 || memcmp(node->name, "memory@", 7))
+    if (strlen(node->name) < sizeof("memory@") - 1 ||
+        memcmp(node->name, "memory@", sizeof("memory@") - 1))
       continue;
 
     // Run consider_physical_memory() on each one's reg property.
