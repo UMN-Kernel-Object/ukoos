@@ -80,9 +80,9 @@ static void page_init_small_or_large(struct mm_alloc_page *page,
   // Figure out the range of addresses that need to be initialized.
   uptr page_start, page_end;
   page_bounds(page, &page_start, &page_end);
-  page_start = align_up(page_start, 3 + size_class);
-  assert(is_aligned(page_start, 3 + size_class));
-  assert(is_aligned(page_end, 3 + size_class));
+  page_start = align_up(page_start, log2_size_of_size_class(size_class));
+  assert(is_aligned(page_start, log2_size_of_size_class(size_class)));
+  assert(is_aligned(page_end, log2_size_of_size_class(size_class)));
 
   // Randomly initialize the free list. For efficiency's sake, the free list is
   // not perfectly shuffled; instead, we keep a buffer of 16 blocks we might add

@@ -103,11 +103,19 @@ static inline usize size_class_of_size(usize size) {
 }
 
 /**
+ * Given a size class, returns the log2 of the size of the allocation of that
+ * size class.
+ */
+static inline usize log2_size_of_size_class(usize size_class) {
+  assert(size_class_is_valid(size_class));
+  return 3 + size_class;
+}
+
+/**
  * Given a size class, returns the size of the allocation of that size class.
  */
 static inline usize size_of_size_class(usize size_class) {
-  assert(size_class_is_valid(size_class));
-  return (usize)1 << (3 + size_class);
+  return (usize)1 << log2_size_of_size_class(size_class);
 }
 
 #endif // UKO_OS_KERNEL__MM_ALLOC_SIZE_CLASSES_H
