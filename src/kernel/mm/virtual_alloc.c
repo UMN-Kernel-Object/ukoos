@@ -24,16 +24,16 @@ enum which_treap {
 };
 
 /**
- * An instance of the virtual memory allocator. The allocator stores a
- * non-empty sequence of VMAs, in a few forms.
+ * An instance of the virtual memory allocator. The allocator stores the same
+ * non-empty sequence of VMAs in three different data structures.
  *
- * - All VMAs are stored in an intrusive doubly linked list, sorted by their
- *   start address. This gives VMAs easy access to their siblings, letting them
- *   be merged when freed.
- * - All VMAs are stored in a treap, sorted by their start address. This allows
- *   efficiently finding a VMA by address.
- * - All free VMAs are stored in a treap, sorted by their size. This allows
- *   efficiently allocating a free VMA.
+ * 1. All VMAs are stored in an intrusive doubly linked list, sorted by their
+ *    start address. This gives VMAs easy access to their siblings, letting them
+ *    be merged when freed.
+ * 2. All VMAs are stored in a treap, sorted by their start address. This allows
+ *    efficiently finding a VMA by address.
+ * 3. All *free* VMAs are stored in a treap, sorted by their size. This allows
+ *    efficiently allocating a free VMA.
  *
  * A few invariants hold:
  *
