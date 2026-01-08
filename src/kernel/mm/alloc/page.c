@@ -230,7 +230,8 @@ void page_free(struct mm_alloc_page *page, struct mm_alloc_heap *heap) {
 
   struct mm_alloc_segment *segment = page_segment(page);
   assert(segment->used_pages);
-  if (--segment->used_pages) {
+  segment->used_pages--;
+  if (segment->used_pages) {
     // There are still more pages in use, so we can't free the segment, and we
     // know this is a page for small objects, so it should end up in the
     // unused_pages list.
