@@ -28,6 +28,12 @@ union mm_alloc_page_remote {
      * This will cause the page to get removed from the `full_pages` list the
      * next time the owning hart fails to find a free page with free blocks in
      * any `pages` list.
+     *
+     * This is simpler than the state described in the mimalloc paper, which
+     * describes three states: `NORMAL`, `DELAYED`, and `DELAYING`. In our
+     * allocator, heaps are owned by harts instead of by threads. Since we don't
+     * (yet?) support CPU hotplug, harts never terminate, so we don't need the
+     * `DELAYING` state -- this bit only encodes `NORMAL` vs `DELAYED`.
      */
     bool needs_delayed_free : 1;
 

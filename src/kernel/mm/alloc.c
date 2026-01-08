@@ -28,8 +28,12 @@ void free(void *ptr) {
       // TODO: Does something have to be done with delayed freeing?
       list_remove(&page->list);
       list_push(&heap->pages[page->size_class], &page->list);
+
+      // The page is no longer full, so it doesn't need a delayed free. Clear
+      // the .needs_delayed_free flag.
       atomic uaddr *remote = (atomic uaddr *)&page->remote;
       atomic_fetch_and(remote, ~1);
+
       page->in_full_list = false;
     }
   } else {
