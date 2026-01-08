@@ -93,8 +93,9 @@ struct treap_head {
   enum which_child which_child : 1;
 
   /**
-   * The priority, which the heap is ordered by. This is non-zero when the VMA
-   * is in the treap.
+   * The priority, which the heap is ordered by. This is normally non-zero when
+   * the VMA is in the treap, but gets set to zero during tree rotations while
+   * removing a node from the treap and when the VMA is not in the treap.
    */
   u32 priority : 31;
 
