@@ -552,12 +552,16 @@ struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
   // Before we do, we allocate memory for the new VMAs to be stored, so we don't
   // have to "undo" work if allocation fails later.
   struct vma *new_vma_lo = nullptr, *new_vma_hi = nullptr;
-  if (vma_lo != lo)
-    if (!(new_vma_lo = alloc(sizeof(struct vma))))
+  if (vma_lo != lo) {
+    new_vma_lo = alloc(sizeof(struct vma));
+    if (!new_vma_lo)
       goto fail;
-  if (vma_hi != hi)
-    if (!(new_vma_hi = alloc(sizeof(struct vma))))
+  }
+  if (vma_hi != hi) {
+    new_vma_hi = alloc(sizeof(struct vma));
+    if (!new_vma_hi)
       goto fail;
+  }
 
   // Save a pointer to the previous VMA (or the allocator), so we can insert all
   // the VMAs into the list without searching.
