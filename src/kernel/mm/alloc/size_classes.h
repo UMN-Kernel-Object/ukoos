@@ -81,6 +81,13 @@ static inline bool size_class_is_valid(usize size_class) {
 }
 
 /**
+ * A sentinel for huge pages. Because these are only ever in a state where
+ * they're full (since they only contain one object, and don't get pooled when
+ * empty), this "size class" is _not_ treated as one by `size_class_is_valid`.
+ */
+static constexpr usize SIZE_CLASS_HUGE_SENTINEL = 17;
+
+/**
  * Returns whether a size class is valid for a small object.
  */
 static inline bool size_class_is_small(usize size_class) {
