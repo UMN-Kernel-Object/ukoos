@@ -85,6 +85,12 @@ static_assert(alignof(uaddr) == __SIZEOF_SIZE_T__,
               "incorrect alignment for uaddr");
 
 /**
+ * The type of null pointers.
+ */
+
+typedef typeof(nullptr) nullptr_t;
+
+/**
  * Strict provenance functions. See [0] for more details, but these are
  * basically APIs for doing "funny things" to pointers that compile better on
  * architectures like CHERI or Fil-C than arbitrary int2ptr casts.
