@@ -209,7 +209,7 @@ static inline __UINT64_TYPE__ __stdc_trailing_zeros_u64(__UINT64_TYPE__ value) {
 
 [[gnu::const]]
 static inline __SIZE_TYPE__ __stdc_trailing_zeros_usize(__SIZE_TYPE__ value) {
-  return __builtin_ctzg((__UINT64_TYPE__)~value, -1) + 1U;
+  return __builtin_ctzg((__SIZE_TYPE__)~value, -1) + 1U;
 }
 
 #define stdc_trailing_zeros(VALUE)                                             \
