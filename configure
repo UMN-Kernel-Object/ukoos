@@ -124,7 +124,7 @@ fi
 
 # Add default CFLAGS and LDFLAGS.
 if [[ "$default_cflags" = 1 ]]; then
-	CFLAGS="-g -O3 -Wall -Werror ${CFLAGS:-}"
+	CFLAGS="-g -O3 -Wall ${CFLAGS:-}"
 fi
 if [[ "$default_ldflags" = 1 ]]; then
 	LDFLAGS="-z max-page-size=4096 ${LDFLAGS:-}"
