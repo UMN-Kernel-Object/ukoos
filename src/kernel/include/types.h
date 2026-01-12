@@ -137,7 +137,7 @@ static inline uaddr _addr_of_ptr_uptr(uptr ptr) {
     constexpr auto __addr_of_ptr_PTR_type =                                    \
         __builtin_classify_type(__addr_of_ptr_PTR);                            \
     const auto __addr_of_ptr_PTR_or_null = __builtin_choose_expr(              \
-        __addr_of_ptr_PTR_type == __builtin_classify_type(void *),             \
+        __addr_of_ptr_PTR_type == __builtin_classify_type((void *)nullptr),    \
         __addr_of_ptr_PTR, (void **)nullptr);                                  \
     const auto __addr_of_ptr_func = _Generic(__addr_of_ptr_PTR,                \
         typeof(*__addr_of_ptr_PTR_or_null) *: _addr_of_ptr,                    \
@@ -173,7 +173,7 @@ static inline const uptr _ptr_with_addr_uptr(const uptr ptr_uptr, uaddr addr) {
     constexpr auto __ptr_with_addr_PTR_type =                                  \
         __builtin_classify_type(__ptr_with_addr_PTR);                          \
     const auto __ptr_with_addr_PTR_or_null = __builtin_choose_expr(            \
-        __ptr_with_addr_PTR_type == __builtin_classify_type(void *),           \
+        __ptr_with_addr_PTR_type == __builtin_classify_type((void *)nullptr),  \
         __ptr_with_addr_PTR, (void **)nullptr);                                \
     const auto __ptr_with_addr_func = _Generic(__ptr_with_addr_PTR,            \
         typeof(*__ptr_with_addr_PTR_or_null) *: _ptr_with_addr,                \
