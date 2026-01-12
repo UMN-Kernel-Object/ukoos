@@ -81,7 +81,7 @@ src/kernel/arch/riscv64/kernel-unstripped.elf: $(srcdir)/src/kernel/arch/riscv64
 	@echo "LD      $@"
 	$(Q)$(CC) $(kernel-cflags) $(kernel-ldflags) \
 		-T $(srcdir)/src/kernel/arch/riscv64/kernel.ld -o $@ \
-		$(kernel-objs) -lgcc
+		$(kernel-objs)
 
 # Split the kernel into the actual binary we want to load and its debug
 # symbols. Using these does mean we won't get debug symbols for the bootstub,
