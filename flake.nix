@@ -45,6 +45,8 @@
               pkgs.perl
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
+              pkgs.pkgsCross.riscv64-embedded.llvmPackages.stdenv.cc.bintools.bintools
+              pkgs.pkgsCross.riscv64-embedded.llvmPackages.stdenv.cc.cc
               pkgs.python3
               pkgs.watchexec
             ];
@@ -104,7 +106,8 @@
             pkgs.watchexec
           ];
           shellHook = ''
-            export CC=riscv64-none-elf-gcc
+            export CC=clang
+            export CFLAGS="-target riscv64-none-elf -std=c23"
             export OBJDUMP=riscv64-none-elf-objdump
             export STRIP=riscv64-none-elf-strip
           '';
