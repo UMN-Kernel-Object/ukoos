@@ -37,18 +37,11 @@ SECTIONS
 	_kernel_start_phys = .;
 
 	/**
-	 * The page tables get appended as well.
-	 */
-	.pgtbls ALIGN(0x1000) :
-	{
-		*(.pgtbls)
-	}
-
-	/**
 	 * The kernel's string and symbol table sections get appended.
 	 */
 	.kernel_tables ALIGN(0x1000) :
 	{
+		PROVIDE(__start_kernel_tables = .);
 		*(.kernel_tables)
 	}
 
@@ -57,6 +50,7 @@ SECTIONS
 	 */
 	.kernel ALIGN(0x1000) :
 	{
+		PROVIDE(__start_kernel = .);
 		*(.kernel)
 	}
 	.kernel_bss :
@@ -65,13 +59,28 @@ SECTIONS
 	}
 
 	/**
-	 * An initial stack page, to use in early boot (i.e., before the allocator is up).
+	 * The initial heap segment and boothart stack.
 	 */
-	.stack ALIGN(0x1000) :
+	.initial_heap_segment ALIGN(0x1000) :
 	{
-		. += 0x1000;
-		_stack_end_phys = .;
+		PROVIDE(__start_initial_heap_segment = .);
+		. += 0x400000;
+	}
+	.boothart_stack ALIGN(0x1000) :
+	{
+		PROVIDE(__start_boothart_stack = .);
+		. += 0x200000;
+	}
+
+	/**
+	 * The page tables get appended as well.
+	 */
+	.pgtbls ALIGN(0x1000) :
+	{
+		*(.pgtbls)
 	}
 
 	_kernel_end_phys = .;
+
+	INCLUDE "src/kernel/arch/riscv64/bootstub_generated.ld"
 }

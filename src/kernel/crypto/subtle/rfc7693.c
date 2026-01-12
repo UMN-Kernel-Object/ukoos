@@ -9,7 +9,6 @@
 #include <minmax.h>
 #include <panic.h>
 #include <selftest.h>
-#include <stdckdint.h>
 
 /**
  * The shared permutations between BLAKE2b and BLAKE2s. BLAKE2s only uses the

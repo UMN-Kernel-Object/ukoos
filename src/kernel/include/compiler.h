@@ -33,11 +33,23 @@ typedef __builtin_va_list va_list;
     __builtin_expect(__unlikely_COND, false);                                  \
   })
 
+#define ARRAY_SIZE(ARRAY)                                                      \
+  ({                                                                           \
+    static_assert(                                                             \
+        !__builtin_types_compatible_p(typeof(ARRAY), typeof(&(ARRAY)[0])),     \
+        #ARRAY " should be an array");                                         \
+    sizeof(ARRAY) / sizeof((ARRAY)[0]);                                        \
+  })
+
 #define bswap(X)                                                               \
   (_Generic(X,                                                                 \
        u16: __builtin_bswap16,                                                 \
        u32: __builtin_bswap32,                                                 \
        u64: __builtin_bswap64)(X))
+
+#define ckd_add(R, A, B) __builtin_add_overflow((A), (B), (R))
+#define ckd_sub(R, A, B) __builtin_sub_overflow((A), (B), (R))
+#define ckd_mul(R, A, B) __builtin_mul_overflow((A), (B), (R))
 
 #define stdc_leading_zeros __builtin_stdc_leading_zeros
 #define stdc_leading_ones __builtin_stdc_leading_ones

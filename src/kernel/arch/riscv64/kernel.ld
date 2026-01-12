@@ -64,6 +64,4 @@ SECTIONS
 	} :rw
 
 	PROVIDE(_kernel_end = .);
-
-	PROVIDE(kernel_pgtbl2 = 0xffffffffffffd000);
 }

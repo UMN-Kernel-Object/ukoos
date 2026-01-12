@@ -7,22 +7,117 @@
 #ifndef UKO_OS_KERNEL__DEVICETREE_H
 #define UKO_OS_KERNEL__DEVICETREE_H 1
 
-#include <types.h>
+#include <list.h>
 
 /**
- * Registers the given DeviceTree globally.
+ * A property in the Devicetree.
  */
-void devicetree_init(paddr devicetree_start);
+struct devicetree_prop {
+  /**
+   * This node that has this property. Non-owning, never `nullptr`.
+   */
+  struct devicetree_node *node;
+
+  /**
+   * The `list_head` for this property's entry in `node->props`.
+   */
+  struct list_head node_props_head;
+
+  /**
+   * The name of this property. Null-terminated.
+   */
+  char *name;
+
+  /**
+   * The length of the value field.
+   */
+  usize value_len;
+
+  /**
+   * The value of this property.
+   */
+  u8 *value;
+};
 
 /**
- * Uses the globally-registered DeviceTree to:
- * - find memory and give it to the physical allocator
- * - find an RNG seed and give it to the entropy pool
- *
- * Then, initializes the physical allocator, adjusting free_va_start and
- * free_va_end to account for the memory it allocates.
+ * A node in the Devicetree.
  */
-void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
-                        uptr *free_va_start, uptr *free_va_end);
+struct devicetree_node {
+  /**
+   * This parent of this node. Non-owning, `nullptr` for the root node.
+   */
+  struct devicetree_node *parent;
+
+  /**
+   * The `list_head` for this node's entry in `parent->children`.
+   */
+  struct list_head parent_children_head;
+
+  /**
+   * The nodes that are children of this node.
+   */
+  struct list_head children;
+
+  /**
+   * The props of this node.
+   */
+  struct list_head props;
+
+  /**
+   * The name of this node. Null-terminated.
+   */
+  char *name;
+};
+
+/**
+ * Parses a Devicetree, given its start address in _physical_ memory.
+ */
+struct devicetree_node *devicetree_parse_from_physical(paddr devicetree_start,
+                                                       paddr kernel_start,
+                                                       paddr kernel_end);
+
+/**
+ * Frees the Devicetree.
+ */
+void devicetree_free(struct devicetree_node *devicetree);
+
+/**
+ * Finds the child of the Devicetree node with the given name. Returns `nullptr`
+ * if there is no such child.
+ */
+struct devicetree_node *devicetree_child(struct devicetree_node *parent,
+                                         const char *name);
+
+/**
+ * Finds the property of the Devicetree node with the given name. Returns
+ * `nullptr` if there is no such property.
+ */
+struct devicetree_prop *devicetree_prop(struct devicetree_node *parent,
+                                        const char *name);
+
+/**
+ * Retrieves the `#address-cells` and `#size-cells` properties of a node.
+ * Returns whether this succeeded.
+ */
+bool devicetree_address_size_cells(struct devicetree_node *node,
+                                   u32 *out_address_cells, u32 *out_size_cells);
+
+/**
+ * Retrieves the `i`th address and size pair from a property. This is useful
+ * for properties like `reg`. Returns whether this succeeded.
+ */
+bool devicetree_prop_reg(struct devicetree_prop *prop, usize i, paddr *out_addr,
+                         usize *out_size);
+
+/**
+ * Prints the Devicetree.
+ */
+void devicetree_print(struct devicetree_node *root);
+
+/**
+ * Adds the `/chosen/rng-seed` property to the entropy pool, then deletes it
+ * from the Devicetree.
+ */
+void devicetree_add_entropy(struct devicetree_node *root);
 
 #endif // UKO_OS_KERNEL__DEVICETREE_H
