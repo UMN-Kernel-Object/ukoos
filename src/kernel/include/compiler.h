@@ -55,25 +55,25 @@ typedef __builtin_va_list va_list;
 [[gnu::const]]
 static inline __UINT8_TYPE__
 __stdc_first_trailing_one_u8(__UINT8_TYPE__ value) {
-  return __builtin_ctzg(value, -1) + 1U;
+  return (__UINT8_TYPE__)(__builtin_ctzg(value, -1) + 1);
 }
 
 [[gnu::const]]
 static inline __UINT16_TYPE__
-__stdc_first_trailing_one_u16(__UINT64_TYPE__ value) {
-  return __builtin_ctzg(value, -1) + 1U;
+__stdc_first_trailing_one_u16(__UINT16_TYPE__ value) {
+  return (__UINT16_TYPE__)(__builtin_ctzg(value, -1) + 1);
 }
 
 [[gnu::const]]
 static inline __UINT32_TYPE__
-__stdc_first_trailing_one_u32(__UINT64_TYPE__ value) {
-  return __builtin_ctzg(value, -1) + 1U;
+__stdc_first_trailing_one_u32(__UINT32_TYPE__ value) {
+  return (__UINT32_TYPE__)(__builtin_ctzg(value, -1) + 1);
 }
 
 [[gnu::const]]
 static inline __UINT64_TYPE__
 __stdc_first_trailing_one_u64(__UINT64_TYPE__ value) {
-  return __builtin_ctzg(value, -1) + 1U;
+  return (__UINT64_TYPE__)(__builtin_ctzg(value, -1) + 1);
 }
 
 #define stdc_first_trailing_one(VALUE)                                         \
