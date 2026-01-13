@@ -201,27 +201,27 @@ static inline __UINT64_TYPE__ __stdc_bit_width_u64(__UINT64_TYPE__ value) {
 #else
 [[gnu::const]]
 static inline __UINT8_TYPE__ __stdc_trailing_zeros_u8(__UINT8_TYPE__ value) {
-  return __builtin_ctzg((__UINT8_TYPE__)~value, -1) + 1U;
+  return (__UINT8_TYPE__)(__builtin_ctzg((__UINT8_TYPE__)~value, -1) + 1);
 }
 
 [[gnu::const]]
 static inline __UINT16_TYPE__ __stdc_trailing_zeros_u16(__UINT16_TYPE__ value) {
-  return __builtin_ctzg((__UINT16_TYPE__)~value, -1) + 1U;
+  return (__UINT16_TYPE__)(__builtin_ctzg((__UINT16_TYPE__)~value, -1) + 1);
 }
 
 [[gnu::const]]
 static inline __UINT32_TYPE__ __stdc_trailing_zeros_u32(__UINT32_TYPE__ value) {
-  return __builtin_ctzg((__UINT32_TYPE__)~value, -1) + 1U;
+  return (__UINT32_TYPE__)(__builtin_ctzg((__UINT32_TYPE__)~value, -1) + 1);
 }
 
 [[gnu::const]]
 static inline __UINT64_TYPE__ __stdc_trailing_zeros_u64(__UINT64_TYPE__ value) {
-  return __builtin_ctzg((__UINT64_TYPE__)~value, -1) + 1U;
+  return (__UINT64_TYPE__)(__builtin_ctzg((__UINT64_TYPE__)~value, -1) + 1);
 }
 
 [[gnu::const]]
 static inline __SIZE_TYPE__ __stdc_trailing_zeros_usize(__SIZE_TYPE__ value) {
-  return __builtin_ctzg((__SIZE_TYPE__)~value, -1) + 1U;
+  return (__SIZE_TYPE__)(__builtin_ctzg((__SIZE_TYPE__)~value, -1) + 1);
 }
 
 #define stdc_trailing_zeros(VALUE)                                             \
