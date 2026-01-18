@@ -51,6 +51,7 @@ kernel-objs-c += random
 kernel-objs-c += selftest
 kernel-objs-c += swar_test
 kernel-objs-c += symbolicate
+kernel-objs-c += task
 include $(srcdir)/src/kernel/drivers/include.mak
 
 # The architecture-specific file needs to be last, since it calls
