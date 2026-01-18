@@ -14,6 +14,7 @@
   - [Threads and Harts](./kernel/threads-and-harts.md)
   - [Containers]()
     - [Lists](./kernel/containers/lists.md)
+    - [Guards](./kernel/containers/guards.md)
   - [Memory management]()
     - [Overview](./kernel/mm/overview.md)
     - [Memory map](./kernel/mm/memory-map.md)
