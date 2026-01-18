@@ -14,6 +14,7 @@
   - [Containers]()
     - [Lists](./kernel/containers/lists.md)
     - [Guards](./kernel/containers/guards.md)
+    - [Reference counting](./kernel/containers/refcounting.md)
   - [Memory management]()
     - [Overview](./kernel/mm/overview.md)
     - [Memory map](./kernel/mm/memory-map.md)
