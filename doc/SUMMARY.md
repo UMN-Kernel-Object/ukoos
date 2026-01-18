@@ -12,6 +12,8 @@
   - [Init Functions](./kernel/init.md)
   - [Devices](./kernel/devices.md)
   - [Threads and Harts](./kernel/threads-and-harts.md)
+  - [Containers]()
+    - [Lists](./kernel/containers/lists.md)
   - [Memory management]()
     - [Overview](./kernel/mm/overview.md)
     - [Memory map](./kernel/mm/memory-map.md)
