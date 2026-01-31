@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <stdatomic.h>
+
 #include <hart_locals.h>
 #include <panic.h>
 #include <spinlock.h>
