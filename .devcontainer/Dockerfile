@@ -23,4 +23,5 @@ RUN apk add --no-interactive \
 	shellcheck \
 	tar \
 	tio \
+	watchexec \
 	zstd
