@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+# SPDX-FileCopyrightText: 2025-2026 ukoOS Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -23,4 +23,5 @@ RUN apk add --no-interactive \
 	shellcheck \
 	tar \
 	tio \
+	watchexec \
 	zstd
