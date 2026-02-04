@@ -1,0 +1,10 @@
+;; SPDX-FileCopyrightText: 2026 ukoOS Contributors
+;;
+;; SPDX-License-Identifier: GPL-3.0-or-later
+
+(defun main ()
+  (+ 40 2))
+
+(1+ (* 2 (+ 19 (main))))
+
+;; vi: set ft=lisp :

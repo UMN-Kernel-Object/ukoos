@@ -42,6 +42,7 @@ endef
 # Information about the build to perform.
 include $(srcdir)/doc/include.mak
 include $(srcdir)/src/kernel/include.mak
+include $(srcdir)/src/zz/include.mak
 
 # Load the target.
 ifeq ($(realpath $(srcdir)/src/targets/$(arch)/$(target).mak),)
