@@ -7,7 +7,7 @@ install:: src/zz/zz.elf
 	install -DT src/zz/zz.elf $(DESTDIR)$(prefix)/sys/zz.elf
 
 # Bootstrap zz.
-src/zz/zz.elf: $(srcdir)/src/zpy/main.py $(srcdir)/src/zz/main.z
+src/zz/zz.elf: $(zpy-files) $(srcdir)/src/zz/main.z
 	@mkdir -p $(dir $@)
 	@echo "ZPY     $@"
 	$(Q)$(PYTHON3) $(srcdir)/src/zpy/main.py \
