@@ -5,6 +5,8 @@ It's not necessary for a Z learner to read and understand everything here before
 
 ## Syntax
 
+Z's syntax is based on [Shrubbery notation](https://docs.racket-lang.org/shrubbery/index.html).
+
 ### Reading and parsing
 
 ## Compilation
