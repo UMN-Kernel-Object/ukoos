@@ -20,7 +20,7 @@ Brief comparisons to some popular languages:
 - **Go:**
   - Like Go, Z is both compiled and garbage-collected.
   - Like Go, Z's method definitions are separate from its type definitions.
-  - Like Go, Z has async without "function coloring."
+  - Like Go, Z has async without "[function coloring](https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/)."
   - Unlike Go, Z has a REPL and supports interactive development.
   - Unlike Go, Z has operator overloading and macros.
   - Unlike Go, Z has inheritance and open recursion.
@@ -40,7 +40,7 @@ Brief comparisons to some popular languages:
   - Unlike JavaScript, Z does not have a "baseline" interpreter.
   - Unlike the V8 implementation of JavaScript, Z does not have a JIT compiler.
   - Unlike the QuickJS implementation of JavaScript, Z compiles to machine code.
-  - Unlike JavaScript, Z doesn't have "function coloring."
+  - Unlike JavaScript, Z doesn't have "[function coloring](https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/)."
 
 Brief comparisons to some other languages that are similar to Z:
 
