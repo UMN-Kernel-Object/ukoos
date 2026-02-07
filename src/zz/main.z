@@ -2,9 +2,6 @@
 ;;
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(defun main ()
-  (+ 40 2))
-
-(1+ (* 2 (+ 19 (main))))
-
-;; vi: set ft=lisp :
+; TODO: Hello, world!
+; TODO: Fizzbuzz
+; TODO: Metacircular eval

@@ -26,10 +26,10 @@ Every class is an instance of `Z:CLASS`.
 - `Z:CLASS/NAME` (has reader, type [`Z:SYMBOL`](#zsymbol))
 - `Z:CLASS/FINALIZED?` (has reader, type [`Z:BOOLEAN`](#zboolean))
 - `Z:CLASS/DIRECT-SLOTS` (has accessor)
-- `Z:CLASS/EFFECTIVE-SLOTS` (has reader)
 - `Z:CLASS/DIRECT-SUPERCLASSES` (has accessor)
-- `Z:CLASS/EFFECTIVE-SUPERCLASSES` (has reader)
 - `Z:CLASS/DIRECT-SUBCLASSES` (has accessor)
+- `Z:CLASS/EFFECTIVE-SLOTS` (has reader)
+- `Z:CLASS/EFFECTIVE-SUPERCLASSES` (has reader)
 - `Z:CLASS/EFFECTIVE-SUBCLASSES` (has reader)
 
 **Summary:**
@@ -38,7 +38,7 @@ Every class is an instance of `Z:CLASS`.
 
 ### `Z:DIRECT-SLOT-DEFINITION`
 
-**Superclasses:** [`Z:T`](#zt)
+**Superclasses:** [`Z:SLOT-DEFINITION`](#zslot-definition)
 
 **Slots:**
 
@@ -50,7 +50,7 @@ TODO
 
 ### `Z:EFFECTIVE-SLOT-DEFINITION`
 
-**Superclasses:** [`Z:T`](#zt)
+**Superclasses:** [`Z:SLOT-DEFINITION`](#zslot-definition)
 
 **Slots:**
 
@@ -89,6 +89,18 @@ TODO
 **Slots:**
 
 - `Z:PACKAGE/NAME` (has reader, type [`Z:STRING`](#zstring))
+- TODO
+
+**Summary:**
+
+TODO
+
+### `Z:SLOT-DEFINITION`
+
+**Superclasses:** [`Z:T`](#zt)
+
+**Slots:**
+
 - TODO
 
 **Summary:**

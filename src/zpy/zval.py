@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from dataclasses import dataclass
-from typing import Self
+from typing import Optional, Self
 
 """
 The basic object model.
@@ -59,7 +59,7 @@ ZVal = (
     | ZSimpleArrayT
     | ZStructObj
 )
-ZNil: ZVal = ()
+Nil: ZVal = ()
 
 ### Define some builtin objects that need extra data associated with them that's not in slots.
 
@@ -154,86 +154,172 @@ def make_vec(*elems: ZVal) -> ZSimpleArrayT:
 ### names of the form PackageFoo, symbols in Z have names of the form SymbolFoo.
 
 ## Define Z:BUILTIN-CLASS, but don't define its slots.
-ClassBuiltinClass = ZSlottedObj(ZNil)
-ClassBuiltinClass.klass = ClassBuiltinClass
+ClassBuiltInClass = ZSlottedObj(Nil)
+ClassBuiltInClass.klass = ClassBuiltInClass
 
 ## Define objects we need to make symbols.
-ClassPackage = ZSlottedObj(ClassBuiltinClass)
-ClassSymbol = ZSlottedObj(ClassBuiltinClass)
+ClassPackage = ZSlottedObj(ClassBuiltInClass)
+ClassSymbol = ZSlottedObj(ClassBuiltInClass)
 PackageZ = ZPackage("Z")
 SymbolPackageName = PackageZ.intern("PACKAGE/NAME")
 SymbolSymbolName = PackageZ.intern("SYMBOL/NAME")
 SymbolSymbolPackage = PackageZ.intern("SYMBOL/PACKAGE")
 
-## Define objects we need to define slots.
-ClassDirectSlotDefinition = ZSlottedObj(ClassBuiltinClass)
-ClassEffectiveSlotDefinition = ZSlottedObj(ClassBuiltinClass)
+## Define T.
+T = PackageZ.intern("T")
 
-## Define the names of the slots of class objects.
-SymbolClassName = PackageZ.intern("CLASS/NAME")
-SymbolClassFinalized = PackageZ.intern("CLASS/FINALIZED?")
-SymbolClassDirectSlots = PackageZ.intern("CLASS/DIRECT-SLOTS")
-SymbolClassDirectSuperclasses = PackageZ.intern("CLASS/DIRECT-SUPERCLASSES")
-SymbolClassDirectSubclasses = PackageZ.intern("CLASS/DIRECT-SUBCLASSES")
-SymbolClassEffectiveSlots = PackageZ.intern("CLASS/EFFECTIVE-SLOTS")
-SymbolClassEffectiveSuperclasses = PackageZ.intern("CLASS/EFFECTIVE-SUPERCLASSES")
-SymbolClassEffectiveSubclasses = PackageZ.intern("CLASS/EFFECTIVE-SUBCLASSES")
+## Define slot definitions.
+ClassStandardDirectSlotDefinition = ZSlottedObj(ClassBuiltInClass)
 
 
-## Set the direct slots of the classes we've defined so far.
-
-
-def make_direct_slot_definition():
+def make_direct_slot_definition(
+    name: str,
+    *,
+    initform: Optional[ZVal] = None,
+    initargs: list[ZVal] = [],
+    reader: Optional[str] = None,
+    writer: Optional[str] = None,
+    # allocation: Optional[str] = None,
+) -> ZVal:
+    slot = ZSlottedObj(ClassStandardDirectSlotDefinition)
+    slot.set_slot(PackageZ.intern("SLOT-DEFINITION/NAME"), PackageZ.intern(name))
+    if initform is not None:
+        slot.set_slot(PackageZ.intern("SLOT-DEFINITION/INITFORM"), initform)
+        # TODO: initfunction
+    slot.set_slot(PackageZ.intern("SLOT-DEFINITION/INITARGS"), make_list(*initargs))
+    slot.set_slot(
+        PackageZ.intern("SLOT-DEFINITION/READERS"),
+        make_list(PackageZ.intern(reader) if reader is not None else Nil),
+    )
+    slot.set_slot(
+        PackageZ.intern("SLOT-DEFINITION/WRITERS"),
+        make_list(PackageZ.intern(writer) if writer is not None else Nil),
+    )
+    # slot.set_slot(PackageZ.intern("ALLOCATION"), PackageZ.intern(name))
+    # slot.set_slot(PackageZ.intern("ALLOCATION-CLASS"), PackageZ.intern(name))
     # TODO
+    return slot
+
+
+## Define helpers for defining classes.
+
+
+def add_direct_subclass(child: ZSlottedObj, parent: ZSlottedObj):
+    SymbolClassDirectSuperclasses = PackageZ.intern("CLASS/DIRECT-SUPERCLASSES")
+    SymbolClassDirectSubclasses = PackageZ.intern("CLASS/DIRECT-SUBCLASSES")
+    child.set_slot(
+        SymbolClassDirectSuperclasses,
+        (parent, child.get_slot(SymbolClassDirectSubclasses)),
+    )
+    parent.set_slot(
+        SymbolClassDirectSubclasses,
+        (child, parent.get_slot(SymbolClassDirectSubclasses)),
+    )
+
+
+def init_class(
+    klass: ZSlottedObj,
+    name: str,
+    *direct_slots: ZVal,
+    direct_superclasses: list[ZSlottedObj] = [],
+):
+    klass.set_slot(PackageZ.intern("CLASS/NAME"), PackageZ.intern(name))
+    klass.set_slot(PackageZ.intern("CLASS/FINALIZED?"), Nil)
+    klass.set_slot(PackageZ.intern("CLASS/DIRECT-SLOTS"), make_list(*direct_slots))
+    klass.set_slot(PackageZ.intern("CLASS/DIRECT-SUPERCLASSES"), Nil)
+    klass.set_slot(PackageZ.intern("CLASS/DIRECT-SUBCLASSES"), Nil)
+    for parent in direct_superclasses:
+        add_direct_subclass(klass, parent)
+
+
+def defclass(
+    name: str,
+    *direct_slots: ZVal,
+    sup: Optional[list[ZSlottedObj]] = None,
+    metaclass: Optional[ZVal] = None,
+) -> ZSlottedObj:
+    if sup is None:
+        sup = [ClassStandardObject]
+    if metaclass is None:
+        metaclass = ClassStandardClass
+    klass = ZSlottedObj(metaclass)
+    init_class(klass, name, *direct_slots, direct_superclasses=sup)
+    return klass
+
+
+### Define the rest of the metaobjects and fill out the fields on the classes
+### we've already defined.
+
+ClassStandardClass = defclass("STANDARD-CLASS", sup=[], metaclass=Nil)
+ClassStandardClass.klass = ClassStandardClass
+
+ClassT = defclass("T", sup=[], metaclass=ClassBuiltInClass)
+ClassStandardObject = defclass("STANDARD-OBJECT", sup=[ClassT])
+
+ClassSpecializer = defclass("SPECIALIZER")
+ClassEqlSpecializer = defclass("EQL-SPECIALIZER", sup=[ClassSpecializer])
+ClassClass = defclass("CLASS", sup=[ClassSpecializer])
+init_class(ClassBuiltInClass, "BUILT-IN-CLASS", direct_superclasses=[ClassClass])
+add_direct_subclass(ClassStandardClass, ClassClass)
+ClassForwardReferencedClass = defclass("FORWARD-REFERENCED-CLASS")
+ClassFuncallableStandardClass = defclass("FUNCALLABLE-STANDARD-CLASS", sup=[ClassClass])
+
+ClassSlotDefinition = defclass("SLOT-DEFINITION")
+ClassDirectSlotDefinition = defclass(
+    "DIRECT-SLOT-DEFINITION", sup=[ClassSlotDefinition]
+)
+ClassEffectiveSlotDefinition = defclass(
+    "EFFECTIVE-SLOT-DEFINITION", sup=[ClassSlotDefinition]
+)
+ClassStandardSlotDefinition = defclass(
+    "STANDARD-SLOT-DEFINITION", sup=[ClassSlotDefinition]
+)
+init_class(
+    ClassStandardDirectSlotDefinition,
+    "STANDARD-DIRECT-SLOT-DEFINITION",
+    direct_superclasses=[ClassStandardSlotDefinition, ClassDirectSlotDefinition],
+)
+ClassStandardEffectiveSlotDefinition = defclass(
+    "STANDARD-EFFECTIVE-SLOT-DEFINITION",
+    sup=[ClassStandardSlotDefinition, ClassEffectiveSlotDefinition],
+)
+
+ClassMethodCombination = defclass("METHOD-COMBINATION")
+
+ClassMethod = defclass("METHOD")
+ClassStandardMethod = defclass("STANDARD-METHOD", sup=[ClassMethod])
+ClassStandardAccessorMethod = defclass(
+    "STANDARD-ACCESSOR-METHOD", sup=[ClassStandardMethod]
+)
+ClassStandardReaderMethod = defclass(
+    "STANDARD-READER-METHOD", sup=[ClassStandardAccessorMethod]
+)
+ClassStandardWriterMethod = defclass(
+    "STANDARD-WRITER-METHOD", sup=[ClassStandardAccessorMethod]
+)
+
+ClassFuncallableStandardObject = defclass("FUNCALLABLE-STANDARD-OBJECT")
+ClassGenericFunction = defclass(
+    "GENERIC-FUNCTION", sup=[ClassFuncallableStandardObject]
+)
+ClassStandardGenericFunction = defclass(
+    "STANDARD-GENERIC-FUNCTION", sup=[ClassGenericFunction]
+)
+
+### Implement class finalization and finalize the metaobject classes.
+
+
+def finalize_inheritance(klass: ZSlottedObj):
     pass
 
 
-ClassBuiltinClass.set_slot(SymbolClassName, PackageZ.intern("BUILTIN-CLASS"))
-ClassBuiltinClass.set_slot(SymbolClassFinalized, ZNil)
-ClassBuiltinClass.set_slot(SymbolClassDirectSlots, make_vec())
-ClassBuiltinClass.set_slot(SymbolClassDirectSuperclasses, make_vec())
-ClassBuiltinClass.set_slot(SymbolClassDirectSubclasses, make_vec())
-
-ClassDirectSlotDefinition.set_slot(
-    SymbolClassName, PackageZ.intern("DIRECT-SLOT-DEFINITION")
-)
-ClassDirectSlotDefinition.set_slot(SymbolClassFinalized, ZNil)
-ClassDirectSlotDefinition.set_slot(SymbolClassDirectSlots, make_vec())
-ClassDirectSlotDefinition.set_slot(SymbolClassDirectSuperclasses, make_vec())
-ClassDirectSlotDefinition.set_slot(SymbolClassDirectSubclasses, make_vec())
-
-ClassEffectiveSlotDefinition.set_slot(
-    SymbolClassName, PackageZ.intern("EFFECTIVE-SLOT-DEFINITION")
-)
-ClassEffectiveSlotDefinition.set_slot(SymbolClassFinalized, ZNil)
-ClassEffectiveSlotDefinition.set_slot(SymbolClassDirectSlots, make_vec())
-ClassEffectiveSlotDefinition.set_slot(SymbolClassDirectSuperclasses, make_vec())
-ClassEffectiveSlotDefinition.set_slot(SymbolClassDirectSubclasses, make_vec())
-
-ClassPackage.set_slot(SymbolClassName, PackageZ.intern("PACKAGE"))
-ClassPackage.set_slot(SymbolClassFinalized, ZNil)
-ClassPackage.set_slot(SymbolClassDirectSlots, make_vec())  # TODO
-ClassPackage.set_slot(SymbolClassDirectSuperclasses, make_vec())
-ClassPackage.set_slot(SymbolClassDirectSubclasses, make_vec())
-
-ClassSymbol.set_slot(SymbolClassName, PackageZ.intern("SYMBOL"))
-ClassSymbol.set_slot(SymbolClassFinalized, ZNil)
-ClassSymbol.set_slot(SymbolClassDirectSlots, make_vec())  # TODO
-ClassSymbol.set_slot(SymbolClassDirectSuperclasses, make_vec())
-ClassSymbol.set_slot(SymbolClassDirectSubclasses, make_vec())
-
-## TODO
-SymbolClass = PackageZ.intern("CLASS")
-SymbolPackageName = PackageZ.intern("PACKAGE/NAME")
-SymbolString = PackageZ.intern("STRING")
-
 ### Define some other primitive classes.
 
-# ClassClass = ZObj(ClassBuiltinClass)
-# ClassString = ZObj(ClassBuiltinClass)
-# ClassCons = ZObj(ClassBuiltinClass)
-# ClassInt = ZObj(ClassBuiltinClass)
-# ClassNull = ZObj(ClassBuiltinClass)
+# ClassClass = ZObj(ClassBuiltInClass)
+# ClassString = ZObj(ClassBuiltInClass)
+# ClassCons = ZObj(ClassBuiltInClass)
+# ClassInt = ZObj(ClassBuiltInClass)
+# ClassNull = ZObj(ClassBuiltInClass)
 
 ### Bootstrap Z:CLASS-OF.
 ###
