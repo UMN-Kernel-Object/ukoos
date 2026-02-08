@@ -65,28 +65,28 @@ Nil: ZVal = ()
 
 
 @dataclass
-class PackageSymbol:
+class ModuleSymbol:
     symbol: "ZSymbol"
     exported: bool = False
 
 
 @dataclass
-class ZPackage(ZSlottedObj):
-    symbols: dict[str, PackageSymbol]
+class ZModule(ZSlottedObj):
+    symbols: dict[str, ModuleSymbol]
 
     def __init__(self, name: str):
-        super().__init__(ClassPackage)
+        super().__init__(ClassModule)
         self.name = name
         self.symbols = {}
 
     def get_slot(self, slot: "ZSymbol") -> "ZVal":
-        if slot is SymbolPackageName:
+        if slot is SymbolModuleName:
             return self.name
         else:
             return super().get_slot(slot)
 
     def set_slot(self, slot: "ZSymbol", value: "ZVal"):
-        if slot is SymbolPackageName:
+        if slot is SymbolModuleName:
             assert isinstance(value, str)
             self.name = value
             return self
@@ -98,17 +98,17 @@ class ZPackage(ZSlottedObj):
             return self.symbols[name].symbol
         else:
             out = ZSymbol(name, self)
-            self.symbols[name] = PackageSymbol(out, exported)
+            self.symbols[name] = ModuleSymbol(out, exported)
             return out
 
 
 @dataclass
 class ZSymbol(ZSlottedObj):
-    def __init__(self, name: str, pkg: ZPackage):
+    def __init__(self, name: str, mod: ZModule):
         super().__init__(ClassSymbol)
-        assert name not in pkg.symbols
+        assert name not in mod.symbols
         self.name = name
-        self.pkg = pkg
+        self.mod = mod
 
     def get_slot(self, slot: "ZSymbol") -> "ZVal":
         if slot is SymbolSymbolName:
@@ -128,10 +128,10 @@ class ZSymbol(ZSlottedObj):
         return self is other
 
     def __hash__(self) -> int:
-        return hash((self.pkg.name, self.name))
+        return hash((self.mod.name, self.name))
 
     def __repr__(self) -> str:
-        return f"{self.pkg.name}::{self.name}"
+        return f"{self.mod.name}::{self.name}"
 
 
 ### Define helpers for making Z lists and simple vectors.
@@ -150,23 +150,23 @@ def make_vec(*elems: ZVal) -> ZSimpleArrayT:
 
 ### Bootstrap the root of the class hierarchy.
 ###
-### Naming convention: classes have names of the form ClassFoo, packages have
-### names of the form PackageFoo, symbols in Z have names of the form SymbolFoo.
+### Naming convention: classes have names of the form ClassFoo, modules have
+### names of the form ModuleFoo, symbols in Z have names of the form SymbolFoo.
 
 ## Define Z:BUILTIN-CLASS, but don't define its slots.
 ClassBuiltInClass = ZSlottedObj(Nil)
 ClassBuiltInClass.klass = ClassBuiltInClass
 
 ## Define objects we need to make symbols.
-ClassPackage = ZSlottedObj(ClassBuiltInClass)
+ClassModule = ZSlottedObj(ClassBuiltInClass)
 ClassSymbol = ZSlottedObj(ClassBuiltInClass)
-PackageZ = ZPackage("Z")
-SymbolPackageName = PackageZ.intern("PACKAGE/NAME")
-SymbolSymbolName = PackageZ.intern("SYMBOL/NAME")
-SymbolSymbolPackage = PackageZ.intern("SYMBOL/PACKAGE")
+ModuleZ = ZModule("Z")
+SymbolModuleName = ModuleZ.intern("MODULE/NAME")
+SymbolSymbolName = ModuleZ.intern("SYMBOL/NAME")
+SymbolSymbolModule = ModuleZ.intern("SYMBOL/MODULE")
 
 ## Define T.
-T = PackageZ.intern("T")
+T = ModuleZ.intern("T")
 
 ## Define slot definitions.
 ClassStandardDirectSlotDefinition = ZSlottedObj(ClassBuiltInClass)
@@ -182,21 +182,21 @@ def make_direct_slot_definition(
     # allocation: Optional[str] = None,
 ) -> ZVal:
     slot = ZSlottedObj(ClassStandardDirectSlotDefinition)
-    slot.set_slot(PackageZ.intern("SLOT-DEFINITION/NAME"), PackageZ.intern(name))
+    slot.set_slot(ModuleZ.intern("SLOT-DEFINITION/NAME"), ModuleZ.intern(name))
     if initform is not None:
-        slot.set_slot(PackageZ.intern("SLOT-DEFINITION/INITFORM"), initform)
+        slot.set_slot(ModuleZ.intern("SLOT-DEFINITION/INITFORM"), initform)
         # TODO: initfunction
-    slot.set_slot(PackageZ.intern("SLOT-DEFINITION/INITARGS"), make_list(*initargs))
+    slot.set_slot(ModuleZ.intern("SLOT-DEFINITION/INITARGS"), make_list(*initargs))
     slot.set_slot(
-        PackageZ.intern("SLOT-DEFINITION/READERS"),
-        make_list(PackageZ.intern(reader) if reader is not None else Nil),
+        ModuleZ.intern("SLOT-DEFINITION/READERS"),
+        make_list(ModuleZ.intern(reader) if reader is not None else Nil),
     )
     slot.set_slot(
-        PackageZ.intern("SLOT-DEFINITION/WRITERS"),
-        make_list(PackageZ.intern(writer) if writer is not None else Nil),
+        ModuleZ.intern("SLOT-DEFINITION/WRITERS"),
+        make_list(ModuleZ.intern(writer) if writer is not None else Nil),
     )
-    # slot.set_slot(PackageZ.intern("ALLOCATION"), PackageZ.intern(name))
-    # slot.set_slot(PackageZ.intern("ALLOCATION-CLASS"), PackageZ.intern(name))
+    # slot.set_slot(ModuleZ.intern("ALLOCATION"), ModuleZ.intern(name))
+    # slot.set_slot(ModuleZ.intern("ALLOCATION-CLASS"), ModuleZ.intern(name))
     # TODO
     return slot
 
@@ -205,8 +205,8 @@ def make_direct_slot_definition(
 
 
 def add_direct_subclass(child: ZSlottedObj, parent: ZSlottedObj):
-    SymbolClassDirectSuperclasses = PackageZ.intern("CLASS/DIRECT-SUPERCLASSES")
-    SymbolClassDirectSubclasses = PackageZ.intern("CLASS/DIRECT-SUBCLASSES")
+    SymbolClassDirectSuperclasses = ModuleZ.intern("CLASS/DIRECT-SUPERCLASSES")
+    SymbolClassDirectSubclasses = ModuleZ.intern("CLASS/DIRECT-SUBCLASSES")
     child.set_slot(
         SymbolClassDirectSuperclasses,
         (parent, child.get_slot(SymbolClassDirectSubclasses)),
@@ -223,11 +223,11 @@ def init_class(
     *direct_slots: ZVal,
     direct_superclasses: list[ZSlottedObj] = [],
 ):
-    klass.set_slot(PackageZ.intern("CLASS/NAME"), PackageZ.intern(name))
-    klass.set_slot(PackageZ.intern("CLASS/FINALIZED?"), Nil)
-    klass.set_slot(PackageZ.intern("CLASS/DIRECT-SLOTS"), make_list(*direct_slots))
-    klass.set_slot(PackageZ.intern("CLASS/DIRECT-SUPERCLASSES"), Nil)
-    klass.set_slot(PackageZ.intern("CLASS/DIRECT-SUBCLASSES"), Nil)
+    klass.set_slot(ModuleZ.intern("CLASS/NAME"), ModuleZ.intern(name))
+    klass.set_slot(ModuleZ.intern("CLASS/FINALIZED?"), Nil)
+    klass.set_slot(ModuleZ.intern("CLASS/DIRECT-SLOTS"), make_list(*direct_slots))
+    klass.set_slot(ModuleZ.intern("CLASS/DIRECT-SUPERCLASSES"), Nil)
+    klass.set_slot(ModuleZ.intern("CLASS/DIRECT-SUBCLASSES"), Nil)
     for parent in direct_superclasses:
         add_direct_subclass(klass, parent)
 

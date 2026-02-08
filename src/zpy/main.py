@@ -6,7 +6,7 @@
 
 from pathlib import Path
 from sys import argv
-from zval import PackageZ
+from zval import ModuleZ
 
 
 def main(src_path: Path, *args: str):
