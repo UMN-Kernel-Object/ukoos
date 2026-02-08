@@ -257,16 +257,39 @@ ClassT = defclass("T", sup=[], metaclass=ClassBuiltInClass)
 ClassStandardObject = defclass("STANDARD-OBJECT", sup=[ClassT])
 
 ClassSpecializer = defclass("SPECIALIZER")
-ClassEqlSpecializer = defclass("EQL-SPECIALIZER", sup=[ClassSpecializer])
-ClassClass = defclass("CLASS", sup=[ClassSpecializer])
+ClassEqlSpecializer = defclass(
+    "EQL-SPECIALIZER",
+    make_direct_slot_definition("EQL-SPECIALIZER/OBJECT"),
+    make_direct_slot_definition("EQL-SPECIALIZER/DIRECT-METHODS"),
+    sup=[ClassSpecializer],
+)
+ClassClass = defclass(
+    "CLASS",
+    make_direct_slot_definition("CLASS/NAME"),
+    make_direct_slot_definition("CLASS/CLASS-EQ-SPECIALIZER"),
+    make_direct_slot_definition("CLASS/DIRECT-SUPERCLASSES"),
+    make_direct_slot_definition("CLASS/DIRECT-SUBCLASSES"),
+    make_direct_slot_definition("CLASS/DIRECT-METHODS"),
+    make_direct_slot_definition("CLASS/FINALIZED-P"),
+    sup=[ClassSpecializer],
+)
 init_class(ClassBuiltInClass, "BUILT-IN-CLASS", direct_superclasses=[ClassClass])
 add_direct_subclass(ClassStandardClass, ClassClass)
 ClassForwardReferencedClass = defclass("FORWARD-REFERENCED-CLASS")
 ClassFuncallableStandardClass = defclass("FUNCALLABLE-STANDARD-CLASS", sup=[ClassClass])
 
-ClassSlotDefinition = defclass("SLOT-DEFINITION")
+ClassSlotDefinition = defclass(
+    "SLOT-DEFINITION",
+    make_direct_slot_definition("SLOT-DEFINITION/NAME"),
+    make_direct_slot_definition("SLOT-DEFINITION/INITFORM"),
+    make_direct_slot_definition("SLOT-DEFINITION/INITFUNCTION"),
+    make_direct_slot_definition("SLOT-DEFINITION/INITARGS"),
+)
 ClassDirectSlotDefinition = defclass(
-    "DIRECT-SLOT-DEFINITION", sup=[ClassSlotDefinition]
+    "DIRECT-SLOT-DEFINITION",
+    make_direct_slot_definition("DIRECT-SLOT-DEFINITION/READERS"),
+    make_direct_slot_definition("DIRECT-SLOT-DEFINITION/WRITERS"),
+    sup=[ClassSlotDefinition],
 )
 ClassEffectiveSlotDefinition = defclass(
     "EFFECTIVE-SLOT-DEFINITION", sup=[ClassSlotDefinition]
@@ -281,13 +304,20 @@ init_class(
 )
 ClassStandardEffectiveSlotDefinition = defclass(
     "STANDARD-EFFECTIVE-SLOT-DEFINITION",
+    make_direct_slot_definition("STANDARD-EFFECTIVE-SLOT-DEFINITION/LOCATION"),
     sup=[ClassStandardSlotDefinition, ClassEffectiveSlotDefinition],
 )
 
 ClassMethodCombination = defclass("METHOD-COMBINATION")
 
 ClassMethod = defclass("METHOD")
-ClassStandardMethod = defclass("STANDARD-METHOD", sup=[ClassMethod])
+ClassStandardMethod = defclass(
+    "STANDARD-METHOD",
+    make_direct_slot_definition("STANDARD-METHOD/QUALIFIERS"),
+    make_direct_slot_definition("STANDARD-METHOD/SPECIALIZERS"),
+    make_direct_slot_definition("STANDARD-METHOD/LAMBDA-LIST"),
+    sup=[ClassMethod],
+)
 ClassStandardAccessorMethod = defclass(
     "STANDARD-ACCESSOR-METHOD", sup=[ClassStandardMethod]
 )
@@ -303,7 +333,13 @@ ClassGenericFunction = defclass(
     "GENERIC-FUNCTION", sup=[ClassFuncallableStandardObject]
 )
 ClassStandardGenericFunction = defclass(
-    "STANDARD-GENERIC-FUNCTION", sup=[ClassGenericFunction]
+    "STANDARD-GENERIC-FUNCTION",
+    make_direct_slot_definition("STANDARD-GENERIC-FUNCTION/NAME"),
+    make_direct_slot_definition("STANDARD-GENERIC-FUNCTION/METHODS"),
+    make_direct_slot_definition("STANDARD-GENERIC-FUNCTION/METHOD-CLASS"),
+    make_direct_slot_definition("STANDARD-GENERIC-FUNCTION/METHOD-COMBINATION"),
+    make_direct_slot_definition("STANDARD-GENERIC-FUNCTION/DECLARATIONS"),
+    sup=[ClassGenericFunction],
 )
 
 ### Implement class finalization and finalize the metaobject classes.
