@@ -22,6 +22,7 @@
   - [Syntax](./z/syntax.md)
   - [Concepts](./z/concepts.md)
   - [Standard Library Reference](./z/stdlib.md)
+  - [Z for Lispers](./z/z-for-lispers.md)
 - [Targets](./targets.md)
 - [Tutorials](./tutorials/tutorials.md)
   - [First Day](./tutorials/first-day.md)
