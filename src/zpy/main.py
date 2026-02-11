@@ -6,13 +6,14 @@
 
 from pathlib import Path
 from sys import argv
-from zval import ModuleZ
+from zval import Z
 
 
 def main(src_path: Path, *args: str):
     with src_path.open() as src_file:
         src = src_file.read()
 
+    print(Z["MAKE-INSTANCE"].call(Z["STANDARD-OBJECT"]))
     pass
 
 

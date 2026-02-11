@@ -1,7 +1,91 @@
-;; SPDX-FileCopyrightText: 2026 ukoOS Contributors
-;;
-;; SPDX-License-Identifier: GPL-3.0-or-later
+;;; SPDX-FileCopyrightText: 2026 ukoOS Contributors
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ; TODO: Hello, world!
 ; TODO: Fizzbuzz
 ; TODO: Metacircular eval
+
+; TODO: symbols to check:
+;
+; MOP:
+; x defclass
+;   defgeneric
+;   defmethod
+;
+; x find-class
+; x class-of
+;
+;   call-next-method
+;   next-method?
+;
+; x slot-value
+; x slot-bound?
+; x slot-exists?
+; x slot-unbind
+;
+;   make-instance
+;   change-class
+;
+;   initialize-instance
+;   reinitialize-instance
+;   shared-initialize
+;
+;   update-instance-for-different-class
+;
+;   print-object
+;
+; x standard-object
+;   standard-class
+;   standard-generic-function
+;   standard-method
+;
+; x class/name
+; x class/direct-superclasses
+; x class/direct-slots
+;
+; x class/precedence-list
+; x class/effective-slots
+; x class/direct-subclasses
+; x class/direct-methods
+;
+;   generic-function/name
+;   generic-function/lambda-list
+;   generic-function/methods
+;   generic-function/discriminating-function
+;   generic-function/method-class
+;
+;   method/lambda-list
+;   method/qualifiers
+;   method/specializers
+;   method/body
+;   method/environment
+;   method/generic-function
+;   method/function
+;
+; x slot-definition/name
+; x slot-definition/initfunction
+; x slot-definition/initform
+; x slot-definition/initargs
+; x slot-definition/allocation
+; x direct-slot-definition/readers
+; x direct-slot-definition/writers
+;
+;   compute-class-precedence-list
+;   compute-slots
+;   compute-effective-slot-definition
+;   finalize-inheritance
+;   allocate-instance
+;   slot-value-using-class
+;   slot-bound?-using-class
+;   slot-exists?-using-class
+;   slot-unbind-using-class
+;
+;   compute-discriminating-function
+;   compute-applicable-methods-using-classes
+;   method-more-specific?
+;   compute-effective-method-function
+;   compute-method-function
+;   apply-methods
+;   apply-method
+;   find-generic-function
