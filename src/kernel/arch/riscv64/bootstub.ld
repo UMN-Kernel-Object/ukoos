@@ -9,7 +9,7 @@ OUTPUT_FORMAT(elf64-littleriscv)
 
 SECTIONS
 {
-	. = 0x80080000;
+	. = 0x8200000;
 
 	/**
 	 * We mix up all the sections of the bootstub, since it won't run with

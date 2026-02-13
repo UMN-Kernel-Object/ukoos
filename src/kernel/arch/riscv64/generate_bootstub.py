@@ -333,7 +333,7 @@ def main():
         physical_memory_layout.append((old_paddr, next_paddr, size_kib, label))
         return old_paddr
 
-    total_start_paddr = next_paddr = 0x80080000  # start address
+    total_start_paddr = next_paddr = 0x8200000  # start address
     reserve("bootstub", 4096)
     kernel_tables_start_paddr = reserve(
         "symbol and string tables", symtab.size + strtab.size
