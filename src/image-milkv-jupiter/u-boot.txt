@@ -3,14 +3,14 @@ autostart=no
 bootdelay=0
 bootfile=kernel.elf
 loadaddr=0x200000
-startaddr=0x80080000
+startaddr=0x8200000
 
 bootcmd=run custom_bootcmd || bootmenu
 
 bootmenu_0=Default boot order=run bootcmd_sd || run bootcmd_emmc || while true; do run bootcmd_net; done
 
 bootmenu_1=Boot from SD=run bootcmd_sd
-bootcmd_sd=echo Trying to boot from SD...; mmc dev 0 && fatload mmc 0 ${loadaddr} ${bootfile} && bootelf -p ${loadaddr} && gok ${startaddr} ${fdtcontroladdr}
+bootcmd_sd=echo Trying to boot from SD...; mmc dev 0:5 && fatload mmc 0:5 ${loadaddr} ${bootfile} && bootelf -p ${loadaddr} && gok ${startaddr} ${fdtcontroladdr}
 
 bootmenu_2=Boot from eMMC=run bootcmd_emmc
 bootcmd_emmc=echo Trying to boot from eMMC...; mmc dev 1 && fatload mmc 1 ${loadaddr} ${bootfile} && bootelf -p ${loadaddr} && gok ${startaddr} ${fdtcontroladdr}
