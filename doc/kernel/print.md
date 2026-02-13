@@ -71,6 +71,18 @@ This directive expects a C `bool` in the arguments to `print` or `format`.
 It prints either `true` or `false`, corresponding to the value.
 This directive does not take any arguments.
 
+### `bytes`
+
+This directive expects a C `const u8 *` and a C `usize` in the arguments to `print` or `format`.
+
+It treats these as an array of bytes and prints each byte.
+By default, bytes are printed in hex with a space between each byte.
+The following arguments are supported:
+
+- `?`:
+  Wraps the bytes in `[]`.
+  If the bytes are all printable ASCII or have simple escape sequences in C, they get wrapped in `""`s and escaped if necessary.
+
 ### `cstr`
 
 This directive expects a C `const char *` in the arguments to `print` or `format`.

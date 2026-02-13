@@ -641,7 +641,7 @@ void devicetree_print(struct devicetree_node *node) {
          prop_list != &node->props; prop_list = prop_list->next) {
       struct devicetree_prop *prop =
           container_of(prop_list, struct devicetree_prop, node_props_head);
-      print("{indent}{cstr} = [{bytes}];", depth, prop->name, prop->value,
+      print("{indent}{cstr} = {bytes:?};", depth, prop->name, prop->value,
             prop->value_len);
     }
 
