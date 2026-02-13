@@ -16,6 +16,7 @@ kernel-objs-c += arch/riscv64/panic
 kernel-objs-c += arch/riscv64/physical
 kernel-objs-c += arch/riscv64/random
 kernel-objs-c += arch/riscv64/sbi
+kernel-objs-c += arch/riscv64/task
 
 $(eval $(call compute_component_variables,kernel))
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: 2025-2026 ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -7,6 +7,8 @@
 #include <arch/riscv64/insns.h>
 #include <device.h>
 #include <hart_locals.h>
+#include <mm/alloc.h>
+#include <task.h>
 
 /**
  * Storage for the boothart's hart-locals.
@@ -34,6 +36,7 @@ void init_boothart_hart_locals_early(u64 hart_id) {
   csrw(RISCV64_CSR_SSCRATCH, (u64)&boothart_hart_locals);
   boothart_hart_locals = (struct hart_locals){
       .hart = nullptr,
+      .task = nullptr,
       .heap = nullptr,
       .rng = {},
   };
@@ -62,6 +65,9 @@ void init_boothart_hart_locals_late(void) {
 
   // Fix up the heap to refer to this hart.
   heap_change_boothart_hart(hart_locals->heap, hart_locals->hart);
+
+  // Create a task object for the current task.
+  hart_locals->task = alloc(sizeof(struct task));
 }
 
 void init_hart_locals(u64 hart_id);

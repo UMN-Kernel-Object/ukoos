@@ -34,6 +34,10 @@ struct hart_locals {
   struct random_rng rng;
 };
 
+// Check that the layout that's assumed by assembly code.
+static_assert(offsetof(struct hart_locals, hart) == 0);
+static_assert(offsetof(struct hart_locals, task) == 8);
+
 /**
  * Returns a pointer to the current hart's locals.
  *

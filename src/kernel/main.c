@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: 2025-2026 ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -27,6 +27,7 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   arch_entropy_pool_seed_early();
   init_boothart_hart_locals_early(hart_id);
   mm_alloc_init();
+  init_boothart_hart_locals_late();
 
   // Parse the Devicetree.
   struct devicetree_node *devicetree = devicetree_parse_from_physical(
