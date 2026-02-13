@@ -17,10 +17,10 @@ struct mm_alloc_heap;
  */
 struct mm_alloc_segment {
   /**
-   * The ID of the hart that allocates from pages in the segment. When other
-   * harts free memory, they push to `remote_free` instead of `local_free`.
+   * The hart that allocates from pages in the segment. When other harts free
+   * memory, they push to `remote_free` instead of `local_free`.
    */
-  u64 hart_id;
+  struct hart *hart;
 
   /**
    * The number of pages that are not in the `unused_pages` list. When this

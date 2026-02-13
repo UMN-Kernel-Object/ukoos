@@ -25,7 +25,7 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   symbolicate_init(symtab, symtab_len, strtab, strtab_len);
   entropy_pool_init();
   arch_entropy_pool_seed_early();
-  init_boothart_hart_locals(hart_id);
+  init_boothart_hart_locals_early(hart_id);
   mm_alloc_init();
 
   // Parse the Devicetree.
@@ -49,14 +49,21 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   // Run initializers, which include e.g. registering drivers.
   run_initializers();
 
-  // Enumerate devices in the devicetree.
+  // Enumerate devices in the devicetree. This should recursively enumerate
+  // other buses as they're discovered.
   devicetree_enumerate(devicetree);
 
   // Print the devices that have been created.
   print_devices();
 
+  // Finish initializing hart-locals, now that the root hart should have been
+  // detected.
+  init_boothart_hart_locals_late();
+
   print("Running self-tests...");
   run_selftests();
 
+  struct hart_locals *hart_locals = get_hart_locals();
+  print("{uptr}", hart_locals->hart);
   TODO();
 }

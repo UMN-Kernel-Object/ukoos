@@ -17,7 +17,7 @@ void free(void *ptr) {
   struct mm_alloc_segment *segment = segment_of_ptr((uptr)ptr);
   struct mm_alloc_page *page = page_of_ptr((uptr)ptr);
   struct mm_alloc_block *block = ptr;
-  if (segment->hart_id == get_hart_locals()->hart_id) {
+  if (segment->hart == get_hart_locals()->hart) {
     // This is a local free; i.e., we're running on the hart that owns the page.
     struct mm_alloc_heap *heap = get_hart_locals()->heap;
 
@@ -43,6 +43,7 @@ void free(void *ptr) {
 }
 
 void *alloc_small(usize size, struct mm_alloc_heap *heap) {
+  assert(heap->hart == get_hart_locals()->hart);
   assert(0 < size && size <= 1024);
 
   // Compute the index into pages_direct.
@@ -93,6 +94,7 @@ static void *alloc_huge(usize size, struct mm_alloc_heap *heap) {
 }
 
 void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
+  assert(heap->hart == get_hart_locals()->hart);
   assert(size);
 
   // Go through the delayed free list to free everything.

@@ -16,10 +16,10 @@
  */
 struct mm_alloc_heap {
   /**
-   * The ID of the hart that owns the heap, and all the segments and pages
-   * pointed to by it.
+   * The hart that owns the heap, and all the segments and pages pointed to by
+   * it.
    */
-  u64 hart_id;
+  struct hart *hart;
 
   /**
    * Pointers to pages that hopefully contain free blocks for small objects.

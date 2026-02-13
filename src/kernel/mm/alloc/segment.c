@@ -53,10 +53,10 @@ physical_oom:
 void segment_init_small(struct mm_alloc_segment *segment,
                         struct mm_alloc_heap *heap) {
   assert(is_aligned(segment, SEGMENT_SHIFT));
-  assert(heap->hart_id == get_hart_locals()->hart_id);
+  assert(heap->hart == get_hart_locals()->hart);
 
   *segment = (struct mm_alloc_segment){
-      .hart_id = heap->hart_id,
+      .hart = heap->hart,
       .used_pages = 0,
       .page_shift = PAGE_SMALL_SHIFT,
       .pages = {},
@@ -71,7 +71,7 @@ void segment_init_large(struct mm_alloc_segment *segment) {
   assert(is_aligned(segment, SEGMENT_SHIFT));
 
   *segment = (struct mm_alloc_segment){
-      .hart_id = get_hart_locals()->hart_id,
+      .hart = get_hart_locals()->hart,
       .used_pages = 0,
       .page_shift = PAGE_LARGE_SHIFT,
       .pages = {},
@@ -83,7 +83,7 @@ void segment_init_huge(struct mm_alloc_segment *segment) {
   assert(is_aligned(segment, SEGMENT_SHIFT));
 
   *segment = (struct mm_alloc_segment){
-      .hart_id = get_hart_locals()->hart_id,
+      .hart = get_hart_locals()->hart,
       .used_pages = 0,
       .page_shift = PAGE_HUGE_SHIFT,
       .pages = {},

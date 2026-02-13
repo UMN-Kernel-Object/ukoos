@@ -11,7 +11,7 @@ void heap_init(struct mm_alloc_heap *heap, struct mm_alloc_segment *segment) {
   // Initialize the heap. pages_direct is full of null pointers, though,
   // which is normally illegal -- we fix that below.
   *heap = (struct mm_alloc_heap){
-      .hart_id = get_hart_locals()->hart_id,
+      .hart = get_hart_locals()->hart,
       .pages_direct = {0}, // initialized below
       .pages = {0},        // initialized below
       .unused_pages = LIST_INIT(heap->unused_pages),
@@ -35,6 +35,35 @@ void heap_init(struct mm_alloc_heap *heap, struct mm_alloc_segment *segment) {
     assert(size_class_of_size(size_of_pages_direct_index(i)) ==
            heap->pages_direct[i]->size_class);
   }
+}
+
+static void
+pages_list_change_segment_boothart_hart(struct list_head *pages_list,
+                                        struct hart *hart) {
+  for (struct list_head *page_list = pages_list->next; page_list != pages_list;
+       page_list = page_list->next) {
+    struct mm_alloc_page *page =
+        container_of(page_list, struct mm_alloc_page, list);
+    struct mm_alloc_segment *segment = page_segment(page);
+    if (segment->hart == hart)
+      continue;
+    assert(!segment->hart);
+    segment->hart = hart;
+  }
+}
+
+/**
+ * Modifies a heap to change the hart that owns it.
+ */
+void heap_change_boothart_hart(struct mm_alloc_heap *heap, struct hart *hart) {
+  assert(!heap->hart);
+  heap->hart = hart;
+  for (usize i = 0; i < ARRAY_SIZE(heap->pages); i++)
+    pages_list_change_segment_boothart_hart(&heap->pages[i], hart);
+  // We don't need to traverse unused_pages, since we're guaranteed that at
+  // least one page in the relevant segment will be in a pages or full_pages
+  // list.
+  pages_list_change_segment_boothart_hart(&heap->full_pages, hart);
 }
 
 void heap_update_pages_direct(struct mm_alloc_heap *heap, usize size_class) {
