@@ -28,6 +28,7 @@ kernel-objs-c += builtins/memcpy
 kernel-objs-c += builtins/memset
 kernel-objs-c += builtins/strcmp
 kernel-objs-c += builtins/strlen
+kernel-objs-c += builtins/strnlen
 kernel-objs-c += crypto/subtle/rfc7539
 kernel-objs-c += crypto/subtle/rfc7693
 kernel-objs-c += device
