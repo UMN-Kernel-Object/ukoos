@@ -7,7 +7,7 @@
 #ifndef UKO_OS_KERNEL__MM_PHYSICAL_ALLOC_H
 #define UKO_OS_KERNEL__MM_PHYSICAL_ALLOC_H 1
 
-#include <types.h>
+#include <devicetree.h>
 
 /**
  * Initializes the physical allocator with the memory discovered in the
