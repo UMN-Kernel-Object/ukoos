@@ -90,6 +90,7 @@
           ];
           nativeBuildInputs = [
             pkgs.bear
+            (pkgs.runCommand "busybox" { } "install -Dt $out/bin ${pkgs.pkgsStatic.busybox}/bin/busybox")
             pkgs.clang-tools
             pkgs.dtc
             pkgs.gdb
@@ -99,6 +100,7 @@
             pkgs.reuse
             pkgs.shellcheck
             pkgs.tio
+            pkgs.watchexec
           ];
           shellHook = ''
             export CC=riscv64-none-elf-gcc
