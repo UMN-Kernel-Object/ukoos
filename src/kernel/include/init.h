@@ -18,6 +18,7 @@ enum initializer_priority : i32 {
    * The priority level at which drivers should register themselves.
    */
   INIT_REGISTER_DRIVERS = 10,
+  INIT_REGISTER_PCI_DRIVERS = 20
 };
 
 /**
