@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-FROM docker.io/alpine:3.21
+FROM docker.io/alpine:3.23
 RUN apk add --no-interactive \
 	bash \
 	binutils-riscv-none-elf \
