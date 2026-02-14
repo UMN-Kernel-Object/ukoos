@@ -94,7 +94,7 @@
             pkgs.dtc
             pkgs.gdb
             pkgs.minicom
-            pkgs.nixfmt-rfc-style
+            pkgs.nixfmt
             pkgs.qemu
             pkgs.reuse
             pkgs.shellcheck
