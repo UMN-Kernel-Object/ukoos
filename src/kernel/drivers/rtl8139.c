@@ -6,6 +6,7 @@
 #include <device.h>
 #include <devices/pci.h>
 #include <devices/netdev.h>
+#include <net/eth.h>
 
 struct rtl8139_regs {
   u8 mac[6];
@@ -111,6 +112,15 @@ bool send_packet(struct netdev *this, u8 packet[], usize length) {
 }
 
 
+void rtl8139_test(struct rtl8139 *rtl_device) {
+  volatile struct rtl8139_regs *rtl_regs = rtl_device->regs;
+
+  eth_send_packet(&rtl_device->netdev, (u8*) "yellow submarine", 16);
+
+  assert(rtl_regs->tsad[0] != 0);
+  assert((rtl_regs->tsd[0] & TSD_TOK) != 0);
+}
+
 
 static struct device *add_device(paddr reg_addr, usize reg_size) {
   struct rtl8139 *device = nullptr;
@@ -173,6 +183,8 @@ void rtl8139_init(struct pci_regs *pci_device) {
 
   rtl_regs->tsad[0] = 0x12;
   assert(rtl_regs->tsad[0] == 0x12);
+
+  rtl8139_test(rtl_device);
 }
 
 DEFINE_INIT(INIT_REGISTER_PCI_DRIVERS) {
