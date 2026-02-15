@@ -52,6 +52,7 @@ kernel-objs-c += selftest
 kernel-objs-c += swar_test
 kernel-objs-c += symbolicate
 include $(srcdir)/src/kernel/drivers/include.mak
+include $(srcdir)/src/kernel/net/include.mak
 
 # The architecture-specific file needs to be last, since it calls
 # compute_component_variables for the kernel.
