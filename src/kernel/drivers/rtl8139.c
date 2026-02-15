@@ -1,0 +1,180 @@
+#include <mm/paging.h>
+#include <mm/virtual_alloc.h>
+#include <physical.h>
+#include <print.h>
+
+#include <device.h>
+#include <devices/pci.h>
+#include <devices/netdev.h>
+
+struct rtl8139_regs {
+  u8 mac[6];
+  u8 pad0[10];
+  u32 tsd[4];
+  u32 tsad[4];
+  u8 pad1[7];
+  u8 com;
+  u8 pad2[26];
+  u8 config1;
+};
+
+struct rtl8139 {
+  struct device device;
+  struct netdev netdev;
+  struct rtl8139_regs *regs;
+  usize current_buffer;
+};
+
+bool send_packet(struct netdev *this, u8 packet[], usize length);
+bool get_mac(struct netdev *this, u8 *mac);
+
+struct netdev_ops rtl8139_ops = {
+  .send_packet = send_packet,
+  .get_mac = get_mac
+};
+
+constexpr usize TX_BUFF_SIZE = 0x1700;
+
+enum RTL8139_REGS {
+  REG_COM = 0x37,
+  REG_TCR = 0x40,
+  REG_CONFIG1 = 0x52
+};
+
+enum RTL8139_CONST {
+  TSD_TOK = (1 << 15),
+  TSD_OWN = (1 << 13),
+
+  COM_RST = (1 << 4),
+  COM_RE = (1 << 3),
+  COM_TE = (1 << 2)
+};
+
+u8 rtl8139_tbuff[4][TX_BUFF_SIZE] __attribute__((aligned(256)));
+
+
+static_assert( offsetof(struct rtl8139_regs, tsad) == 0x20);
+static_assert( offsetof(struct rtl8139_regs, tsd) == 0x10);
+static_assert( offsetof(struct rtl8139_regs, com) == 0x37);
+static_assert( offsetof(struct rtl8139_regs, config1) == 0x52);
+
+//volatile struct rtl8139_regs *rtl_regs;
+
+bool mm_paging_walk(uaddr va, paddr *pte, bool alloc);
+
+u32 walkaddr(uaddr addr) {
+  paddr pte_addr;
+  u64 pte;
+  u32 off;
+
+  off = addr & 0xfff;
+  addr &= (~0xfffUL);
+
+  assert(mm_paging_walk(addr, &pte_addr, false));
+
+  copy_from_physical(&pte, pte_addr, sizeof pte);
+
+  pte = (pte >> 10) << 12;
+  assert(pte < U32_MAX);
+  return (u32) pte | off;
+}
+
+bool get_mac(struct netdev *this, u8 *mac) {
+  struct rtl8139 *rtl_this = (struct rtl8139 *)(this->device);
+  volatile struct rtl8139_regs *rtl_regs = rtl_this->regs;
+
+  for (usize i = 0; i<6; ++i) {
+    mac[i] = rtl_regs->mac[i];
+  }
+  return true;
+}
+
+bool send_packet(struct netdev *this, u8 packet[], usize length) {
+  struct rtl8139 *rtl_this = (struct rtl8139 *) this->device;
+  volatile struct rtl8139_regs *rtl_regs = rtl_this->regs;
+  u32 phys_buffer = walkaddr((uaddr) (&rtl8139_tbuff[0]));
+  u64 i;
+
+  for (i=0; i<length; ++i) {
+    rtl8139_tbuff[rtl_this->current_buffer][i] = packet[i];
+  }
+
+  if ((rtl_regs->tsd[rtl_this->current_buffer] & TSD_OWN) == 0) {
+    return false;
+  }
+
+  rtl_regs->tsad[rtl_this->current_buffer] = phys_buffer;
+  rtl_regs->tsd[rtl_this->current_buffer] = (u32) length;
+
+  ++rtl_this->current_buffer;
+  return true;
+}
+
+
+
+static struct device *add_device(paddr reg_addr, usize reg_size) {
+  struct rtl8139 *device = nullptr;
+
+  if (reg_size < sizeof(struct rtl8139_regs))
+    goto fail;
+
+  device = alloc(sizeof(struct rtl8139));
+  if (!device)
+    goto fail;
+
+  *device = (struct rtl8139){
+      .device = DEVICE_INIT(device->device, "rtl8139", reg_addr),
+      .netdev =
+          {
+              .list = LIST_INIT(device->netdev.list),
+              .ops = &rtl8139_ops,
+              .device = &device->device,
+          },
+      .regs = iomem_map(reg_addr, reg_size),
+  };
+  if (!device->device.name || !device->regs)
+    goto fail;
+
+  list_push(&pcis, &device->netdev.list);
+
+  return &device->device;
+
+fail:
+  if (device) {
+    free(device->device.name);
+    iomem_unmap(device->regs, reg_size);
+  }
+  free(device);
+  return nullptr;
+
+}
+
+void rtl8139_init(struct pci_regs *pci_device) {
+  print("initializing rtl8139");
+
+  volatile struct rtl8139_regs *rtl_regs;
+  u32 reg_addr = 0x40000000;
+
+  struct device *device = add_device(paddr_of_bits(reg_addr), sizeof(struct rtl8139_regs));
+  struct rtl8139 *rtl_device = (struct rtl8139 *) device;
+  rtl_regs = rtl_device->regs;
+
+
+  /* TODO: Maybe move PCI init to pci.c? */
+  /* Setup BAR for MMIO - we just pick a nice number for now */
+  pci_device->memar = reg_addr;
+  pci_device->cmd |= 0x6;
+
+  rtl_regs->config1 = 0;
+
+  rtl_regs->com = COM_RST;
+  while (rtl_regs->com & COM_RST) ;
+  rtl_regs->com = COM_RE | COM_TE;
+
+  rtl_regs->tsad[0] = 0x12;
+  assert(rtl_regs->tsad[0] == 0x12);
+}
+
+DEFINE_INIT(INIT_REGISTER_PCI_DRIVERS) {
+  pci_register(0x10ec,0x8139,rtl8139_init);
+}
