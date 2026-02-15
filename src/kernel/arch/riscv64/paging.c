@@ -90,7 +90,7 @@ void mm_paging_fence(void) {
   sfence_vma();
 }
 
-static bool mm_paging_walk(uaddr va, paddr *pte, bool alloc) {
+bool mm_paging_walk(uaddr va, paddr *pte, bool alloc) {
   assert(is_aligned(va, PAGE_BITS), "va={uaddr}", va);
   assert((uaddr)(((iaddr)va >> 39) + 1) <= 1, "va={uaddr}", va);
   assert(pte);
