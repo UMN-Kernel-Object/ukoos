@@ -4,17 +4,23 @@
 #include <physical.h>
 #include <devicetree.h>
 
-//#include <drivers/rtl8139.h>
 #include <devices/pci.h>
-
-//constexpr u64 pci_config = 0x30000000L;
-
-
 
 struct pci_device {
   struct device device;
   struct pci pci;
   void *reg_base;
+};
+union pci_device_addr {
+  struct {
+    u32 offset : 8;
+    u32 func : 3;
+    u32 dev : 5;
+    u32 bus : 8;
+    u32 rsvd : 7;
+    u32 enable : 1;
+  };
+  u32 bits;
 };
 
 void register_device(struct pci *this, u16 vid, u16 did, void (*callback)(void *regs));
@@ -32,26 +38,29 @@ void pci_enumerate(uaddr reg_base) {
 
   vma_bounds(vma, &lo, &hi);
 
-  for (u64 i=0; i<32; ++i) {
-    //mm_paging_map(lo + i * 0x1000, paddr_of_bits(pci_config + i * 0x1000), PGPERM_KRW);
-    //mm_paging_map(lo + i * 0x1000, paddr_offset(pci_config, i * 0x1000), PGPERM_KRW);
-  }
-  for (u64 dev=0; dev<32; ++dev) {
-    u64 bus = 0;
-    u64 func = 0;
-    u64 offset = 0;
-    offset = (bus << 16) | (dev << 11) | (func << 8) | (offset);
-    struct pci_regs *device = (struct pci_regs *)(reg_base + offset);
+  for (u32 bus=0; bus<256; ++bus) {
+    for (u32 dev=0; dev<32; ++dev) {
+      union pci_device_addr addr;
+      addr.offset = 0;
+      addr.func = 0;
+      addr.dev = dev & 31;
+      addr.bus = bus & 255;
 
-    u16 did = device->did;
-    u16 vid = device->vid;
+      struct pci_regs *device = (struct pci_regs *)(reg_base + addr.bits);
 
-    void (*callback)(struct pci_regs *) = pci_get_handler(vid, did);
-    
-    if (callback)  {
-      callback(device);
-    } else {
-      print("unknown pci device: {u16:x} vender: {u16:x}", did, vid);
+      u16 did = device->did;
+      u16 vid = device->vid;
+
+      if (did == 0xffff && vid == 0xffff)
+        continue;
+
+      void (*callback)(struct pci_regs *) = pci_get_handler(vid, did);
+
+      if (callback)  {
+        callback(device);
+      } else {
+        print("Unbekannt pci Gerät: {u16:x} Anbieter: {u16:x}", did, vid);
+      }
     }
   }
 }
@@ -102,11 +111,3 @@ fail:
 DEFINE_INIT(INIT_REGISTER_DRIVERS) {
   devicetree_register("pci-host-ecam-generic", pci_enumerate_dt);
 }
-
-/*DEFINE_INIT(INIT_PCI_DEVICES) {
-  // TODO: iterate through registered devices, enumerate PCI bus
-  struct pci *pci = (struct pci*) pcis.next;
-  struct device *dev = pci->device;
-  struct pci_device *pcidev = (void*) dev;
-  print("Ready to init pci {u64:x}", pcidev);
-}*/

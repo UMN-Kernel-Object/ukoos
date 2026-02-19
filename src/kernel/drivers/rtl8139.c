@@ -35,14 +35,16 @@ struct netdev_ops rtl8139_ops = {
 };
 
 constexpr usize TX_BUFF_SIZE = 0x1700;
+constexpr u16 rtl8139_vid = 0x10ec;
+constexpr u16 rtl8139_did = 0x8139;
 
-enum RTL8139_REGS {
+enum rtl8139_registers {
   REG_COM = 0x37,
   REG_TCR = 0x40,
   REG_CONFIG1 = 0x52
 };
 
-enum RTL8139_CONST {
+enum rtl8139_flags {
   TSD_TOK = (1 << 15),
   TSD_OWN = (1 << 13),
 
@@ -53,13 +55,10 @@ enum RTL8139_CONST {
 
 u8 rtl8139_tbuff[4][TX_BUFF_SIZE] __attribute__((aligned(256)));
 
-
 static_assert( offsetof(struct rtl8139_regs, tsad) == 0x20);
 static_assert( offsetof(struct rtl8139_regs, tsd) == 0x10);
 static_assert( offsetof(struct rtl8139_regs, com) == 0x37);
 static_assert( offsetof(struct rtl8139_regs, config1) == 0x52);
-
-//volatile struct rtl8139_regs *rtl_regs;
 
 bool mm_paging_walk(uaddr va, paddr *pte, bool alloc);
 
@@ -115,7 +114,8 @@ bool send_packet(struct netdev *this, u8 packet[], usize length) {
 void rtl8139_test(struct rtl8139 *rtl_device) {
   volatile struct rtl8139_regs *rtl_regs = rtl_device->regs;
 
-  eth_send_packet(&rtl_device->netdev, (u8*) "yellow submarine", 16);
+  eth_send_packet(&rtl_device->netdev, (const u8*) "\xff\xff\xff\xff\xff\xff",
+	(u8*) "yellow submarine", 16);
 
   assert(rtl_regs->tsad[0] != 0);
   assert((rtl_regs->tsd[0] & TSD_TOK) != 0);
@@ -169,7 +169,6 @@ void rtl8139_init(struct pci_regs *pci_device) {
   struct rtl8139 *rtl_device = (struct rtl8139 *) device;
   rtl_regs = rtl_device->regs;
 
-
   /* TODO: Maybe move PCI init to pci.c? */
   /* Setup BAR for MMIO - we just pick a nice number for now */
   pci_device->memar = reg_addr;
@@ -188,5 +187,5 @@ void rtl8139_init(struct pci_regs *pci_device) {
 }
 
 DEFINE_INIT(INIT_REGISTER_PCI_DRIVERS) {
-  pci_register(0x10ec,0x8139,rtl8139_init);
+  pci_register(rtl8139_vid, rtl8139_did, rtl8139_init);
 }
