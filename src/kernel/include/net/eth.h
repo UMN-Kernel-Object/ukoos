@@ -7,6 +7,6 @@
 #ifndef UKO_OS_KERNEL__NET_ETH__H
 #define UKO_OS_KERNEL__NET_ETH__H 1
 
-bool eth_send_packet(struct netdev *device, u8 *buffer, u32 len);
+bool eth_send_packet(struct netdev *device, const u8 *dstmac, u8 *buffer, u32 len);
 
 #endif
