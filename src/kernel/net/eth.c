@@ -1,29 +1,38 @@
 #include <types.h>
 #include <device.h>
 #include <devices/netdev.h>
+#include <mm/virtual_alloc.h>
+#include <net/eth.h>
 
-bool eth_send_packet(struct netdev *device, u8 *buffer, u32 len) {
-  u8 buf[0x100];
-  u64 i;
+struct ethernet_packet {
+    u8 dst[6];
+    u8 src[6];
+    u8 ethertype[2];
+    u8 data[];
+};
 
-  for (i=0; i<6; ++i) {
-    buf[i] = 0xff;
+bool eth_send_packet(struct netdev *device, const u8 *dstmac, u8 *buffer, u32 len) {
+  struct ethernet_packet *packet;
+  usize packet_len;
+
+  packet_len = len + sizeof(struct ethernet_packet);
+  if (len < 46) {
+    packet_len = 46 + sizeof(struct ethernet_packet);
   }
 
-  print("getting mac");
-  device->ops->get_mac(device, buf+6);
+  packet = alloc(packet_len);
 
-  buf[12] = 0x08;
-  buf[13] = 0x00;
+  memcpy(packet->dst, dstmac, 6);
+  device->ops->get_mac(device, packet->src);
 
-  for (i=0; i<len; ++i) {
-    buf[i + 14] = buffer[i];
+  packet->ethertype[0] = 0x08;
+  packet->ethertype[1] = 0x00;
+  
+  memcpy(packet->data, buffer, len);
+
+  for (usize i=len; i<46; ++i) {
+    packet->data[i] = 0;
   }
-  for (i=len; i<64; ++i) {
-    buf[i + 14] = 0;
-  }
-  if (len < 64) len = 64;
 
-  print("sending");
-  return device->ops->send_packet(device, buf, len + 13);
+  return device->ops->send_packet(device, (u8*) packet, packet_len);
 }
