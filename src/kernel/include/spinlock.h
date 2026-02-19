@@ -14,7 +14,7 @@ struct spinlock {
   u64 flags;
 
   // these only have meaning while `locked` is true
-  u64 owner_hart_id;
+  atomic u64 owner_hart_id;
   const char *file;
   usize line;
   const char *func;

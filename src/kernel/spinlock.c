@@ -26,11 +26,7 @@ void __spinlock_guard_init(struct spinlock_guard *guard,
           line);
   }
 
-  // When acquiring a spinlock, disable local interrupts.
-  // Otherwise, we might get interrupted and then attempt to re-acquire the same
-  // spinlock, leading to a deadlock.
-  u64 flags = local_irq_save();
-
+  // TODO: take a hartlock before this
   struct hart_locals *locals = get_hart_locals();
   u64 hart_id = locals->hart_id;
 
@@ -43,13 +39,15 @@ void __spinlock_guard_init(struct spinlock_guard *guard,
   bool expected = false;
 
   // Try to acquire the lock.
-  while (!__atomic_compare_exchange_n(&spinlock->locked, &expected, true, false,
-                                      __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+  while (!atomic_compare_exchange_weak_explicit(&spinlock->locked, &expected, true,
+                                      memory_order_acquire, memory_order_relaxed)) {
     expected = false;
     pause_hint();
   }
 
-  spinlock->flags = flags;
+  // Disable interrupts and save the previous interrupt state.
+  // Otherwise, we may attempt to re-acquire the same lock from the same hart.
+  spinlock->flags = local_irq_save();
 
   spinlock->owner_hart_id = hart_id;
   spinlock->file = file;
