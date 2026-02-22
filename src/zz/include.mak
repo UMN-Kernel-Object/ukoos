@@ -10,6 +10,6 @@ install:: src/zz/zz.elf
 src/zz/zz.elf: $(zpy-files) $(srcdir)/src/zz/main.z
 	@mkdir -p $(dir $@)
 	@echo "ZPY     $@"
-	$(Q)$(PYTHON3) $(srcdir)/src/zpy/main.py \
+	$(Q)$(PYTHON3) -B $(srcdir)/src/zpy/main.py \
 		$(srcdir)/src/zz/main.z \
 		$(srcdir)/src/zz/main.z

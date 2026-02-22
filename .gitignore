@@ -8,7 +8,6 @@ doc/book/
 
 .cache/
 .direnv/
-__pycache__/
 config.mak
 result
 result-*
