@@ -65,7 +65,7 @@ Z = Module("Z")
 
 
 @dataclass
-class SimpleVectorT:
+class ArrayT:
     elems: tuple["ZVal", ...]
 
     def __init__(self, *elems: "ZVal"):
@@ -82,7 +82,7 @@ class StandardObj:
 
     def __init__(self, klass: "ZVal"):
         (class_effective_slots,) = Z["CLASS/EFFECTIVE-SLOTS"].call(klass)
-        assert isinstance(class_effective_slots, SimpleVectorT)
+        assert isinstance(class_effective_slots, ArrayT)
         self.klass = klass
         self.slots = [
             None
@@ -173,7 +173,7 @@ ZVal = (
     | tuple["ZVal", "ZVal"]
     | BuiltInFunction
     | Module
-    | SimpleVectorT
+    | ArrayT
     | StandardObj
     | StructObj
     | Symbol
@@ -396,7 +396,7 @@ def slot_location(klass: ZVal, slot_name: ZVal) -> int:
         raise Exception("slot_location: StandardClass does not have EFFECTIVE-SLOTS?")
     else:
         (slots,) = Z["CLASS/EFFECTIVE-SLOTS"].call(klass)
-        assert isinstance(slots, SimpleVectorT)
+        assert isinstance(slots, ArrayT)
         for i, slot in enumerate(slots.elems):
             (name,) = Z["SLOT-DEFINITION/NAME"].call(slot)
             if name is slot_name:
@@ -489,7 +489,7 @@ def class_of(obj: ZVal) -> list[ZVal]:
         return Z["FIND-CLASS"].call(Z["BUILT-IN-FUNCTION"])
     elif isinstance(obj, Module):
         return Z["FIND-CLASS"].call(Z["MODULE"])
-    elif isinstance(obj, SimpleVectorT):
+    elif isinstance(obj, ArrayT):
         return Z["FIND-CLASS"].call(Z["SIMPLE-VECTOR-T"])
     elif isinstance(obj, StandardObj):
         return [obj.klass]
@@ -567,11 +567,11 @@ def defclass(
     out = Z["ENSURE-CLASS"].call(
         name,
         KEYWORD["DIRECT-SUPERCLASSES"],
-        SimpleVectorT(
+        ArrayT(
             *(Z["FIND-CLASS"].call(class_name)[0] for class_name in direct_superclasses)
         ),
         KEYWORD["DIRECT-SLOTS"],
-        SimpleVectorT(
+        ArrayT(
             *(canonicalize_direct_slot(direct_slot) for direct_slot in direct_slots)
         ),
         *(arg for k, v in options for arg in canonicalize_defclass_option(k, v)),
@@ -614,56 +614,54 @@ def ensure_class(
     if metaclass is None:
         metaclass = ClassStandardClass
     if direct_superclasses is None:
-        direct_superclasses = SimpleVectorT()
+        direct_superclasses = ArrayT()
     if direct_slots is None:
-        direct_slots = SimpleVectorT()
+        direct_slots = ArrayT()
     assert isinstance(class_name, Symbol)
-    assert isinstance(direct_superclasses, SimpleVectorT)
-    assert isinstance(direct_slots, SimpleVectorT)
+    assert isinstance(direct_superclasses, ArrayT)
+    assert isinstance(direct_slots, ArrayT)
 
     if Z["FIND-CLASS"].call(class_name, Nil)[0] is not Nil:
         raise Exception(f"TODO: redefine the class {class_name}")
 
     if metaclass is ClassStandardClass:
         if len(direct_superclasses.elems) == 0:
-            direct_superclasses = SimpleVectorT(
-                Z["FIND-CLASS"].call(Z["STANDARD-OBJECT"])[0]
-            )
+            direct_superclasses = ArrayT(Z["FIND-CLASS"].call(Z["STANDARD-OBJECT"])[0])
         slots = []
         for args in direct_slots.elems:
-            assert isinstance(args, SimpleVectorT)
+            assert isinstance(args, ArrayT)
             (slot,) = Z["MAKE-DIRECT-SLOT-DEFINITION"].call(*args.elems)
             slots.append(slot)
 
         klass = StandardObj(ClassStandardClass)
         Z["CLASS/NAME"].call_setf(klass, class_name)
-        Z["CLASS/DIRECT-SUBCLASSES"].call_setf(klass, SimpleVectorT())
+        Z["CLASS/DIRECT-SUBCLASSES"].call_setf(klass, ArrayT())
         Z["CLASS/DIRECT-SUPERCLASSES"].call_setf(klass, direct_superclasses)
-        Z["CLASS/DIRECT-METHODS"].call_setf(klass, SimpleVectorT())
-        Z["CLASS/DIRECT-SLOTS"].call_setf(klass, SimpleVectorT(*slots))
+        Z["CLASS/DIRECT-METHODS"].call_setf(klass, ArrayT())
+        Z["CLASS/DIRECT-SLOTS"].call_setf(klass, ArrayT(*slots))
 
         for sup in direct_superclasses.elems:
             (sup_subs,) = Z["CLASS/DIRECT-SUBCLASSES"].call(sup)
-            assert isinstance(sup_subs, SimpleVectorT)
-            Z["CLASS/DIRECT-SUBCLASSES"].call_setf(
-                sup, SimpleVectorT(*sup_subs.elems, klass)
-            )
+            assert isinstance(sup_subs, ArrayT)
+            Z["CLASS/DIRECT-SUBCLASSES"].call_setf(sup, ArrayT(*sup_subs.elems, klass))
 
         for slot in slots:
             (name,) = Z["SLOT-DEFINITION/NAME"].call(slot)
             (readers,) = Z["DIRECT-SLOT-DEFINITION/READERS"].call(slot)
             (writers,) = Z["DIRECT-SLOT-DEFINITION/WRITERS"].call(slot)
-            assert isinstance(readers, SimpleVectorT)
-            assert isinstance(writers, SimpleVectorT)
+            assert isinstance(readers, ArrayT)
+            assert isinstance(writers, ArrayT)
             for reader in readers.elems:
                 Z["ADD-READER-METHOD"].call(klass, reader, name)
             for writer in writers.elems:
                 Z["ADD-WRITER-METHOD"].call(klass, writer, name)
 
-        standard_class_finalize_inheritance(klass)
-        # Z["CLASS/PRECEDENCE-LIST"].call_setf(klass, Nil)
-        # Z["CLASS/EFFECTIVE-SLOTS"].call_setf(klass, Nil)
-        raise Exception("TODO: ensure_class")
+        Z["CLASS/PRECEDENCE-LIST"].call_setf(
+            klass, ArrayT(*toposort_superclasses(collect_superclasses(klass)))
+        )
+        Z["CLASS/EFFECTIVE-SLOTS"].call_setf(
+            klass, ArrayT(*standard_class_compute_effective_slots(klass))
+        )
     else:
         klass = Z["MAKE-INSTANCE"].call(
             metaclass, KEYWORD["NAME"], class_name, *all_keys
@@ -671,6 +669,117 @@ def ensure_class(
 
     class_name.data.klass = klass
     return klass
+
+
+### Define utilities for class precedence lists.
+
+
+def collect_superclasses(klass: ZVal) -> tuple[ZVal, ...]:
+    black = ()
+    gray = [klass]
+    while len(gray) != 0:
+        black += tuple(gray)
+        new_gray = []
+        for klass in gray:
+            (supers,) = Z["CLASS/DIRECT-SUPERCLASSES"].call(klass)
+            assert isinstance(supers, ArrayT)
+            new_gray += list(supers.elems)
+        new_gray = [
+            klass
+            for klass in new_gray
+            if not any(klass is black_class for black_class in black)
+        ]
+        gray = new_gray
+    return black
+
+
+def toposort_superclasses(all_superclasses: tuple[ZVal, ...]) -> tuple[ZVal, ...]:
+    """
+    Returns a topologically sorted list of superclasses, such that subclasses
+    appear before superclasses and classes earlier in the direct-superclasses
+    vector appear before ones that appear later.
+
+    In the event of a tie, chooses the one that most recently had a direct
+    subclass added to the precedence list.
+
+    This uses Kahn's algorithm.
+    """
+
+    def class_index(klass: ZVal) -> int:
+        (i,) = [i for i, x in enumerate(all_superclasses) if klass is x]
+        return i
+
+    # The indices of the superclasses we've assigned to out.
+    assigned: set[int] = set()
+
+    # Maps classes to the classes they depend on.
+    constraints: list[set[int]] = [set() for _ in range(len(all_superclasses))]
+
+    # The sorted list of superclasses.
+    out: list[ZVal] = []
+
+    # The indices of the superclasses we've not yet assigned to out.
+    unassigned: set[int] = set(range(len(all_superclasses)))
+
+    ## Collect constraints.
+    for i, klass in enumerate(all_superclasses):
+        (direct_superclasses,) = Z["CLASS/DIRECT-SUPERCLASSES"].call(klass)
+        assert isinstance(direct_superclasses, ArrayT)
+        indices = list(
+            class_index(superclass) for superclass in direct_superclasses.elems
+        )
+
+        for j in indices:
+            constraints[j].add(i)
+
+        indices.insert(0, i)
+        for j, k in zip(indices[:-1], indices[1:]):
+            constraints[k].add(j)
+
+    def assign(i: int):
+        assigned.add(i)
+        out.append(all_superclasses[i])
+        unassigned.remove(i)
+
+    ## Repeatedly find all the unassigned superclasses that are now assignable
+    ## and assign them.
+    while len(out) != len(all_superclasses):
+        assignable = [i for i in unassigned if constraints[i].issubset(assigned)]
+        if len(assignable) == 0:
+            raise Exception("circular superclass dependencies")
+        if len(assignable) > 1:
+            raise Exception(f"TODO {assignable}")
+        assign(assignable[0])
+
+    return tuple(out)
+
+
+### Define slot inheritance.
+
+
+def standard_class_compute_effective_slots(klass: ZVal) -> list[ZVal]:
+    def direct_slots(klass: ZVal) -> tuple[ZVal, ...]:
+        (slots,) = Z["CLASS/DIRECT-SLOTS"].call(klass)
+        assert isinstance(slots, ArrayT)
+        return slots.elems
+
+    def slot_name(slot: ZVal) -> Symbol:
+        (name,) = Z["SLOT-DEFINITION/NAME"].call(slot)
+        assert isinstance(name, Symbol)
+        return name
+
+    (all_supers,) = Z["CLASS/PRECEDENCE-LIST"].call(klass)
+    assert isinstance(all_supers, ArrayT)
+
+    all_slots: tuple[ZVal, ...] = tuple(
+        slot for klass in all_supers.elems for slot in direct_slots(klass)
+    )
+
+    effective_slots: list[ZVal] = []
+    for name in set(slot_name(slot) for slot in all_slots):
+        raise Exception("TODO: standard_class_compute_effective_slots")
+
+    return effective_slots
 
 
 ### Define the slot-definition metaobjects.
@@ -681,35 +790,35 @@ def ensure_class(
 def make_direct_slot_definition(
     name: ZVal,
     *,
-    initargs: ZVal | None = None,
+    initargs: list[ZVal] | None = None,
     initform: ZVal | None = None,
     initfunction: ZVal | None = None,
     allocation: ZVal | None = None,
-    readers: ZVal | None = None,
-    writers: ZVal | None = None,
+    readers: list[ZVal] | None = None,
+    writers: list[ZVal] | None = None,
 ):
-    return SimpleVectorT(
+    return ArrayT(
         name,
-        initargs if initargs is not None else Nil,
+        ArrayT(*initargs) if initargs is not None else Nil,
         initform if initform is not None else Nil,
         initfunction if initfunction is not None else Nil,
         allocation if allocation is not None else KEYWORD["INSTANCE"],
-        readers if readers is not None else Nil,
-        writers if writers is not None else Nil,
+        ArrayT(*readers) if readers is not None else Nil,
+        ArrayT(*writers) if writers is not None else Nil,
     )
 
 
 def make_effective_slot_definition(
     name: ZVal,
     *,
-    initargs: ZVal | None = None,
+    initargs: list[ZVal] | None = None,
     initform: ZVal | None = None,
     initfunction: ZVal | None = None,
     allocation: ZVal | None = None,
 ):
-    return SimpleVectorT(
+    return ArrayT(
         name,
-        initargs if initargs is not None else Nil,
+        ArrayT(*initargs) if initargs is not None else Nil,
         initform if initform is not None else Nil,
         initfunction if initfunction is not None else Nil,
         allocation if allocation is not None else KEYWORD["INSTANCE"],
@@ -718,43 +827,43 @@ def make_effective_slot_definition(
 
 @def_builtin_function("SLOT-DEFINITION/NAME")
 def slot_definition_name(slot_definition: ZVal) -> list[ZVal]:
-    assert isinstance(slot_definition, SimpleVectorT)
+    assert isinstance(slot_definition, ArrayT)
     return [slot_definition.elems[0]]
 
 
 @def_builtin_function("SLOT-DEFINITION/INITARGS")
 def slot_definition_initargs(slot_definition: ZVal) -> list[ZVal]:
-    assert isinstance(slot_definition, SimpleVectorT)
+    assert isinstance(slot_definition, ArrayT)
     return [slot_definition.elems[1]]
 
 
 @def_builtin_function("SLOT-DEFINITION/INITFORM")
 def slot_definition_initform(slot_definition: ZVal) -> list[ZVal]:
-    assert isinstance(slot_definition, SimpleVectorT)
+    assert isinstance(slot_definition, ArrayT)
     return [slot_definition.elems[2]]
 
 
 @def_builtin_function("SLOT-DEFINITION/INITFUNCTION")
 def slot_definition_initfunction(slot_definition: ZVal) -> list[ZVal]:
-    assert isinstance(slot_definition, SimpleVectorT)
+    assert isinstance(slot_definition, ArrayT)
     return [slot_definition.elems[3]]
 
 
 @def_builtin_function("SLOT-DEFINITION/ALLOCATION")
 def slot_definition_allocation(slot_definition: ZVal) -> list[ZVal]:
-    assert isinstance(slot_definition, SimpleVectorT)
+    assert isinstance(slot_definition, ArrayT)
     return [slot_definition.elems[4]]
 
 
 @def_builtin_function("DIRECT-SLOT-DEFINITION/READERS")
 def direct_slot_definition_readers(slot_definition: ZVal) -> list[ZVal]:
-    assert isinstance(slot_definition, SimpleVectorT)
+    assert isinstance(slot_definition, ArrayT)
     return [slot_definition.elems[5]]
 
 
 @def_builtin_function("DIRECT-SLOT-DEFINITION/WRITERS")
 def direct_slot_definition_writers(slot_definition: ZVal) -> list[ZVal]:
-    assert isinstance(slot_definition, SimpleVectorT)
+    assert isinstance(slot_definition, ArrayT)
     return [slot_definition.elems[6]]
 
 
@@ -790,31 +899,55 @@ SlotsStandardClass = [
     ),
 ]
 
-## Define the STANDARD-CLASS object.
+## Define the STANDARD-CLASS class temporarily for bootstrapping.
 ClassStandardClass = StandardObj.__new__(StandardObj)
 ClassStandardClass.klass = ClassStandardClass
 ClassStandardClass.slots = [None] * len(SlotsStandardClass)
-Z["CLASS/EFFECTIVE-SLOTS"].call_setf(
-    ClassStandardClass, SimpleVectorT(*SlotsStandardClass)
-)
+Z["CLASS/EFFECTIVE-SLOTS"].call_setf(ClassStandardClass, ArrayT(*SlotsStandardClass))
 
 ## Define the class T.
 ClassT = StandardObj(ClassStandardClass)
 Z["CLASS/NAME"].call_setf(ClassT, Z["T"])
-Z["CLASS/DIRECT-SUBCLASSES"].call_setf(ClassT, SimpleVectorT())
-Z["CLASS/DIRECT-SUPERCLASSES"].call_setf(ClassT, SimpleVectorT())
-Z["CLASS/DIRECT-METHODS"].call_setf(ClassT, SimpleVectorT())
-Z["CLASS/DIRECT-SLOTS"].call_setf(ClassT, SimpleVectorT())
-Z["CLASS/PRECEDENCE-LIST"].call_setf(ClassT, SimpleVectorT())
-Z["CLASS/EFFECTIVE-SLOTS"].call_setf(ClassT, SimpleVectorT())
+Z["CLASS/DIRECT-SUBCLASSES"].call_setf(ClassT, ArrayT())
+Z["CLASS/DIRECT-SUPERCLASSES"].call_setf(ClassT, ArrayT())
+Z["CLASS/DIRECT-METHODS"].call_setf(ClassT, ArrayT())
+Z["CLASS/DIRECT-SLOTS"].call_setf(ClassT, ArrayT())
+Z["CLASS/PRECEDENCE-LIST"].call_setf(ClassT, ArrayT())
+Z["CLASS/EFFECTIVE-SLOTS"].call_setf(ClassT, ArrayT())
 Z["T"].data.klass = ClassT
 
 ## Define the STANDARD-OBJECT class.
 defclass(name=Z["STANDARD-OBJECT"], direct_superclasses=[Z["T"]])
 
-print(ClassT)
-print(ClassStandardClass)
-exit()
+## Define the STANDARD-CLASS class and replace references to the temporary
+## definition.
+defclass(
+    Z["STANDARD-CLASS"],
+    [],
+    make_direct_slot_definition(Z["NAME"], initargs=[KEYWORD["NAME"]]),
+    make_direct_slot_definition(
+        Z["DIRECT-SUPERCLASSES"], initargs=[KEYWORD["DIRECT-SUPERCLASSES"]]
+    ),
+    make_direct_slot_definition(Z["DIRECT-SLOTS"]),
+    make_direct_slot_definition(Z["CLASS-PRECEDENCE-LIST"]),
+    make_direct_slot_definition(Z["EFFECTIVE-SLOTS"]),
+    make_direct_slot_definition(Z["DIRECT-SUBCLASSES"], initform=Nil),
+    make_direct_slot_definition(Z["DIRECT-METHODS"], initform=Nil),
+)
+(ClassStandardClass,) = Z["FIND-CLASS"].call(Z["STANDARD-CLASS"])
+(ClassStandardObject,) = Z["FIND-CLASS"].call(Z["STANDARD-OBJECT"])
+assert isinstance(ClassStandardClass, StandardObj)
+assert isinstance(ClassStandardObject, StandardObj)
+ClassStandardClass.klass = ClassStandardClass
+ClassStandardObject.klass = ClassStandardClass
+ClassT.klass = ClassStandardClass
 
-## Re-define the STANDARD-CLASS object.
-# print(Z["CLASS/NAME"].call(ClassStandardClass))
+## Define the other built-in classes.
+defclass(Z["BUILT-IN-FUNCTION"], [Z["T"]])
+defclass(Z["CONS"], [Z["T"]])
+defclass(Z["INT"], [Z["T"]])
+defclass(Z["MODULE"], [Z["T"]])
+defclass(Z["STR"], [Z["T"]])
+defclass(Z["SYMBOL"], [Z["T"]])
+defclass(Z["NULL"], [Z["SYMBOL"]])
+defclass(Z["ARRAY-T"], [Z["T"]])

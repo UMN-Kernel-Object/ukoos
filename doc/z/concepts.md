@@ -22,6 +22,20 @@ Most Z code is compiled a function at a time.
 
 ### Keywords
 
+## Type system
+
+- Gradual typing with space-efficient coercions and monotonic references (see [Efficient Gradual Typing](https://arxiv.org/abs/1802.06375)).
+
+## Array-like containers
+
+There are four basic "array-like" types in the standard library.
+They are:
+
+- `array`: A 1-dimensional container that does not allow resizing.
+- `vector`: A 1-dimensional resizable container.
+- `slice`: A reference to part of an `array`.
+- `ndarray`: An _n_-dimensional container that does not allow resizing, or a reference to one.
+
 ## Structs and classes
 
 ## Functions and methods
