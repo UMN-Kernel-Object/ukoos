@@ -38,6 +38,10 @@ TODO
 
 TODO
 
+### `fixint`
+
+TODO
+
 ### `function`
 
 TODO

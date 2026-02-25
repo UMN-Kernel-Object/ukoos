@@ -91,7 +91,7 @@ class StandardObj:
         ]
 
     def __str__(self) -> str:
-        if self.klass == ClassStandardClass:
+        if self.klass is ClassStandardClass:
             class_name = Z["STANDARD-CLASS"]
         else:
             (class_name,) = Z["CLASS/NAME"].call(self.klass)
@@ -228,11 +228,13 @@ def make_bad_arguments_for_lambda_list_error(
 
 
 def make_missing_slot_error(klass: ZVal, slot_name: ZVal) -> ZVal:
-    raise Exception(f"TODO: make_missing_slot_error {klass} {slot_name}")
+    (class_name,) = Z["CLASS/NAME"].call(klass)
+    raise Exception(f"TODO: make_missing_slot_error {class_name} {slot_name}")
 
 
 def make_not_instance_slot_error(klass: ZVal, slot: ZVal) -> ZVal:
-    raise Exception(f"TODO: make_not_instance_slot_error {klass} {slot}")
+    (class_name,) = Z["CLASS/NAME"].call(klass)
+    raise Exception(f"TODO: make_not_instance_slot_error {class_name} {slot}")
 
 
 def make_not_a_function_error(value: ZVal) -> ZVal:
@@ -388,7 +390,7 @@ def funcall(func: ZVal, *args: ZVal) -> list[ZVal]:
 def slot_location(klass: ZVal, slot_name: ZVal) -> int:
     assert isinstance(slot_name, Symbol)
 
-    if klass == ClassStandardClass and slot_name is Z["EFFECTIVE-SLOTS"]:
+    if klass is ClassStandardClass and slot_name is Z["EFFECTIVE-SLOTS"]:
         for i, slot in enumerate(SlotsStandardClass):
             (name,) = Z["SLOT-DEFINITION/NAME"].call(slot)
             if name is Z["EFFECTIVE-SLOTS"]:
@@ -496,7 +498,7 @@ def class_of(obj: ZVal) -> list[ZVal]:
     elif isinstance(obj, StructObj):
         return [obj.klass]
     elif isinstance(obj, Symbol):
-        if obj == Nil:
+        if obj is Nil:
             return Z["FIND-CLASS"].call(Z["NULL"])
         else:
             return Z["FIND-CLASS"].call(Z["SYMBOL"])
@@ -512,7 +514,7 @@ def subclassp(child: ZVal, parent: ZVal) -> bool:
 
     return any(
         klass is parent
-        for klass in list_iter(Z["CLASS-PRECEDENCE-LIST"].call(child)[0])
+        for klass in list_iter(Z["CLASS/PRECEDENCE-LIST"].call(child)[0])
     )
 
 
@@ -557,13 +559,15 @@ def defclass(
     *direct_slots: ZVal,
     **options: ZVal,
 ) -> StandardObj:
-    def canonicalize_direct_slot(direct_slot: ZVal) -> ZVal:
-        raise Exception("TODO: canonicalize_direct_slot")
-
     def canonicalize_defclass_option(name: str, value: ZVal) -> list[ZVal]:
-        raise Exception("TODO: canonicalize_defclass_option")
+        raise Exception(f"TODO: canonicalize_defclass_option {name} {value}")
 
+    for direct_slot in direct_slots:
+        # Check that the value looks like an actual direct-slot-definition.
+        assert isinstance(direct_slot, ArrayT)
+        assert len(direct_slot.elems) == 7
     assert len(options) == 0  # TODO
+
     out = Z["ENSURE-CLASS"].call(
         name,
         KEYWORD["DIRECT-SUPERCLASSES"],
@@ -571,9 +575,7 @@ def defclass(
             *(Z["FIND-CLASS"].call(class_name)[0] for class_name in direct_superclasses)
         ),
         KEYWORD["DIRECT-SLOTS"],
-        ArrayT(
-            *(canonicalize_direct_slot(direct_slot) for direct_slot in direct_slots)
-        ),
+        ArrayT(*direct_slots),
         *(arg for k, v in options for arg in canonicalize_defclass_option(k, v)),
     )
     assert len(out) == 1
@@ -628,9 +630,9 @@ def ensure_class(
         if len(direct_superclasses.elems) == 0:
             direct_superclasses = ArrayT(Z["FIND-CLASS"].call(Z["STANDARD-OBJECT"])[0])
         slots = []
-        for args in direct_slots.elems:
-            assert isinstance(args, ArrayT)
-            (slot,) = Z["MAKE-DIRECT-SLOT-DEFINITION"].call(*args.elems)
+        for slot in direct_slots.elems:
+            assert isinstance(slot, ArrayT)
+            assert len(slot.elems) == 7
             slots.append(slot)
 
         klass = StandardObj(ClassStandardClass)
@@ -763,6 +765,31 @@ def standard_class_compute_effective_slots(klass: ZVal) -> list[ZVal]:
         assert isinstance(slots, ArrayT)
         return slots.elems
 
+    def slot_allocation(slot: ZVal) -> Symbol:
+        (allocation,) = Z["SLOT-DEFINITION/ALLOCATION"].call(slot)
+        assert isinstance(allocation, Symbol)
+        return allocation
+
+    def slot_initargs(slot: ZVal) -> tuple[Symbol, ...]:
+        (initargs,) = Z["SLOT-DEFINITION/INITARGS"].call(slot)
+        assert isinstance(initargs, ArrayT)
+
+        def must_be_keyword(val: ZVal) -> Symbol:
+            assert isinstance(val, Symbol)
+            assert val.mod is KEYWORD
+            return val
+
+        return tuple(must_be_keyword(initarg) for initarg in initargs.elems)
+
+    def slot_initform(slot: ZVal) -> ZVal:
+        (initform,) = Z["SLOT-DEFINITION/INITFORM"].call(slot)
+        return initform
+
+    def slot_initfunction(slot: ZVal) -> ZVal:
+        (initfunction,) = Z["SLOT-DEFINITION/INITFUNCTION"].call(slot)
+        assert initfunction is Nil or isinstance(initfunction, Symbol)
+        return initfunction
+
     def slot_name(slot: ZVal) -> Symbol:
         (name,) = Z["SLOT-DEFINITION/NAME"].call(slot)
         assert isinstance(name, Symbol)
@@ -771,13 +798,31 @@ def standard_class_compute_effective_slots(klass: ZVal) -> list[ZVal]:
     (all_supers,) = Z["CLASS/PRECEDENCE-LIST"].call(klass)
     assert isinstance(all_supers, ArrayT)
 
-    all_slots: tuple[ZVal, ...] = tuple(
+    all_slots: list[ZVal] = [
         slot for klass in all_supers.elems for slot in direct_slots(klass)
-    )
+    ]
 
     effective_slots: list[ZVal] = []
     for name in set(slot_name(slot) for slot in all_slots):
-        raise Exception("TODO: standard_class_compute_effective_slots")
+        slots = [slot for slot in all_slots if slot_name(slot) is name]
+        assert len(slots) != 0
+        all_slots = [slot for slot in all_slots if slot_name(slot) is not name]
+
+        initer = slots[0]
+        for slot in slots:
+            if slot_initfunction(slot) is not Nil:
+                initer = slot
+                break
+
+        effective_slots.append(
+            make_effective_slot_definition(
+                name=slot_name(slots[0]),
+                initargs=[initarg for slot in slots for initarg in slot_initargs(slot)],
+                initform=slot_initform(initer),
+                initfunction=slot_initfunction(initer),
+                allocation=slot_allocation(initer),
+            )
+        )
 
     return effective_slots
 
@@ -799,12 +844,12 @@ def make_direct_slot_definition(
 ):
     return ArrayT(
         name,
-        ArrayT(*initargs) if initargs is not None else Nil,
+        ArrayT(*initargs) if initargs is not None else ArrayT(),
         initform if initform is not None else Nil,
         initfunction if initfunction is not None else Nil,
         allocation if allocation is not None else KEYWORD["INSTANCE"],
-        ArrayT(*readers) if readers is not None else Nil,
-        ArrayT(*writers) if writers is not None else Nil,
+        ArrayT(*readers) if readers is not None else ArrayT(),
+        ArrayT(*writers) if writers is not None else ArrayT(),
     )
 
 
@@ -929,7 +974,7 @@ defclass(
         Z["DIRECT-SUPERCLASSES"], initargs=[KEYWORD["DIRECT-SUPERCLASSES"]]
     ),
     make_direct_slot_definition(Z["DIRECT-SLOTS"]),
-    make_direct_slot_definition(Z["CLASS-PRECEDENCE-LIST"]),
+    make_direct_slot_definition(Z["PRECEDENCE-LIST"]),
     make_direct_slot_definition(Z["EFFECTIVE-SLOTS"]),
     make_direct_slot_definition(Z["DIRECT-SUBCLASSES"], initform=Nil),
     make_direct_slot_definition(Z["DIRECT-METHODS"], initform=Nil),
@@ -942,12 +987,49 @@ ClassStandardClass.klass = ClassStandardClass
 ClassStandardObject.klass = ClassStandardClass
 ClassT.klass = ClassStandardClass
 
+## Define the BUILT-IN-CLASS metaclass.
+defclass(
+    Z["BUILT-IN-CLASS"],
+    [],
+    make_direct_slot_definition(Z["NAME"], initargs=[KEYWORD["NAME"]]),
+    make_direct_slot_definition(
+        Z["DIRECT-SUPERCLASSES"], initargs=[KEYWORD["DIRECT-SUPERCLASSES"]]
+    ),
+    make_direct_slot_definition(Z["PRECEDENCE-LIST"]),
+    make_direct_slot_definition(Z["DIRECT-SUBCLASSES"], initform=Nil),
+    make_direct_slot_definition(Z["DIRECT-METHODS"], initform=Nil),
+)
+
 ## Define the other built-in classes.
-defclass(Z["BUILT-IN-FUNCTION"], [Z["T"]])
-defclass(Z["CONS"], [Z["T"]])
-defclass(Z["INT"], [Z["T"]])
+defclass(Z["REAL-NUMBER"], [Z["T"]])
+defclass(Z["FLOAT"], [Z["REAL-NUMBER"]])
+defclass(Z["BF16"], [Z["FLOAT"]])
+defclass(Z["F16"], [Z["FLOAT"]])
+defclass(Z["F32"], [Z["FLOAT"]])
+defclass(Z["F64"], [Z["FLOAT"]])
+defclass(Z["INT"], [Z["REAL-NUMBER"]])
+defclass(Z["BIGINT"], [Z["INT"]])
+defclass(Z["FIXINT"], [Z["INT"]])
+defclass(Z["FUNCTION"], [Z["T"]])
 defclass(Z["MODULE"], [Z["T"]])
 defclass(Z["STR"], [Z["T"]])
+defclass(Z["STRUCTURE-OBJECT"], [Z["T"]])
 defclass(Z["SYMBOL"], [Z["T"]])
-defclass(Z["NULL"], [Z["SYMBOL"]])
-defclass(Z["ARRAY-T"], [Z["T"]])
+defclass(Z["SEQUENCE"], [Z["T"]])
+defclass(Z["ARRAY"], [Z["SEQUENCE"]])
+defclass(Z["ARRAY-BF16"], [Z["ARRAY"]])
+defclass(Z["ARRAY-F16"], [Z["ARRAY"]])
+defclass(Z["ARRAY-F32"], [Z["ARRAY"]])
+defclass(Z["ARRAY-F64"], [Z["ARRAY"]])
+defclass(Z["ARRAY-I8"], [Z["ARRAY"]])
+defclass(Z["ARRAY-I16"], [Z["ARRAY"]])
+defclass(Z["ARRAY-I32"], [Z["ARRAY"]])
+defclass(Z["ARRAY-I64"], [Z["ARRAY"]])
+defclass(Z["ARRAY-U8"], [Z["ARRAY"]])
+defclass(Z["ARRAY-U16"], [Z["ARRAY"]])
+defclass(Z["ARRAY-U32"], [Z["ARRAY"]])
+defclass(Z["ARRAY-U64"], [Z["ARRAY"]])
+defclass(Z["ARRAY-T"], [Z["ARRAY"]])
+defclass(Z["LIST"], [Z["SEQUENCE"]])
+defclass(Z["CONS"], [Z["LIST"]])
+defclass(Z["NULL"], [Z["SYMBOL"], Z["LIST"]])
