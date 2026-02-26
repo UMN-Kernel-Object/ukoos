@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 #include <mm/paging.h>
 #include <mm/virtual_alloc.h>
 #include <physical.h>
