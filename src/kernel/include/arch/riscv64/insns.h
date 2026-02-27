@@ -34,6 +34,7 @@ enum csr {
   RISCV64_CSR_CYCLE = 0xc00,
   RISCV64_CSR_TIME = 0xc01,
   RISCV64_CSR_INSTRET = 0xc02,
+  RISCV64_CSR_VLENB = 0xc22,
 };
 
 /**
