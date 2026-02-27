@@ -9,6 +9,7 @@ kernel-cflags += \
 	-mcmodel=medany
 kernel-objs-asm += arch/riscv64/start
 kernel-objs-c += arch/riscv64/backtrace
+kernel-objs-c += arch/riscv64/hart_group
 kernel-objs-c += arch/riscv64/hart_locals
 kernel-objs-c += arch/riscv64/paging
 kernel-objs-c += arch/riscv64/panic
