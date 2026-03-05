@@ -9,8 +9,8 @@ For example, it allows representing that one cannot (safely) disable a PCIe port
 
 ## Device classes
 
-Each device probably provides some functionality other than simply existing.
-These bits of functionality can be lumped into a "device class."
+Devices provide functionality other than simply existing.
+These bits of functionality can be lumped into "device classes."
 Device classes are not a single construct in the code, but are a design pattern in the kernel.
 
 Typically, a device class consists of three things: a vtable struct, a device struct, and a list of devices.
