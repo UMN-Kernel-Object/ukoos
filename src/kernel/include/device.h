@@ -69,10 +69,10 @@ extern struct device root_device;
 /**
  * Registers a device in the tree of devices and with its device class.
  *
- * - `name` must be filled out.
- * - `parent` and `device_class` must be `nullptr`.
- * - `parent_children`, `children`, and `device_class_members` must be
- *   self-linked.
+ * - `child->name` must be filled out.
+ * - `child->parent` and `child->device_class` must be `nullptr`.
+ * - `child->parent_children`, `child->children`, and
+ *   `child->device_class_members` must be self-linked.
  */
 [[gnu::nonnull(1, 2)]]
 void device_add(struct device *parent, struct device *child);
