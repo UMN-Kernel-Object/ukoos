@@ -9,7 +9,7 @@
 #include <align.h>
 #include <random.h>
 
-static struct mm_alloc_page *page_alloc_small(struct mm_alloc_heap *heap,
+static struct mm_alloc_page *page_alloc_small(struct hartlock *hartlock, struct mm_alloc_heap *heap,
                                               usize size_class) {
   assert(size_class_is_valid(size_class));
   assert(size_class_is_small(size_class));
@@ -20,7 +20,7 @@ static struct mm_alloc_page *page_alloc_small(struct mm_alloc_heap *heap,
     struct mm_alloc_segment *segment = segment_alloc(1 << SEGMENT_SHIFT);
     if (!segment)
       return nullptr;
-    segment_init_small(segment, heap);
+    segment_init_small(hartlock, segment, heap);
     assert(!list_is_empty(&heap->unused_pages));
   }
 
@@ -157,12 +157,13 @@ static void page_init_huge(struct mm_alloc_page *page,
   list_push(&heap->pages[SIZE_CLASS_HUGE_SENTINEL], &page->list);
 }
 
-struct mm_alloc_page *page_new_small(struct mm_alloc_heap *heap,
+struct mm_alloc_page *page_new_small(struct hartlock *hartlock,
+                                     struct mm_alloc_heap *heap,
                                      usize size_class) {
   assert(size_class_is_valid(size_class));
   assert(size_class_is_small(size_class));
 
-  struct mm_alloc_page *page = page_alloc_small(heap, size_class);
+  struct mm_alloc_page *page = page_alloc_small(hartlock, heap, size_class);
   if (!page)
     return nullptr;
 
@@ -171,7 +172,8 @@ struct mm_alloc_page *page_new_small(struct mm_alloc_heap *heap,
   return page;
 }
 
-struct mm_alloc_page *page_new_large(struct mm_alloc_heap *heap,
+struct mm_alloc_page *page_new_large(struct hartlock *hartlock,
+                                     struct mm_alloc_heap *heap,
                                      usize size_class) {
   assert(size_class_is_valid(size_class));
   assert(!size_class_is_small(size_class));
@@ -179,7 +181,7 @@ struct mm_alloc_page *page_new_large(struct mm_alloc_heap *heap,
   struct mm_alloc_segment *segment = segment_alloc(1 << SEGMENT_SHIFT);
   if (!segment)
     return nullptr;
-  segment_init_large(segment);
+  segment_init_large(hartlock, segment);
 
   struct mm_alloc_page *page = &segment->pages[0];
   page_init_small_or_large(page, heap, size_class);
@@ -190,14 +192,15 @@ struct mm_alloc_page *page_new_large(struct mm_alloc_heap *heap,
   return page;
 }
 
-struct mm_alloc_page *page_new_huge(struct mm_alloc_heap *heap, usize size) {
+struct mm_alloc_page *page_new_huge(struct hartlock *hartlock,
+                                    struct mm_alloc_heap *heap, usize size) {
   assert(size_is_huge(size));
 
   // The segment has to be made larger by 2 pages, for the header to fit.
   struct mm_alloc_segment *segment = segment_alloc(size + (2 << 12));
   if (!segment)
     return nullptr;
-  segment_init_huge(segment);
+  segment_init_huge(hartlock, segment);
 
   struct mm_alloc_page *page = &segment->pages[0];
   page_init_huge(page, heap, size);

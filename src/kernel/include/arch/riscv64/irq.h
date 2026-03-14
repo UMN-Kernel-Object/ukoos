@@ -11,7 +11,7 @@
  * IRQ handling.
  */
 
-#include <insns.h>
+#include <arch/riscv64/insns.h>
 #include <types.h>
 
 // TODO: move this over to insns.h?

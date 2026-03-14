@@ -9,6 +9,7 @@
 
 #include <crypto/subtle/random_internals.h>
 #include <devices/hart.h>
+#include <hartlock.h>
 
 /**
  * The data that is local to a hart.
@@ -41,10 +42,22 @@ static_assert(offsetof(struct hart_locals, task) == 8);
 /**
  * Returns a pointer to the current hart's locals.
  *
- * TODO: Make sure this is called under some lock that ensures the current
- * thread cannot be rescheduled. Otherwise, it'd be super-easy to get a race.
+ * Requires a hartlock to be held. You can acquire a hartlock by using
+ * `WITH_HARTLOCK` in a new scope; for example:
+ *
+ * ```c
+ * void foo() {
+ *   u8 blah = 2 + 2;
+ *   {
+ *     WITH_HARTLOCK(lock);
+ *     struct hart_locals *locals = get_hart_locals(lock);
+ *     
+ *     // access `locals->rng`, etc ...
+ *   }
+ * }
+ * ```
  */
-struct hart_locals *get_hart_locals(void);
+struct hart_locals *get_hart_locals(struct hartlock *);
 
 /**
  * Called during early boot to initialize the boothart's hart-local storage

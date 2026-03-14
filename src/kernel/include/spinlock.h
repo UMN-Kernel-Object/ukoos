@@ -8,10 +8,11 @@
 #define UKO_OS_KERNEL__SPINLOCK_H 1
 
 #include <types.h>
+#include <hartlock.h>
 
 struct spinlock {
   atomic bool locked;
-  u64 flags;
+  struct hartlock hartlock;
 
   // these only have meaning while `locked` is true
   atomic u64 owner_hart_id;

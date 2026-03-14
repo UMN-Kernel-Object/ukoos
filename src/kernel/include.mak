@@ -35,6 +35,7 @@ kernel-objs-c += device
 kernel-objs-c += devices/hart
 kernel-objs-c += devices/uart
 kernel-objs-c += devicetree
+kernel-objs-c += hartlock
 kernel-objs-c += init
 kernel-objs-c += main
 kernel-objs-c += mm/alloc

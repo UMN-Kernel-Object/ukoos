@@ -16,6 +16,7 @@
 #include <random.h>
 #include <selftest.h>
 #include <symbolicate.h>
+#include <hartlock.h>
 
 [[noreturn]]
 void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
@@ -64,7 +65,10 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   print("Running self-tests...");
   run_selftests();
 
-  struct hart_locals *hart_locals = get_hart_locals();
-  print("{uptr}", hart_locals->hart);
+  {
+    WITH_HARTLOCK(hartlock);
+    struct hart_locals *hart_locals = get_hart_locals(hartlock);
+    print("{uptr}", hart_locals->hart);
+  }
   TODO();
 }
