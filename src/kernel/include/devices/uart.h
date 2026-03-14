@@ -24,7 +24,7 @@ struct uart {
   const struct uart_ops *ops;
 
   /**
-   * A pointer to the _same_ device.
+   * A pointer to the `struct device` for this UART.
    */
   struct device *device;
 };
