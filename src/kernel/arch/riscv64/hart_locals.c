@@ -27,7 +27,7 @@ static u64 boothart_hart_id;
  */
 void heap_change_boothart_hart(struct mm_alloc_heap *heap, struct hart *hart);
 
-struct hart_locals *get_hart_locals(void) {
+struct hart_locals *get_hart_locals(struct hartlock *_hartlock) {
   return (struct hart_locals *)csrr(RISCV64_CSR_SSCRATCH);
 }
 

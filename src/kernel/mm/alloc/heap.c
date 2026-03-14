@@ -7,11 +7,11 @@
 #include "heap.h"
 #include <hart_locals.h>
 
-void heap_init(struct mm_alloc_heap *heap, struct mm_alloc_segment *segment) {
+void heap_init(struct hartlock *hartlock, struct mm_alloc_heap *heap, struct mm_alloc_segment *segment) {
   // Initialize the heap. pages_direct is full of null pointers, though,
   // which is normally illegal -- we fix that below.
   *heap = (struct mm_alloc_heap){
-      .hart = get_hart_locals()->hart,
+      .hart = get_hart_locals(hartlock)->hart,
       .pages_direct = {0}, // initialized below
       .pages = {0},        // initialized below
       .unused_pages = LIST_INIT(heap->unused_pages),
@@ -22,12 +22,12 @@ void heap_init(struct mm_alloc_heap *heap, struct mm_alloc_segment *segment) {
     heap->pages[i] = LIST_INIT(heap->pages[i]);
 
   // Initialize the segment.
-  segment_init_small(segment, heap);
+  segment_init_small(hartlock, segment, heap);
 
   // Allocate pages of the right size classes to initialize the pages_direct
   // array.
   for (usize size_class = 0; size_class < 8; size_class++)
-    assert(page_new_small(heap, size_class));
+    assert(page_new_small(hartlock, heap, size_class));
 
   // Check that we did actually initialize the entire pages_direct array.
   for (usize i = 0; i < ARRAY_SIZE(heap->pages_direct); i++) {

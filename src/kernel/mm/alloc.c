@@ -9,6 +9,7 @@
 #include <mm/alloc.h>
 #include <panic.h>
 #include <stdatomic.h>
+#include "hartlock.h"
 
 void free(void *ptr) {
   if (!ptr)
@@ -17,9 +18,12 @@ void free(void *ptr) {
   struct mm_alloc_segment *segment = segment_of_ptr((uptr)ptr);
   struct mm_alloc_page *page = page_of_ptr((uptr)ptr);
   struct mm_alloc_block *block = ptr;
-  if (segment->hart == get_hart_locals()->hart) {
+  
+  WITH_HARTLOCK(hartlock);
+
+  if (segment->hart == get_hart_locals(hartlock)->hart) {
     // This is a local free; i.e., we're running on the hart that owns the page.
-    struct mm_alloc_heap *heap = get_hart_locals()->heap;
+    struct mm_alloc_heap *heap = get_hart_locals(hartlock)->heap;
 
     page_local_free_push(page, block);
     if (page_is_empty(page)) {
@@ -42,8 +46,8 @@ void free(void *ptr) {
   }
 }
 
-void *alloc_small(usize size, struct mm_alloc_heap *heap) {
-  assert(heap->hart == get_hart_locals()->hart);
+void *alloc_small(usize size, struct hartlock *hartlock, struct mm_alloc_heap *heap) {
+  assert(heap->hart == get_hart_locals(hartlock)->hart);
   assert(0 < size && size <= 1024);
 
   // Compute the index into pages_direct.
@@ -57,7 +61,7 @@ void *alloc_small(usize size, struct mm_alloc_heap *heap) {
   // generic routine.
   struct mm_alloc_block *block = page_free_pop(page);
   if (!block)
-    return alloc_generic(size, heap);
+    return alloc_generic(size, hartlock, heap);
 
   // Increment the counter of used objects.
   page->used_blocks++;
@@ -82,19 +86,19 @@ static void *alloc_generic_from_page(struct mm_alloc_page *page,
   return block;
 }
 
-static void *alloc_huge(usize size, struct mm_alloc_heap *heap) {
+static void *alloc_huge(usize size, struct hartlock *hartlock, struct mm_alloc_heap *heap) {
   assert(size_is_huge(size));
 
   // Every huge object goes in its own page, so allocate one and use it
   // directly.
-  struct mm_alloc_page *page = page_new_huge(heap, size);
+  struct mm_alloc_page *page = page_new_huge(hartlock, heap, size);
   if (!page)
     return nullptr;
   return alloc_generic_from_page(page, heap);
 }
 
-void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
-  assert(heap->hart == get_hart_locals()->hart);
+void *alloc_generic(usize size, struct hartlock *hartlock, struct mm_alloc_heap *heap) {
+  assert(heap->hart == get_hart_locals(hartlock)->hart);
   assert(size);
 
   // Go through the delayed free list to free everything.
@@ -107,7 +111,7 @@ void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
 
   // Huge objects get handled separately.
   if (size_is_huge(size))
-    return alloc_huge(size, heap);
+    return alloc_huge(size, hartlock, heap);
 
   // Check every page of the size class for free objects.
   usize size_class = size_class_of_size(size);
@@ -147,9 +151,9 @@ void *alloc_generic(usize size, struct mm_alloc_heap *heap) {
   // new one.
   assert(list_is_empty(&heap->pages[size_class]));
   if (size_is_small(size))
-    page = page_new_small(heap, size_class);
+    page = page_new_small(hartlock, heap, size_class);
   else
-    page = page_new_large(heap, size_class);
+    page = page_new_large(hartlock, heap, size_class);
 
   // If we couldn't allocate a new page, we're out of memory.
   if (!page)

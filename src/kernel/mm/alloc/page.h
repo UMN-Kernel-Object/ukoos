@@ -9,6 +9,7 @@
 
 #include "block.h"
 #include <list.h>
+#include "hartlock.h"
 
 struct mm_alloc_heap;
 struct mm_alloc_segment;
@@ -112,19 +113,22 @@ struct mm_alloc_page {
 /**
  * Gets a new page for small objects of the given size class.
  */
-struct mm_alloc_page *page_new_small(struct mm_alloc_heap *heap,
+struct mm_alloc_page *page_new_small(struct hartlock *hartlock,
+                                     struct mm_alloc_heap *heap,
                                      usize size_class);
 
 /**
  * Gets a new page for large objects of the given size class.
  */
-struct mm_alloc_page *page_new_large(struct mm_alloc_heap *heap,
+struct mm_alloc_page *page_new_large(struct hartlock *hartlock,
+                                     struct mm_alloc_heap *heap,
                                      usize size_class);
 
 /**
  * Gets a new page for a huge object with the given size.
  */
-struct mm_alloc_page *page_new_huge(struct mm_alloc_heap *heap, usize size);
+struct mm_alloc_page *page_new_huge(struct hartlock *hartlock,
+                                    struct mm_alloc_heap *heap, usize size);
 
 /**
  * Marks a page as free. This might free the segment containing the page if all

@@ -35,6 +35,7 @@ kernel-objs-c += device
 kernel-objs-c += devices/hart
 kernel-objs-c += devices/uart
 kernel-objs-c += devicetree
+kernel-objs-c += hartlock
 kernel-objs-c += init
 kernel-objs-c += main
 kernel-objs-c += mm/alloc
@@ -51,6 +52,7 @@ kernel-objs-c += random
 kernel-objs-c += selftest
 kernel-objs-c += swar_test
 kernel-objs-c += symbolicate
+kernel-objs-c += task
 include $(srcdir)/src/kernel/drivers/include.mak
 
 # The architecture-specific file needs to be last, since it calls

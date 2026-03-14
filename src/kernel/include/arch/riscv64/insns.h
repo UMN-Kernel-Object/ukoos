@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: 2025-2026 ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -57,6 +57,70 @@ static inline void csrw(enum csr csr, u64 value) {
 }
 
 /**
+ * Sets bits in a CSR, returning its previous value.
+ *
+ * @param csr The CSR to set.
+ * @param mask A bitmask indicating which bits to set. (Any bit that is high
+ *             in `mask` will be set in the CSR.)
+ * @return The previous value of the CSR.
+ */
+static inline u64 csrrs(enum csr csr, u64 mask) {
+  u64 out;
+  // If this gets an "impossible constraint" error, make sure optimizations are
+  // on -- this relies on being able to inline and constant-fold `csr`.
+  __asm__ volatile("csrrs %0, %1, %2"
+                   : "=r"(out)
+                   : "i"(csr), "r"(mask)
+                   : "memory");
+  return out;
+}
+
+/**
+ * Sets bits in a CSR.
+ *
+ * @param csr The CSR to set.
+ * @param mask A bitmask indicating which bits to set. (Any bit that is high
+ *             in `mask` will be set in the CSR.)
+ */
+static inline void csrs(enum csr csr, u64 mask) {
+  // If this gets an "impossible constraint" error, make sure optimizations are
+  // on -- this relies on being able to inline and constant-fold `csr`.
+  __asm__ volatile("csrs %0, %1" ::"i"(csr), "r"(mask) : "memory");
+}
+
+/**
+ * Clears a CSR, returning its previous value.
+ *
+ * @param csr The CSR to clear.
+ * @param mask A bitmask indicating which bits to clear. (Any bit that is high
+ *             in `mask` will be cleared in the CSR.)
+ * @return The previous value of the CSR.
+ */
+static inline u64 csrrc(enum csr csr, u64 mask) {
+  u64 out;
+  // If this gets an "impossible constraint" error, make sure optimizations are
+  // on -- this relies on being able to inline and constant-fold `csr`.
+  __asm__ volatile("csrrc %0, %1, %2"
+                   : "=r"(out)
+                   : "i"(csr), "r"(mask)
+                   : "memory");
+  return out;
+}
+
+/**
+ * Clears a CSR.
+ *
+ * @param csr The CSR to clear.
+ * @param mask A bitmask indicating which bits to clear. (Any bit that is high
+ *             in `mask` will be cleared in the CSR.)
+ */
+static inline void csrc(enum csr csr, u64 mask) {
+  // If this gets an "impossible constraint" error, make sure optimizations are
+  // on -- this relies on being able to inline and constant-fold `csr`.
+  __asm__ volatile("csrc %0, %1" ::"i"(csr), "r"(mask) : "memory");
+}
+
+/**
  * Fences modifications to page tables.
  */
 static inline void sfence_vma(void) {
@@ -69,4 +133,19 @@ static inline void sfence_vma(void) {
  */
 static inline void wfi(void) { __asm__ volatile("wfi" :::); }
 
+/**
+ * Hints to the processor that we are in a spin-wait loop.
+ */
+static inline void pause_hint() {
+  // ... with the caveat that our boards don't actually support `pause`,
+  // which is in Zihintpause:
+  // https://docs.riscv.org/reference/isa/unpriv/zihintpause.html
+  // However, it behaves as a NOP on unsupported hardware, as far as I
+  // can tell. GCC used to just let us call `__builtin_riscv_pause`,
+  // but they stopped supporting this function on systems without
+  // Zihintpause in 2023:
+  // https://patchwork.sourceware.org/project/gcc/patch/22150b9f9e14718d368a0223848a69920d54305d.1691634361.git.research_trasio@irq.a4lg.com/
+  // As a result, we use the raw instruction encoding for now.
+  __asm__(".insn i 0x0f, 0, x0, x0, 0x010");
+}
 #endif // UKO_OS_KERNEL__ARCH_RISCV64_INSNS_H

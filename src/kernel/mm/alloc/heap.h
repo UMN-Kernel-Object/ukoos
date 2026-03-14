@@ -96,7 +96,7 @@ struct mm_alloc_heap *heap_alloc(void);
  * Initializes an already-allocated heap, using memory allocated for a 4MiB
  * segment as its initial memory.
  */
-void heap_init(struct mm_alloc_heap *heap, struct mm_alloc_segment *segment);
+void heap_init(struct hartlock *hartlock, struct mm_alloc_heap *heap, struct mm_alloc_segment *segment);
 
 /**
  * Updates the pages_direct entries for the heap corresponding to the given size

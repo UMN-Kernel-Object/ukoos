@@ -50,10 +50,11 @@ physical_oom:
   TODO("clean up properly from OOM");
 }
 
-void segment_init_small(struct mm_alloc_segment *segment,
+void segment_init_small(struct hartlock *hartlock,
+                        struct mm_alloc_segment *segment,
                         struct mm_alloc_heap *heap) {
   assert(is_aligned(segment, SEGMENT_SHIFT));
-  assert(heap->hart == get_hart_locals()->hart);
+  assert(heap->hart == get_hart_locals(hartlock)->hart);
 
   *segment = (struct mm_alloc_segment){
       .hart = heap->hart,
@@ -67,11 +68,12 @@ void segment_init_small(struct mm_alloc_segment *segment,
   }
 }
 
-void segment_init_large(struct mm_alloc_segment *segment) {
+void segment_init_large(struct hartlock *hartlock,
+                        struct mm_alloc_segment *segment) {
   assert(is_aligned(segment, SEGMENT_SHIFT));
 
   *segment = (struct mm_alloc_segment){
-      .hart = get_hart_locals()->hart,
+      .hart = get_hart_locals(hartlock)->hart,
       .used_pages = 0,
       .page_shift = PAGE_LARGE_SHIFT,
       .pages = {},
@@ -79,11 +81,12 @@ void segment_init_large(struct mm_alloc_segment *segment) {
   segment->pages[0].list = LIST_INIT(segment->pages[0].list);
 }
 
-void segment_init_huge(struct mm_alloc_segment *segment) {
+void segment_init_huge(struct hartlock *hartlock,
+                       struct mm_alloc_segment *segment) {
   assert(is_aligned(segment, SEGMENT_SHIFT));
 
   *segment = (struct mm_alloc_segment){
-      .hart = get_hart_locals()->hart,
+      .hart = get_hart_locals(hartlock)->hart,
       .used_pages = 0,
       .page_shift = PAGE_HUGE_SHIFT,
       .pages = {},

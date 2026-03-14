@@ -8,6 +8,7 @@
 #define UKO_OS_KERNEL__MM_ALLOC_H 1
 
 #include <hart_locals.h>
+#include <hartlock.h>
 
 /**
  * Frees memory returned by a previous call to `alloc`.
@@ -21,13 +22,13 @@ void free(void *ptr);
  * Like `alloc`, but only for allocations with `0 < size && size <= 1024`.
  */
 [[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
-alloc_small(usize size, struct mm_alloc_heap *heap);
+alloc_small(usize size, struct hartlock *hartlock, struct mm_alloc_heap *heap);
 
 /**
  * The slow path of `alloc`.
  */
 [[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
-alloc_generic(usize size, struct mm_alloc_heap *heap);
+alloc_generic(usize size, struct hartlock *hartlock, struct mm_alloc_heap *heap);
 
 /**
  * Allocates `size` bytes of memory and returns a pointer to it. On OOM, returns
@@ -40,7 +41,8 @@ alloc_generic(usize size, struct mm_alloc_heap *heap);
  */
 [[gnu::alloc_size(1), gnu::malloc, nodiscard]] static inline void *
 alloc(usize size) {
-  struct mm_alloc_heap *heap = get_hart_locals()->heap;
+  WITH_HARTLOCK(hartlock);
+  struct mm_alloc_heap *heap = get_hart_locals(hartlock)->heap;
   // Bump up the size if it's zero, since zero isn't a valid input to
   // alloc_small.
   //
@@ -50,11 +52,11 @@ alloc(usize size) {
   // constant (or at least provably non-zero) in the caller most of the time, so
   // the branch should be eliminated.
   if (size == 0)
-    return alloc_small(1, heap);
+    return alloc_small(1, hartlock, heap);
   else if (size <= 1024)
-    return alloc_small(size, heap);
+    return alloc_small(size, hartlock, heap);
   else
-    return alloc_generic(size, heap);
+    return alloc_generic(size, hartlock, heap);
 }
 
 /**

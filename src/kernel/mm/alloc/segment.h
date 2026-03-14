@@ -9,6 +9,7 @@
 
 #include "page.h"
 #include "size_classes.h"
+#include "hartlock.h"
 
 struct mm_alloc_heap;
 
@@ -62,7 +63,7 @@ struct mm_alloc_segment *segment_alloc(usize size);
  *
  * The pages of this segment get pushed to the heap's unused pages list.
  */
-void segment_init_small(struct mm_alloc_segment *segment,
+void segment_init_small(struct hartlock *hartlock, struct mm_alloc_segment *segment,
                         struct mm_alloc_heap *heap);
 
 /**
@@ -71,7 +72,7 @@ void segment_init_small(struct mm_alloc_segment *segment,
  *
  * The page of this segment is not linked into any list.
  */
-void segment_init_large(struct mm_alloc_segment *segment);
+void segment_init_large(struct hartlock *hartlock, struct mm_alloc_segment *segment);
 
 /**
  * Initializes an already-allocated segment for a huge object with the given
@@ -79,7 +80,7 @@ void segment_init_large(struct mm_alloc_segment *segment);
  *
  * The page of this segment is not linked into any list.
  */
-void segment_init_huge(struct mm_alloc_segment *segment);
+void segment_init_huge(struct hartlock *hartlock, struct mm_alloc_segment *segment);
 
 /**
  * Frees a segment.

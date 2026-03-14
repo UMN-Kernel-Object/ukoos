@@ -27,11 +27,15 @@ void mm_alloc_init(void) {
   assert(!inited);
   inited = true;
 
+  // interrupts are disabled anyways, but this makes calling get_hart_locals
+  // easier
+  WITH_HARTLOCK(hartlock);
+
   // Initialize the heap.
-  heap_init(&boothart_heap, boothart_heap_segment);
+  heap_init(hartlock, &boothart_heap, boothart_heap_segment);
 
   // Store the heap into the hart locals.
-  struct hart_locals *hart_locals = get_hart_locals();
+  struct hart_locals *hart_locals = get_hart_locals(hartlock);
   assert(!hart_locals->heap);
   hart_locals->heap = &boothart_heap;
 }

@@ -11,6 +11,7 @@
 #include <minmax.h>
 #include <panic.h>
 #include <random.h>
+#include <hartlock.h>
 
 /**
  * A random number generator based on the same approach and ciphers Linux uses.
@@ -83,8 +84,8 @@ static void rng_getrandom(struct random_rng *rng, u8 *ptr, usize len) {
  * Returns the hart-local RNG, possibly initializing or re-initializing it if
  * necessary.
  */
-static struct random_rng *ensure_hart_local_rng(void) {
-  struct random_rng *rng = &get_hart_locals()->rng;
+static struct random_rng *ensure_hart_local_rng(struct hartlock *hartlock) {
+  struct random_rng *rng = &get_hart_locals(hartlock)->rng;
 
   // See if the global heap's entropy estimate is more than 256 bits "ahead" of
   // the one the local heap was initialized with, or if we never actually
@@ -136,5 +137,6 @@ u64 random_u64(void) {
 }
 
 void getrandom(u8 *buf, usize len) {
-  rng_getrandom(ensure_hart_local_rng(), buf, len);
+  WITH_HARTLOCK(hartlock);
+  rng_getrandom(ensure_hart_local_rng(hartlock), buf, len);
 }
