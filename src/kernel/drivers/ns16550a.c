@@ -8,6 +8,7 @@
 #include <devicetree.h>
 #include <mm/paging.h>
 #include <physical.h>
+#include <volatile.h>
 
 /**
  * The bits of the Interrupt Enable Register.
@@ -75,6 +76,22 @@ struct ns16550a_iir {
 };
 
 /**
+ * The bits of the Line Status Register.
+ */
+struct ns16550a_lsr {
+  /**
+   */
+  bool data_ready : 1;
+  bool overrun_error : 1;
+  bool parity_error : 1;
+  bool framing_error : 1;
+  bool break_interrupt : 1;
+  bool empty_transmitter_holding_register : 1;
+  bool empty_data_holding_registers : 1;
+  bool error_in_received_fifo : 1;
+};
+
+/**
  * The UART's registers.
  */
 struct ns16550a_regs {
@@ -137,7 +154,7 @@ struct ns16550a_regs {
   /**
    * The Line Status Register.
    */
-  u8 lsr;
+  struct ns16550a_lsr lsr;
 
   /**
    * The Modem Status Register.
@@ -158,7 +175,14 @@ struct ns16550a {
   struct ns16550a_regs *regs;
 };
 
-static void ns16550a_write_byte(struct uart *uart, u8 byte) { TODO(); }
+static void ns16550a_write_byte(struct uart *uart, u8 byte) {
+  struct ns16550a *ns16550a = container_of(uart, struct ns16550a, uart);
+
+  // TODO: This should not busy-wait, this should be interrupt-triggered.
+  while (!READ_ONCE(&ns16550a->regs->lsr).empty_transmitter_holding_register)
+    ;
+  WRITE_ONCE(&ns16550a->regs->thr, byte);
+}
 
 static const struct uart_ops ns16550a_uart_ops = {
     .write_byte = ns16550a_write_byte,
