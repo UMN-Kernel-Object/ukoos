@@ -1,11 +1,13 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <device.h>
 #include <devicetree.h>
 #include <hart_locals.h>
+#include <init.h>
 #include <mm/alloc.h>
 #include <mm/physical_alloc.h>
 #include <mm/virtual_alloc.h>
@@ -43,6 +45,15 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   assert(vma_alloc_by_addr(&kernel_virtual_allocator, 0xffffffe000400000,
                            0xffffffe000600000));
   vma_allocator_print(&kernel_virtual_allocator);
+
+  // Run initializers, which include e.g. registering drivers.
+  run_initializers();
+
+  // Enumerate devices in the devicetree.
+  devicetree_enumerate(devicetree);
+
+  // Print the devices that have been created.
+  print_devices();
 
   print("Running self-tests...");
   run_selftests();

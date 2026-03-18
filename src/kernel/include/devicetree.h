@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -7,7 +7,7 @@
 #ifndef UKO_OS_KERNEL__DEVICETREE_H
 #define UKO_OS_KERNEL__DEVICETREE_H 1
 
-#include <list.h>
+#include <device.h>
 
 /**
  * A property in the Devicetree.
@@ -103,6 +103,13 @@ bool devicetree_address_size_cells(struct devicetree_node *node,
                                    u32 *out_address_cells, u32 *out_size_cells);
 
 /**
+ * Retrieves the `i`th address and size pair from the `reg` property of a node.
+ * Returns whether this succeeded.
+ */
+bool devicetree_reg(struct devicetree_node *node, usize i, paddr *out_addr,
+                    usize *out_size);
+
+/**
  * Retrieves the `i`th address and size pair from a property. This is useful
  * for properties like `reg`. Returns whether this succeeded.
  */
@@ -119,5 +126,20 @@ void devicetree_print(struct devicetree_node *root);
  * from the Devicetree.
  */
 void devicetree_add_entropy(struct devicetree_node *root);
+
+/**
+ * Walks the Devicetree. On each node with a `compatible` prop, all the handlers
+ * registered with `devicetree_register` that could apply are called until one
+ * returns non-`nullptr`.
+ */
+void devicetree_enumerate(struct devicetree_node *root);
+
+/**
+ * Adds a handler for devices with the given value for the `compatible` prop,
+ * for use by `devicetree_enumerate`.
+ */
+void devicetree_register(
+    const char *compatible,
+    struct device *(*handler)(struct devicetree_node *node));
 
 #endif // UKO_OS_KERNEL__DEVICETREE_H

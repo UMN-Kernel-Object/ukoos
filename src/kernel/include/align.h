@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -22,15 +22,30 @@ static inline bool _is_aligned_uaddr(uaddr addr, usize bits) {
   return _align_down_uaddr(addr, bits) == addr;
 }
 
+static inline void *_align_down_ptr(void *ptr, usize bits) {
+  return ptr_with_addr(ptr, _align_down_uaddr(addr_of_ptr(ptr), bits));
+}
+
+static inline void *_align_up_ptr(void *ptr, usize bits) {
+  return ptr_with_addr(ptr, _align_up_uaddr(addr_of_ptr(ptr), bits));
+}
+
 static inline bool _is_aligned_ptr(const void *ptr, usize bits) {
   return _is_aligned_uaddr(addr_of_ptr(ptr), bits);
 }
 
 #define align_down(ADDR, BITS)                                                 \
-  (_Generic(ADDR, paddr: _align_down_paddr, uaddr: _align_down_uaddr)(ADDR,    \
-                                                                      BITS))
+  (_Generic(ADDR,                                                              \
+       void *: _align_down_ptr,                                                \
+       paddr: _align_down_paddr,                                               \
+       uaddr: _align_down_uaddr)(ADDR, BITS))
+
 #define align_up(ADDR, BITS)                                                   \
-  (_Generic(ADDR, paddr: _align_up_paddr, uaddr: _align_up_uaddr)(ADDR, BITS))
+  (_Generic(ADDR,                                                              \
+       void *: _align_up_ptr,                                                  \
+       paddr: _align_up_paddr,                                                 \
+       uaddr: _align_up_uaddr)(ADDR, BITS))
+
 #define is_aligned(ADDR, BITS)                                                 \
   ({                                                                           \
     const auto __is_aligned_ADDR = (ADDR);                                     \

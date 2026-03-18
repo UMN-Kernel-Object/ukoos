@@ -1,13 +1,15 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #include <align.h>
+#include <arch/riscv64/constants.h>
 #include <arch/riscv64/insns.h>
 #include <mm/paging.h>
 #include <mm/physical_alloc.h>
+#include <mm/virtual_alloc.h>
 #include <panic.h>
 
 /**
@@ -33,10 +35,10 @@ static_assert(alignof(struct pte) == 8);
  * An Sv39 page table.
  */
 struct pgtbl {
-  alignas(4096) struct pte ptes[512];
+  alignas(PAGE_SIZE) struct pte ptes[512];
 };
-static_assert(sizeof(struct pgtbl) == 4096);
-static_assert(alignof(struct pgtbl) == 4096);
+static_assert(sizeof(struct pgtbl) == PAGE_SIZE);
+static_assert(alignof(struct pgtbl) == PAGE_SIZE);
 
 /**
  * The MODE field of the SATP CSR.
@@ -89,7 +91,7 @@ void mm_paging_fence(void) {
 }
 
 static bool mm_paging_walk(uaddr va, paddr *pte, bool alloc) {
-  assert(is_aligned(va, 12), "va={uaddr}", va);
+  assert(is_aligned(va, PAGE_BITS), "va={uaddr}", va);
   assert((uaddr)(((iaddr)va >> 39) + 1) <= 1, "va={uaddr}", va);
   assert(pte);
 
@@ -142,9 +144,9 @@ static bool mm_paging_walk(uaddr va, paddr *pte, bool alloc) {
 }
 
 bool mm_paging_map(uaddr va, paddr pa, enum page_permissions perms) {
-  assert(is_aligned(va, 12), "va={uaddr}", va);
+  assert(is_aligned(va, PAGE_BITS), "va={uaddr}", va);
   assert((uaddr)(((iaddr)va >> 39) + 1) <= 1, "va={uaddr}", va);
-  assert(is_aligned(pa, 12), "pa={uaddr}", pa);
+  assert(is_aligned(pa, PAGE_BITS), "pa={paddr}", pa);
 
   paddr pte_addr;
   if (!mm_paging_walk(va, &pte_addr, true))
@@ -191,10 +193,10 @@ bool mm_paging_map(uaddr va, paddr pa, enum page_permissions perms) {
 }
 
 bool mm_paging_unmap(uaddr va, paddr *pa) {
-  assert(is_aligned(va, 12), "va={uaddr}", va);
+  assert(is_aligned(va, PAGE_BITS), "va={uaddr}", va);
   assert((uaddr)(((iaddr)va >> 39) + 1) <= 1, "va={uaddr}", va);
-  assert(pa);
-  *pa = paddr_of_bits(0);
+  if (pa)
+    *pa = paddr_of_bits(0);
 
   paddr pte_addr;
   if (!mm_paging_walk(va, &pte_addr, false))
@@ -205,9 +207,62 @@ bool mm_paging_unmap(uaddr va, paddr *pa) {
   if (!pte.valid)
     return false;
 
-  pa->ppn = pte.ppn;
+  if (pa)
+    pa->ppn = pte.ppn;
   pte = (struct pte){0};
   copy_to_physical(pte_addr, &pte, sizeof(struct pte));
 
   return true;
+}
+
+void *iomem_map(paddr addr, usize size) {
+  paddr addr_aligned;
+  addr_aligned = align_down(addr, PAGE_BITS);
+  size = align_up(size + paddr_diff(addr, addr_aligned), PAGE_BITS);
+
+  uaddr lo, hi;
+  struct vma *vma;
+  vma = vma_alloc(&kernel_virtual_allocator, size >> PAGE_BITS);
+  if (!vma)
+    goto fail;
+  vma_bounds(vma, &lo, &hi);
+
+  usize i;
+  for (i = 0; i < hi - lo; i += PAGE_SIZE) {
+    uaddr va = lo + i;
+    paddr pa = paddr_offset(addr_aligned, i);
+    if (!mm_paging_map(va, pa, PGPERM_KRW))
+      goto paging_fail;
+  }
+
+  // TODO: Have some provenance to use here.
+  return (void *)lo;
+
+paging_fail:
+  for (usize j = 0; j < i; j += PAGE_SIZE)
+    assert(mm_paging_unmap(lo + j, nullptr));
+fail:
+  return nullptr;
+}
+
+void iomem_unmap(void *ptr, usize size) {
+  if (!ptr)
+    return;
+
+  void *ptr_aligned;
+  ptr_aligned = align_down(ptr, PAGE_BITS);
+  size = align_up(size + (usize)(ptr - ptr_aligned), PAGE_BITS);
+
+  uaddr lo, hi;
+  struct vma *vma;
+  vma = vma_find(&kernel_virtual_allocator, addr_of_ptr(ptr));
+  assert(vma, "No VMA for address {uaddr}", addr_of_ptr(ptr));
+  vma_bounds(vma, &lo, &hi);
+
+  for (usize i = 0; i < hi - lo; i += PAGE_SIZE) {
+    uaddr va = lo + i;
+    assert(mm_paging_unmap(va, nullptr), "Failed to unmap {uaddr}", va);
+  }
+
+  vma_free(vma);
 }

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+# SPDX-FileCopyrightText: ukoOS Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -30,7 +30,10 @@ kernel-objs-c += builtins/strcmp
 kernel-objs-c += builtins/strlen
 kernel-objs-c += crypto/subtle/rfc7539
 kernel-objs-c += crypto/subtle/rfc7693
+kernel-objs-c += device
+kernel-objs-c += devices/uart
 kernel-objs-c += devicetree
+kernel-objs-c += init
 kernel-objs-c += main
 kernel-objs-c += mm/alloc
 kernel-objs-c += mm/alloc/block
@@ -46,4 +49,8 @@ kernel-objs-c += random
 kernel-objs-c += selftest
 kernel-objs-c += swar_test
 kernel-objs-c += symbolicate
+include $(srcdir)/src/kernel/drivers/include.mak
+
+# The architecture-specific file needs to be last, since it calls
+# compute_component_variables for the kernel.
 include $(srcdir)/src/kernel/arch/$(arch)/include.mak
