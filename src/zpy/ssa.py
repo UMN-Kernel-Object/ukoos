@@ -6,9 +6,8 @@
 An SSA-based IR in phi/upsilon form for interpreting (pre-)Z code.
 """
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Literal, Self
+from dataclasses import dataclass
+from typing import Literal
 from zval import NIL, ZSym, ZVal
 
 
@@ -30,7 +29,7 @@ default_insn_name = Namer("%")
 Type = Literal["never", "unit", "value", "value-list", "value-ptr"]
 
 
-class Insn(ABC):
+class Insn:
     insn_name: str
     insn_ret_ty: Type
     insn_arg_tys: tuple[Type, ...]
@@ -79,10 +78,115 @@ class Insn(ABC):
         return out
 
 
+@dataclass(init=False)
+class Block:
+    name: str
+    insns: list[Insn]
+    parent: "Func"
+
+    def __init__(self, parent: "Func", *, name: str | None = None):
+        if name is None:
+            name = default_block_name()
+        self.name = name
+        self.insns = []
+        self.parent = parent
+
+    def add[T: Insn](self, insn: T) -> T:
+        insn.parent = self
+        self.insns.append(insn)
+        return insn
+
+    def tyck(self):
+        for insn in self.insns:
+            insn.tyck()
+
+    def __repr__(self) -> str:
+        out = f"{self.name}:"
+        for insn in self.insns:
+            out += f"\n\t{insn!r}"
+        return out
+
+
+@dataclass(init=False)
+class Func:
+    name: ZSym
+    args: Insn
+    blocks: list[Block]
+
+    def __init__(self, name: ZSym = NIL):
+        self.name = name
+        self.blocks = []
+
+        entry_block = self.new_block()
+        self.args = entry_block.add(InsnGetArgs())
+
+    def new_block(self) -> Block:
+        block = Block(parent=self)
+        self.blocks.append(block)
+        return block
+
+    def tyck(self):
+        for block in self.blocks:
+            block.tyck()
+
+    def __repr__(self) -> str:
+        out = f"func ({self.name} {self.args.name}) {{\n"
+        for block in self.blocks:
+            out += f"{block!r}\n"
+        out += "}"
+        return out
+
+
 class InsnAbsurdList(Insn):
     insn_name = "absurd-list"
     insn_ret_ty = "value-list"
     insn_arg_tys = ("never",)
+    insn_vararg_ty = None
+
+
+class InsnAlloca(Insn):
+    insn_name = "alloca"
+    insn_ret_ty = "value-ptr"
+    insn_arg_tys = ()
+    insn_vararg_ty = None
+
+
+class InsnBranchBinop(Insn):
+    """
+    The common parent instruction of branching binops.
+    """
+
+    if_t: Block
+    if_f: Block
+
+    def __init__(self, lhs: Insn, rhs: Insn, if_t: Block, if_f: Block):
+        self.if_t = if_t
+        self.if_f = if_f
+        super().__init__(lhs, rhs)
+
+    def __repr__(self):
+        cls = type(self)
+        return f"{self.name} <- {cls.insn_name} {self.args[0].name}, {self.args[1].name}, {self.if_t.name}, {self.if_f.name}"
+
+
+class InsnBranchEq(InsnBranchBinop):
+    insn_name = "branch-eq"
+    insn_ret_ty = "never"
+    insn_arg_tys = ("value", "value")
+    insn_vararg_ty = None
+
+
+class InsnBranchIntEQ(InsnBranchBinop):
+    insn_name = "branch-int-eq"
+    insn_ret_ty = "never"
+    insn_arg_tys = ("value", "value")
+    insn_vararg_ty = None
+
+
+class InsnBranchIntLT(InsnBranchBinop):
+    insn_name = "branch-int-lt"
+    insn_ret_ty = "never"
+    insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
 
 
@@ -107,6 +211,13 @@ class InsnConst(Insn):
 
     def __repr__(self):
         return f"{self.name} <- const {self.value}"
+
+
+class InsnGetArgs(Insn):
+    insn_name = "get-args"
+    insn_ret_ty = "value-list"
+    insn_arg_tys = ()
+    insn_vararg_ty = None
 
 
 class InsnGetValue(Insn):
@@ -142,6 +253,20 @@ class InsnPhi(Insn):
         return InsnUpsilon(value, self)
 
 
+class InsnPtrRead(Insn):
+    insn_name = "ptr-read"
+    insn_ret_ty = "value"
+    insn_arg_tys = ("value-ptr",)
+    insn_vararg_ty = None
+
+
+class InsnPtrWrite(Insn):
+    insn_name = "ptr-write"
+    insn_ret_ty = "unit"
+    insn_arg_tys = ("value-ptr", "value")
+    insn_vararg_ty = None
+
+
 class InsnRet(Insn):
     insn_name = "ret"
     insn_ret_ty = "never"
@@ -163,6 +288,13 @@ class InsnTailCall(Insn):
     insn_vararg_ty = None
 
 
+class InsnUnreachable(Insn):
+    insn_name = "unreachable"
+    insn_ret_ty = "never"
+    insn_arg_tys = ()
+    insn_vararg_ty = None
+
+
 class InsnUpsilon(Insn):
     insn_name = "upsilon"
     insn_ret_ty = "unit"
@@ -178,57 +310,8 @@ class InsnUpsilon(Insn):
         return f"{self.name} <- upsilon {self.args[0]}, ^{self.shadow}"
 
 
-@dataclass(init=False)
-class Block:
-    name: str
-    insns: list[Insn]
-    parent: "Func"
-
-    def __init__(self, parent: "Func", *, name: str | None = None):
-        if name is None:
-            name = default_block_name()
-        self.name = name
-        self.insns = []
-        self.parent = parent
-
-    def add[T: Insn](self, insn: T) -> T:
-        insn.parent = self
-        self.insns.append(insn)
-        return insn
-
-    def tyck(self):
-        for insn in self.insns:
-            insn.tyck()
-
-    def __repr__(self) -> str:
-        out = f"{self.name}:"
-        for insn in self.insns:
-            out += f"\n\t{insn!r}"
-        return out
-
-
-@dataclass(init=False)
-class Func:
-    name: ZSym
-    blocks: list[Block]
-
-    def __init__(self, name: ZSym = NIL):
-        self.name = name
-        self.blocks = []
-        self.new_block()  # entry block
-
-    def new_block(self) -> Block:
-        block = Block(parent=self)
-        self.blocks.append(block)
-        return block
-
-    def tyck(self):
-        for block in self.blocks:
-            block.tyck()
-
-    def __repr__(self) -> str:
-        out = f"func {self.name} {{\n"
-        for block in self.blocks:
-            out += f"{block!r}\n"
-        out += "}"
-        return out
+class InsnValueListLength(Insn):
+    insn_name = "value-list-length"
+    insn_ret_ty = "value"
+    insn_arg_tys = ("value-list",)
+    insn_vararg_ty = None

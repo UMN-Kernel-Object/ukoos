@@ -163,6 +163,14 @@ class ZSym:
     def z(name: str) -> "ZSym":
         return ZMod.find("Z").intern(name)[0]
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, ZSym):
+            return False
+        return self is other
+
+    def __hash__(self) -> int:
+        return hash(id(self))
+
     def __repr__(self) -> str:
         if self.is_keyword:
             return f":{self.name}"
@@ -176,6 +184,12 @@ class ZSym:
     @property
     def is_keyword(self) -> bool:
         return self.mod.name == ZStr("KEYWORD")
+
+    def is_the_keyword(self, name: str | ZStr) -> bool:
+        if not isinstance(name, ZStr):
+            name = ZStr(name)
+        assert self.mod.name == ZStr("KEYWORD")
+        return self.name == name
 
 
 NIL = ZSym.z("NIL")
