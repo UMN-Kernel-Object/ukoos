@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import ssa
 from typing import Literal
 from zval import NIL, ZCons, ZSym, ZVal
+from .optimizer import optimize
 
 
 Decls = list[tuple[ZSym, ZVal]]
@@ -334,10 +335,12 @@ def zcompile(form: ZVal, env: Env) -> ssa.Func:
     func.tyck()
     assert return_values.type == "value-list"
 
-    # TODO: Run the optimizer.
-
+    # Run the optimizer.
     print(form)
     print(func)
+    optimize(func)
+    print(func)
+
     return func
 
 

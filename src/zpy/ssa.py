@@ -63,6 +63,10 @@ class Insn:
         for arg, ty in zip(self.args, cls.insn_arg_tys):
             assert arg.type == ty
 
+        if self.parent is not None:
+            for arg in self.args:
+                assert self.parent is arg.parent
+
     @property
     def type(self) -> Type:
         return type(self).insn_ret_ty
@@ -95,6 +99,25 @@ class Block:
         insn.parent = self
         self.insns.append(insn)
         return insn
+
+    def remove_all(self, indices: list[int]) -> list[Insn]:
+        for i in indices:
+            assert 0 <= i < len(self.insns)
+        to_remove = frozenset(indices)
+        removed: dict[int, Insn] = {}
+        new_insns = []
+        for i, insn in enumerate(self.insns):
+            if (i - len(removed)) in to_remove:
+                insn.parent = None
+                removed[i] = insn
+            else:
+                new_insns.append(insn)
+
+        self.insns.clear()
+        for insn in new_insns:
+            self.insns.append(insn)
+
+        return [removed[i] for i in indices]
 
     def tyck(self):
         for insn in self.insns:
