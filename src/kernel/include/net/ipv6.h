@@ -19,7 +19,7 @@ struct ipv6_header {
   u8 dst[16];
 };
 
-static_assert(sizeof(struct ipv6_header) == 48)
+static_assert(sizeof(struct ipv6_header) == 40);
 
     struct hop_by_hop_opt_header {
   u8 next_header;
