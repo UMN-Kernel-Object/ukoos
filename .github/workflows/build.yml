@@ -60,12 +60,12 @@ jobs:
             $name
           zstd -19 --threads=0 $name.tar
           sha256sum $name.tar $name.tar.zst
-          cp $name.tar.zst ../ukoos-${{ matrix.target }}-git.tar.zst
+          cp $name.tar.zst ../ukoos-${{ matrix.target }}-${{ matrix.compiler }}-git.tar.zst
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ukoos-${{ matrix.target }}-git.tar.zst
-          path: ukoos-${{ matrix.target }}-git.tar.zst
+          name: ukoos-${{ matrix.target }}-${{ matrix.compiler }}-git.tar.zst
+          path: ukoos-${{ matrix.target }}-${{ matrix.compiler }}-git.tar.zst
           compression-level: 0
   build-images:
     runs-on: ubuntu-latest
