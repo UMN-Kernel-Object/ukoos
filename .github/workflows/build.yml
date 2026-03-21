@@ -46,7 +46,8 @@ jobs:
           shortrev=$(git rev-parse --short HEAD)
           mkdir build
           cd build
-          [ ${{ matrix.target }} == "*clang" ] && ../configure --target ${${{ matrix.target }}::-6} --clang || ../configure --target ${{ matrix.target }}
+          export target=${{ matrix.target }}
+          [ ${{ matrix.target }} == "*clang" ] && ../configure --target ${target::-6} --clang || ../configure --target ${{ matrix.target }}
           make -j$(nproc) -l$(nproc)
           name=ukoos-${{ matrix.target }}-git-$shortrev
           mkdir $name
