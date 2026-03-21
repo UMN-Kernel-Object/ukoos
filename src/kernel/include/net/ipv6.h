@@ -14,15 +14,18 @@ struct ip_address {
 };
 
 struct ipv6_header {
-  u8 vtf[4];
-  u16 payload_len;
+  u32 version : 4;
+  u32 traffic_class : 8;
+  u32 flow_label : 20;
+
+  u16 payload_length;
   u8 next_header;
   u8 hop_limit;
-  struct ip_address src;
-  struct ip_address dst;
+  u8 src_address[16];
+  u8 dst_address[16];
 };
 
-static_assert(sizeof(struct ipv6_header) == 40);
+static_assert(sizeof(struct ipv6_header) == 48)
 
 struct hop_by_hop_opt_header {
   u8 next_header;
