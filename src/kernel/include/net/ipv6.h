@@ -29,14 +29,13 @@ struct hop_by_hop_opt_header {
   u8 *options; // https://datatracker.ietf.org/doc/html/rfc8200#section-4.3
 };
 
-struct routing_header {
-  u8 next_header;
-  u8 hdr_ext_len;
-  u8 routing_type;
-  u8 segments_left;
-  // TODO figure out what to do about type-specific data here:
-  // https://datatracker.ietf.org/doc/html/rfc8200#section-4.4
-};
+// unusued, we aren't routing
+//struct routing_header {
+//  u8 next_header;
+//  u8 hdr_ext_len;
+//  u8 routing_type;
+//  u8 segments_left;
+//};
 
 struct fragment_header {
   u8 next_header;
@@ -47,8 +46,9 @@ struct fragment_header {
   u32 identifcation;
 };
 
-struct dst_options_header {
-  u8 next_header;
-  u8 hdr_ext_len;
-  u8 *options; // https://datatracker.ietf.org/doc/html/rfc8200#section-4.6
-}
+// unused, we will be ignoring having nodes.
+//struct dst_options_header {
+//  u8 next_header;
+//  u8 hdr_ext_len;
+//  u8 *options; // https://datatracker.ietf.org/doc/html/rfc8200#section-4.6
+//}
