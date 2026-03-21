@@ -12,6 +12,7 @@
 #include <devices/pci.h>
 #include <devices/netdev.h>
 #include <net/eth.h>
+#include <net/ipv6.h>
 
 struct rtl8139_regs {
   u8 mac[6];
@@ -122,8 +123,14 @@ void rtl8139_test(struct rtl8139 *rtl_device) {
   struct mac mac;
   memcpy(mac.addr, (const u8*) "\xff\xff\xff\xff\xff\xff", 6);
 
-  eth_send_packet(&rtl_device->netdev, mac,
-	(u8*) "yellow submarine", 16);
+//  eth_send_packet(&rtl_device->netdev, mac,
+//	(u8*) "yellow submarine", 16);
+
+	struct ip_address src_address = {{6}};
+	struct ip_address dst_address = {{4}};
+	struct ip_header header = ip_create_header(src_address,dst_address,NET_PROTOCOL_UDP);
+	u8 data[] = "yellow submarines are so cool";
+	ip_send_packet(header, data, ARRAY_SIZE(data) -1);
 
   assert(rtl_regs->tsad[0] != 0);
   assert((rtl_regs->tsd[0] & TSD_TOK) != 0);
