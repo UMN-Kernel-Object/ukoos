@@ -27,7 +27,7 @@ struct ipv6_header {
 
 static_assert(sizeof(struct ipv6_header) == 48)
 
-struct hop_by_hop_opt_header {
+    struct hop_by_hop_opt_header {
   u8 next_header;
   u8 hdr_ext_len;
   u8 *options; // https://datatracker.ietf.org/doc/html/rfc8200#section-4.3
@@ -56,9 +56,3 @@ struct fragment_header {
 //  u8 hdr_ext_len;
 //  u8 *options; // https://datatracker.ietf.org/doc/html/rfc8200#section-4.6
 //}
-//
-
-long ipv6_send_packet(struct ipv6_header header, u8 *data, usize len);
-struct ipv6_header ipv6_create_header(struct ip_address,
-                                      struct ip_address dst_address,
-                                      u8 protocol);
