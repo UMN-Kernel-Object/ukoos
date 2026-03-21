@@ -150,7 +150,7 @@ static struct device *add_device(paddr reg_addr, usize reg_size) {
   if (!device->device.name || !device->regs)
     goto fail;
 
-  list_push(&pcis, &device->netdev.list);
+  list_push(&netdevs, &device->netdev.list);
 
   return &device->device;
 
