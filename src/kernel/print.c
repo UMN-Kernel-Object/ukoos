@@ -196,20 +196,99 @@ static void format_bool(struct formatter *fmt, const char *args_start,
 
 static void format_bytes(struct formatter *fmt, const char *args_start,
                          const char *args_end, va_list *ap) {
-  if (args_start != args_end) {
-    write_str(fmt, "{{invalid arguments for type bytes: ");
-    write_stri(fmt, args_start, args_end);
-    write_str(fmt, "}}");
-    return;
+  bool string_like = false;
+  const char *args = args_start;
+
+  while (args != args_end) {
+    char ch = *args++;
+    switch (ch) {
+    case '?':
+      if (!string_like) {
+        string_like = true;
+        break;
+      }
+    default:
+      write_str(fmt, "{{invalid arguments for type bytes: ");
+      write_stri(fmt, args_start, args_end);
+      write_str(fmt, "}}");
+      return;
+    }
   }
 
   const u8 *ptr = va_arg(*ap, const u8 *);
   usize len = va_arg(*ap, usize);
-  for (usize i = 0; i < len; i++) {
-    if (i)
-      write_byte(fmt, ' ');
-    write_byte(fmt, NUMBER_ALPHABET[ptr[i] >> 4]);
-    write_byte(fmt, NUMBER_ALPHABET[ptr[i] & 15]);
+  if (string_like) {
+    bool all_printable = true;
+    for (usize i = 0; i < len; i++) {
+      switch (ptr[i]) {
+      case '\0':
+      case '\a':
+      case '\b':
+      case '\f':
+      case '\n':
+      case '\r':
+      case '\t':
+      case '\v':
+      case ' ' ... '~':
+        continue;
+      default:
+        all_printable = false;
+        goto after_printable_check;
+      }
+    }
+  after_printable_check:
+
+    if (all_printable) {
+      write_byte(fmt, '\"');
+      for (usize i = 0; i < len; i++) {
+        switch (ptr[i]) {
+        case '\0':
+          write_str(fmt, "\\0");
+          break;
+        case '\a':
+          write_str(fmt, "\\a");
+          break;
+        case '\b':
+          write_str(fmt, "\\b");
+          break;
+        case '\f':
+          write_str(fmt, "\\f");
+          break;
+        case '\n':
+          write_str(fmt, "\\n");
+          break;
+        case '\r':
+          write_str(fmt, "\\r");
+          break;
+        case '\t':
+          write_str(fmt, "\\t");
+          break;
+        case '\v':
+          write_str(fmt, "\\v");
+          break;
+        case ' ' ... '~':
+          write_byte(fmt, ptr[i]);
+          break;
+        }
+      }
+      write_byte(fmt, '\"');
+    } else {
+      write_byte(fmt, '[');
+      for (usize i = 0; i < len; i++) {
+        if (i)
+          write_byte(fmt, ' ');
+        write_byte(fmt, NUMBER_ALPHABET[ptr[i] >> 4]);
+        write_byte(fmt, NUMBER_ALPHABET[ptr[i] & 15]);
+      }
+      write_byte(fmt, ']');
+    }
+  } else {
+    for (usize i = 0; i < len; i++) {
+      if (i)
+        write_byte(fmt, ' ');
+      write_byte(fmt, NUMBER_ALPHABET[ptr[i] >> 4]);
+      write_byte(fmt, NUMBER_ALPHABET[ptr[i] & 15]);
+    }
   }
 }
 

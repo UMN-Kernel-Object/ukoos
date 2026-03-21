@@ -163,4 +163,7 @@ int strcmp(const char *s1, const char *s2);
 [[gnu::nonnull(1), gnu::pure]]
 __SIZE_TYPE__ strlen(const char *s);
 
+[[gnu::nonnull(1), gnu::pure]]
+__SIZE_TYPE__ strnlen(const char *s, __SIZE_TYPE__ max_len);
+
 #endif // UKO_OS_KERNEL__COMPILER_H

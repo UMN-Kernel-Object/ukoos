@@ -63,11 +63,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1758996538,
-        "narHash": "sha256-6z5h63WwMqJ4Rk76JFTAnpRHUFanFb0H0g2CGkwwRMo=",
+        "lastModified": 1771036519,
+        "narHash": "sha256-Vr6qv9duNwWigWqn0I+cWukStv+nrIYbiROpU7cuZWM=",
         "owner": "UMN-Kernel-Object",
         "repo": "u-boot",
-        "rev": "056f6b8ea3667470562486ccda79f71ec5acf1eb",
+        "rev": "2fe9d349ac8afb59f743aa3321319648551a7df8",
         "type": "github"
       },
       "original": {
