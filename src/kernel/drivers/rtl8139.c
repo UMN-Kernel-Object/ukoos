@@ -32,7 +32,7 @@ struct rtl8139 {
 };
 
 bool send_packet(struct netdev *this, u8 packet[], usize length);
-bool get_mac(struct netdev *this, u8 *mac);
+struct mac get_mac(struct netdev *this);
 
 struct netdev_ops rtl8139_ops = {
   .send_packet = send_packet,
@@ -84,14 +84,15 @@ u32 walkaddr(uaddr addr) {
   return (u32) pte | off;
 }
 
-bool get_mac(struct netdev *this, u8 *mac) {
+struct mac get_mac(struct netdev *this) {
   struct rtl8139 *rtl_this = (struct rtl8139 *)(this->device);
   volatile struct rtl8139_regs *rtl_regs = rtl_this->regs;
+  struct mac mac;
 
   for (usize i = 0; i<6; ++i) {
-    mac[i] = rtl_regs->mac[i];
+    mac.addr[i] = rtl_regs->mac[i];
   }
-  return true;
+  return mac;
 }
 
 bool send_packet(struct netdev *this, u8 packet[], usize length) {
@@ -118,8 +119,10 @@ bool send_packet(struct netdev *this, u8 packet[], usize length) {
 
 void rtl8139_test(struct rtl8139 *rtl_device) {
   volatile struct rtl8139_regs *rtl_regs = rtl_device->regs;
+  struct mac mac;
+  memcpy(mac.addr, (const u8*) "\xff\xff\xff\xff\xff\xff", 6);
 
-  eth_send_packet(&rtl_device->netdev, (const u8*) "\xff\xff\xff\xff\xff\xff",
+  eth_send_packet(&rtl_device->netdev, mac,
 	(u8*) "yellow submarine", 16);
 
   assert(rtl_regs->tsad[0] != 0);

@@ -16,8 +16,9 @@ struct ethernet_packet {
     u8 data[];
 };
 
-bool eth_send_packet(struct netdev *device, const u8 *dstmac, u8 *buffer, u32 len) {
+bool eth_send_packet(struct netdev *device, const struct mac dst, u8 *buffer, usize len) {
   struct ethernet_packet *packet;
+  struct mac src;
   usize packet_len;
 
   packet_len = len + sizeof(struct ethernet_packet);
@@ -27,8 +28,9 @@ bool eth_send_packet(struct netdev *device, const u8 *dstmac, u8 *buffer, u32 le
 
   packet = alloc(packet_len);
 
-  memcpy(packet->dst, dstmac, 6);
-  device->ops->get_mac(device, packet->src);
+  memcpy(packet->dst, dst.addr, 6);
+  src = device->ops->get_mac(device);
+  memcpy(packet->src, src.addr, 6);
 
   packet->ethertype[0] = 0x08;
   packet->ethertype[1] = 0x00;
