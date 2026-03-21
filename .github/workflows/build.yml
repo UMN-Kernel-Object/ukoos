@@ -13,6 +13,9 @@ jobs:
       image: docker.io/alpine:3.23
     strategy:
       matrix:
+        compiler:
+          - clang
+          - gcc
         target:
           - milkv-duos
           - milkv-jupiter
@@ -43,7 +46,7 @@ jobs:
           shortrev=$(git rev-parse --short HEAD)
           mkdir build
           cd build
-          ../configure --target ${{ matrix.target }}
+          [ ${{ matrix.compiler }} == "clang" ] && ../configure --target ${{ matrix.target }} --clang || ../configure --target ${{ matrix.target }}
           make -j$(nproc) -l$(nproc)
           name=ukoos-${{ matrix.target }}-git-$shortrev
           mkdir $name
