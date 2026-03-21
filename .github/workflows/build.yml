@@ -47,7 +47,7 @@ jobs:
           mkdir build
           cd build
           export target=${{ matrix.target }}
-          [ ${{ matrix.target }} == "*clang" ] && ../configure --target ${target::-6} --clang || ../configure --target ${{ matrix.target }}
+          [[ ${{ matrix.target }} == *"clang" ]] && ../configure --target ${target::-6} --clang || ../configure --target ${{ matrix.target }}
           make -j$(nproc) -l$(nproc)
           name=ukoos-${{ matrix.target }}-git-$shortrev
           mkdir $name
