@@ -33,7 +33,7 @@ struct mm_alloc_segment *segment_alloc(usize size) {
   usize va = segment_start;
   paddr pa;
   while (va < segment_end) {
-    if (!mm_alloc_physical(&pa))
+    if (!mm_alloc_physical(&pa, above_4g_ok))
       goto physical_oom;
     if (!mm_paging_map(va, pa, PGPERM_KRW)) {
       mm_free_physical(pa);

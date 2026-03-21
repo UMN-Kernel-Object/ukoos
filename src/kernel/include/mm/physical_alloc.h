@@ -10,6 +10,14 @@
 #include <devicetree.h>
 
 /**
+ * The possible flags to pass to the allocator
+ */
+enum flags {
+  must_be_below_4g,
+  above_4g_ok,
+};
+
+/**
  * Initializes the physical allocator with the memory discovered in the
  * Devicetree, ignoring memory reservations.
  */
@@ -21,7 +29,7 @@ void mm_init_physical(struct devicetree_node *devicetree);
  *
  * Returns whether it succeeded.
  */
-bool mm_alloc_physical(paddr *out);
+bool mm_alloc_physical(paddr *out, enum flags f);
 
 /**
  * Frees a single frame of memory.
