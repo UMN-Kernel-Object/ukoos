@@ -40,6 +40,7 @@ has_target=0
 default_cflags=1
 default_ldflags=1
 help=0
+clang=0
 prefix=/
 while true; do
 	case "$1" in
@@ -162,8 +163,10 @@ find_tool_with_prefix() {
 	find_tool "$1" "${tools[@]}"
 }
 
-if [[ $clang == 1 ]]; then
+if [[ "$clang" == 1 ]]; then
+  CC="clang"
   find_tool_with_prefix CC clang
+  CFLAGS="-target riscv64-none-elf -std=c23 $CFLAGS"
 else
   # Detect tools. Since we're expecting a freestanding compiler, we _don't_
   # assume that e.g. the default gcc is a reasonable compiler to use.
