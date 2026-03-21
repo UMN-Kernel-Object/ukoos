@@ -50,8 +50,3 @@ struct fragment_header {
 //  u8 hdr_ext_len;
 //  u8 *options; // https://datatracker.ietf.org/doc/html/rfc8200#section-4.6
 //}
-//
-
-long ipv6_send_packet(struct ipv6_header header, u8 *data, usize len);
-struct ipv6_header ipv6_create_header(u8 src_address[16], u8 dst_address[16],
-                                      u8 protocol);
