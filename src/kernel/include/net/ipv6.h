@@ -14,11 +14,13 @@ struct ip_address {
 };
 
 struct ipv6_header {
-  u8 vtf[4];
+  u32 version : 4;
+  u32 traffic_class : 8;
+  u32 flow_label : 20;
+
   u16 payload_len;
   u8 next_header;
   u8 hop_limit;
-  // TODO: put these in a struct ip_address
   u8 src[16];
   u8 dst[16];
 };
