@@ -18,9 +18,8 @@ struct ipv6_header {
   u16 payload_len;
   u8 next_header;
   u8 hop_limit;
-  // TODO: put these in a struct ip_address
-  u8 src[16];
-  u8 dst[16];
+  struct ip_address src;
+  struct ip_address dst;
 };
 
 static_assert(sizeof(struct ipv6_header) == 40);
@@ -57,5 +56,6 @@ struct fragment_header {
 //
 
 long ipv6_send_packet(struct ipv6_header header, u8 *data, usize len);
-struct ipv6_header ipv6_create_header(u8 src_address[16], u8 dst_address[16],
+struct ipv6_header ipv6_create_header(struct ip_address,
+                                      struct ip_address dst_address,
                                       u8 protocol);
