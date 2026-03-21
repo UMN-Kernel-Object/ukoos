@@ -63,7 +63,12 @@ watch:
 		--watch $(srcdir)/doc \
 		--watch $(srcdir)/src \
 		-- $(MAKE) $(filter-out watch,$(MAKECMDGOALS))
-.PHONY: all clean install watch
+format:
+	@find $(srcdir) -type f \( -name '*.c' -o -name '*.h' \) \
+		-exec clang-format -i {} \; \
+		-printf "FORMAT  %P\n"
+
+.PHONY: all clean install watch format
 .SUFFIXES:
 
 define common_rules_for_dir
