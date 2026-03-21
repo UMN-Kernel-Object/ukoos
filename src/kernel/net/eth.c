@@ -32,8 +32,8 @@ bool eth_send_packet(struct netdev *device, const struct mac dst, u8 *buffer, us
   src = device->ops->get_mac(device);
   memcpy(packet->src, src.addr, 6);
 
-  packet->ethertype[0] = 0x08;
-  packet->ethertype[1] = 0x00;
+  packet->ethertype[0] = 0x86;
+  packet->ethertype[1] = 0xDD;
   
   memcpy(packet->data, buffer, len);
 
