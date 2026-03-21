@@ -35,13 +35,17 @@ cleanup() {
 trap cleanup EXIT
 
 # Assemble the command.
-cmd="head=\$(git rev-parse HEAD)"
-cmd+=" && dir=\"\$tmp/\$head\""
-cmd+=" && reuse lint"
-cmd+=" && mkdir \"\$dir\""
-cmd+=" && (cd \"\$dir\" && \"\$repo/configure\" --target qemu-riscv64)"
-cmd+=" && make -C \"\$dir\" clean"
-cmd+=" && make -C \"\$dir\" -j $(nproc) -l $(nproc)"
+cmd=(
+'head=$(git rev-parse HEAD)'
+'&& dir="$tmp/$head"'
+'&& reuse lint'
+'&& mkdir "$dir"'
+'&& (cd "$dir" && "$repo/configure" --target qemu-riscv64)'
+'&& make -C "$dir" clean'
+"make -C \"\$dir\" -j $(nproc) -l $(nproc)"
+)
+cmd=${cmd[*]}
+
 
 # Checks that each commit since trunk builds.
 git rebase \
