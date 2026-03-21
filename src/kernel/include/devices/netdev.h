@@ -17,7 +17,7 @@ struct netdev {
 
 struct netdev_ops {
   bool (*send_packet)(struct netdev *this, u8 packet[], usize length);
-  bool (*get_mac)(struct netdev *this, u8 *mac);
+  struct mac (*get_mac)(struct netdev *this);
 };
 
 extern struct list_head netdevs;
