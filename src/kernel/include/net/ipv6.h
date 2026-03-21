@@ -10,15 +10,18 @@
 enum IPv6ProtoNum : u8 { HOPOPT = 0, ICMP = 1, TCP = 6, UDP = 17 };
 
 struct ipv6_header {
-  u8 version : 4;
-  u8 traffic_class;
-  u8 flow_label : 20;
+  u32 version : 4;
+  u32 traffic_class : 8;
+  u32 flow_label : 20;
+
   u16 payload_length;
   u8 next_header;
   u8 hop_limit;
-  u128 src_address;
-  u128 dst_address;
+  u8 src_address[16];
+  u8 dst_address[16];
 };
+
+static_assert(sizeof(struct ipv6_header) == 48)
 
 struct hop_by_hop_opt_header {
   u8 next_header;
