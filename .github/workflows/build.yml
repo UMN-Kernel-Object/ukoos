@@ -13,13 +13,12 @@ jobs:
       image: docker.io/alpine:3.23
     strategy:
       matrix:
-        compiler:
-          - clang
-          - gcc
         target:
           - milkv-duos
           - milkv-jupiter
+          - milkv-jupiter-clang
           - qemu-riscv64
+          - qemu-riscv64-clang
     steps:
       - name: Install dependencies
         run: |
@@ -47,7 +46,7 @@ jobs:
           shortrev=$(git rev-parse --short HEAD)
           mkdir build
           cd build
-          [ ${{ matrix.compiler }} == "clang" ] && ../configure --target ${{ matrix.target }} --clang || ../configure --target ${{ matrix.target }}
+          [ ${{ matrix.target }} == "*clang" ] && ../configure --target ${${{ matrix.target }}:-6} --clang || ../configure --target ${{ matrix.target }}
           make -j$(nproc) -l$(nproc)
           name=ukoos-${{ matrix.target }}-git-$shortrev
           mkdir $name
@@ -65,8 +64,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ukoos-${{ matrix.target }}-${{ matrix.compiler }}-git.tar.zst
-          path: ukoos-${{ matrix.target }}-${{ matrix.compiler }}-git.tar.zst
+          name: ukoos-${{ matrix.target }}-git.tar.zst
           compression-level: 0
   build-images:
     runs-on: ubuntu-latest
