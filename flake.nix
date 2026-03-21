@@ -103,8 +103,7 @@
             pkgs.tio
           ];
           shellHook = ''
-            export CC=clang
-            export CFLAGS="-target riscv64-none-elf -std=c23"
+            export CC=riscv64-none-elf-gcc
             export OBJDUMP=riscv64-none-elf-objdump
             export STRIP=riscv64-none-elf-strip
           '';
