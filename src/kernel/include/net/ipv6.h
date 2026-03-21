@@ -10,11 +10,13 @@
 enum IPv6ProtoNum : u8 { HOPOPT = 0, ICMP = 1, TCP = 6, UDP = 17 };
 
 struct ipv6_header {
-  u8 vtf[4];
+  u32 version : 4;
+  u32 traffic_class : 8;
+  u32 flow_label : 20;
+
   u16 payload_len;
   u8 next_header;
   u8 hop_limit;
-  // TODO: put these in a struct ip_address
   u8 src[16];
   u8 dst[16];
 };
@@ -50,3 +52,8 @@ struct fragment_header {
 //  u8 hdr_ext_len;
 //  u8 *options; // https://datatracker.ietf.org/doc/html/rfc8200#section-4.6
 //}
+//
+
+long ipv6_send_packet(struct ipv6_header header, u8 data, size_t len);
+struct ipv6_header ipv6_create_header(u8 src_address[16], u8 dst_address[16],
+                                      u8 protocol);
