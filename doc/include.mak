@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+# SPDX-FileCopyrightText: ukoOS Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -14,7 +14,7 @@ all:: doc/book
 clean::
 	@if [[ -d doc/book ]]; then echo "CLEAN   doc/book"; rm -r doc/book; fi
 doc-serve:
-	$(Q)mdbook serve --dest-dir $(abspath doc/book) $(srcdir)/doc
+	$(Q)mdbook serve --dest-dir "$$(realpath doc/book)" --hostname :: $(srcdir)/doc
 .PHONY: doc-serve
 
 doc/book: $(srcdir)/doc/book.toml $(srcdir)/doc/SUMMARY.md

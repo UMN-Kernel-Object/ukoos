@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -12,15 +12,15 @@
  * volatile, and must be aligned.
  *
  * These functions are very inefficiently implemented -- drivers should map the
- * memory they needs to access instead. However, they do work before the memory
- * allocator is configured, which is needed to e.g. parse the DeviceTree.
+ * memory they needs to access instead. However, they do work in contexts where
+ * memory cannot be allocated.
  */
 
 #include <panic.h>
 
-static inline paddr paddr_of_bits(unsigned long bits) {
+static inline paddr paddr_of_bits(uaddr bits) {
   union {
-    unsigned long bits;
+    uaddr bits;
     paddr paddr;
   } u;
   u.bits = bits;
@@ -28,9 +28,9 @@ static inline paddr paddr_of_bits(unsigned long bits) {
   return u.paddr;
 }
 
-static inline unsigned long bits_of_paddr(paddr addr) {
+static inline uaddr bits_of_paddr(paddr addr) {
   union {
-    unsigned long bits;
+    uaddr bits;
     paddr paddr;
   } u;
   assert(addr.rsvd == 0);
@@ -42,17 +42,29 @@ static inline usize paddr_diff(paddr end, paddr start) {
   return bits_of_paddr(end) - bits_of_paddr(start);
 }
 
-static inline paddr paddr_offset(paddr paddr, usize offset) {
-  return paddr_of_bits(bits_of_paddr(paddr) + offset);
+static inline bool paddr_in_range(paddr addr, paddr lo, paddr hi) {
+  return bits_of_paddr(lo) <= bits_of_paddr(addr) &&
+         bits_of_paddr(addr) < bits_of_paddr(hi);
 }
 
-static inline paddr paddr_align_down(paddr paddr, usize bits) {
+static inline paddr paddr_offset(paddr paddr, usize offset) {
+  uaddr addr = bits_of_paddr(paddr);
+  assert(!ckd_add(&addr, addr, offset),
+         "paddr_offset: overflow adding {offset} to {paddr}", offset, paddr);
+  return paddr_of_bits(addr);
+}
+
+static inline paddr _align_down_paddr(paddr paddr, usize bits) {
   usize low_mask = ((usize)1 << bits) - 1;
   return paddr_of_bits(bits_of_paddr(paddr) & ~low_mask);
 }
 
-static inline paddr paddr_align_up(paddr paddr, usize bits) {
-  return paddr_align_down(paddr_offset(paddr, ((usize)1 << bits) - 1), bits);
+static inline paddr _align_up_paddr(paddr paddr, usize bits) {
+  return _align_down_paddr(paddr_offset(paddr, ((usize)1 << bits) - 1), bits);
+}
+
+static inline bool _is_aligned_paddr(paddr addr, usize bits) {
+  return bits_of_paddr(_align_down_paddr(addr, bits)) == bits_of_paddr(addr);
 }
 
 u8 physical_read_u8(paddr);
@@ -71,6 +83,7 @@ void physical_write_u16be(paddr, u16);
 void physical_write_u32be(paddr, u32);
 void physical_write_u64be(paddr, u64);
 
+void bzero_physical(paddr dst, usize len);
 void copy_from_physical(void *dst, paddr src, usize len);
 void copy_to_physical(paddr dst, const void *src, usize len);
 

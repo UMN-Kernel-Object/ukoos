@@ -1,15 +1,16 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <align.h>
 #include <devicetree.h>
-#include <minmax.h>
-#include <mm/physical_alloc.h>
-#include <physical.h>
+#include <endian.h>
+#include <mm/alloc.h>
 #include <print.h>
 #include <random.h>
+#include <symbolicate.h>
 
 struct fdt_header {
   u32 magic;
@@ -37,9 +38,6 @@ enum fdt_struct_token_type : u32 {
   FDT_END = 9,
 };
 
-static paddr devicetree_start = {0}, devicetree_end = {0};
-static struct fdt_header devicetree_header = {0};
-
 static struct fdt_header physical_read_fdt_header(paddr paddr) {
   return (struct fdt_header){
       .magic = physical_read_u32be(paddr_offset(paddr, 0)),
@@ -62,270 +60,77 @@ static struct fdt_reserve_entry physical_read_fdt_reserve_entry(paddr paddr) {
   };
 }
 
-void devicetree_init(paddr start) {
-  assert(!bits_of_paddr(devicetree_start), "DeviceTree already initialized");
+static struct devicetree_node *
+devicetree_parse_structure_block(paddr devicetree_start,
+                                 const struct fdt_header *header) {
+  struct devicetree_node *current_node = nullptr;
 
-  struct fdt_header header = physical_read_fdt_header(start);
-  assert(header.magic == 0xd00dfeed,
-         "DeviceTree magic value did not match (got {u32:#010x}, expected "
-         "0xd00dfeed)",
-         header.magic);
-  assert(header.last_comp_version <= 17,
-         "DeviceTree was not compatible with our parser");
-
-  devicetree_start = start;
-  devicetree_end = paddr_offset(devicetree_start, header.totalsize);
-  devicetree_header = header;
-}
-
-/**
- * Returns whether the point `x` is inside the half-open range `[start, end)`.
- */
-static bool point_in_range(paddr start, paddr end, paddr x) {
-  return (bits_of_paddr(start) <= bits_of_paddr(x) &&
-          bits_of_paddr(x) < bits_of_paddr(end));
-}
-
-/**
- * Returns whether any point is inside both of the half-open ranges
- * `[start1, end1)` and `[start2, end2)`.
- */
-static bool ranges_overlap(paddr start1, paddr end1, paddr start2, paddr end2) {
-  if (bits_of_paddr(start1) >= bits_of_paddr(end1) ||
-      bits_of_paddr(start2) >= bits_of_paddr(end2))
-    return false;
-  return (bits_of_paddr(start1) < bits_of_paddr(end2) &&
-          bits_of_paddr(start2) < bits_of_paddr(end1));
-}
-
-/**
- * A function that gets called for each discovered memory range. It finds the
- * subranges that are actually available for use by allocation, and gives them
- * to the allocator.
- *
- * The areas that it skips are:
- *
- * - Any memory reservations from the DeviceTree.
- * - The DeviceTree itself.
- * - The kernel, including the initial page tables, the symbol and string
- *   tables, and the initial stack.
- *
- * The asymptotics of this function are somewhat horrifying, but we don't expect
- * to run it over large inputs (i.e., large numbers of reservations) and can't
- * allocate at this point (so can't sort).
- */
-static void devicetree_mm_init_on_mem_range(const char *name,
-                                            paddr kernel_start,
-                                            paddr kernel_end, paddr start,
-                                            usize len) {
-  paddr end = paddr_offset(start, len);
-  print("  {paddr}-{paddr} ({cstr})", start, end, name);
-
-  // We break up the whole range [start, end) into a number of chunks,
-  // maximizing the size of chunks while ensuring no chunk intersects with an
-  // "area to skip."
-  //
-  // We create them from the "bottom up," so we stop looping when we reach the
-  // top of the range (and have no possible bytes left to add).
-  while (bits_of_paddr(start) < bits_of_paddr(end)) {
-    paddr chunk_start = start, chunk_end = end;
-    paddr next_reservation;
-
-    // Move the start of the chunk up to avoid it being inside any area to skip.
-    // If we find that it is, we have to re-search previous ones, because
-    // they're unsorted -- after bumping the start point up higher, we might now
-    // be overlapping an interval we missed before.
-  try_to_bump_up_start:
-    next_reservation =
-        paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
-    for (;;) {
-      struct fdt_reserve_entry reservation =
-          physical_read_fdt_reserve_entry(next_reservation);
-      next_reservation =
-          paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
-      if (reservation.address == 0 && reservation.size == 0)
-        break;
-
-      paddr reservation_start = paddr_of_bits(reservation.address),
-            reservation_end =
-                paddr_of_bits(reservation.address + reservation.size);
-      if (point_in_range(reservation_start, reservation_end, chunk_start)) {
-        chunk_start = reservation_end;
-        goto try_to_bump_up_start;
-      }
-    }
-    if (point_in_range(devicetree_start, devicetree_end, chunk_start)) {
-      chunk_start = devicetree_end;
-      goto try_to_bump_up_start;
-    }
-    if (point_in_range(kernel_start, kernel_end, chunk_start)) {
-      chunk_start = kernel_end;
-      goto try_to_bump_up_start;
-    }
-
-    // Move the end of the chunk below the start of any reservation that starts
-    // inside the chunk. Since we're just tracking a minimum, we don't have the
-    // "start over the scan" behavior here.
-    next_reservation =
-        paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
-    for (;;) {
-      struct fdt_reserve_entry reservation =
-          physical_read_fdt_reserve_entry(next_reservation);
-      next_reservation =
-          paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
-      if (reservation.address == 0 && reservation.size == 0)
-        break;
-
-      paddr reservation_start = paddr_of_bits(reservation.address);
-      if (point_in_range(chunk_start, chunk_end, reservation_start)) {
-        chunk_end = reservation_start;
-      }
-    }
-    if (point_in_range(chunk_start, chunk_end, devicetree_start)) {
-      chunk_end = devicetree_start;
-    }
-    if (point_in_range(chunk_start, chunk_end, kernel_start)) {
-      chunk_end = kernel_start;
-    }
-
-    // Check that we actually didn't overlap.
-    if (ASSERTIONS_ENABLED) {
-      next_reservation =
-          paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
-      for (;;) {
-        struct fdt_reserve_entry reservation =
-            physical_read_fdt_reserve_entry(next_reservation);
-        next_reservation =
-            paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
-        if (reservation.address == 0 && reservation.size == 0)
-          break;
-
-        paddr reservation_start = paddr_of_bits(reservation.address),
-              reservation_end =
-                  paddr_of_bits(reservation.address + reservation.size);
-        assert(!ranges_overlap(chunk_start, chunk_end, reservation_start,
-                               reservation_end));
-      }
-      assert(!ranges_overlap(chunk_start, chunk_end, kernel_start, kernel_end));
-      assert(!ranges_overlap(chunk_start, chunk_end, devicetree_start,
-                             devicetree_end));
-    }
-
-    // Shrink the range to be aligned to page boundaries.
-    chunk_start = paddr_align_up(chunk_start, 12);
-    chunk_end = paddr_align_down(chunk_end, 12);
-
-    // Check that the chunk is non-empty.
-    if (bits_of_paddr(chunk_start) < bits_of_paddr(chunk_end)) {
-      assert(!chunk_start.offset);
-      assert(!chunk_end.offset);
-
-      // Put it in the init-time allocator.
-      mm_init_add_physical_chunk(chunk_start, chunk_end);
-    }
-
-    // Do it all again, starting at the sub-range starting immediately after
-    // this chunk.
-    start = chunk_end;
-  }
-}
-
-static void devicetree_mm_init_on_rng_seed(paddr seed_start, usize seed_len) {
-  u8 chunk[64];
-  while (seed_len) {
-    usize chunk_len = min(seed_len, (usize)sizeof(chunk));
-    copy_from_physical(chunk, seed_start, chunk_len);
-    entropy_pool_mix(chunk, chunk_len);
-    // Don't fill the entire pool with a single source.
-    entropy_pool_credit(min(8 * chunk_len, (usize)128));
-    seed_start = paddr_offset(seed_start, chunk_len);
-    seed_len -= chunk_len;
-  }
-}
-
-void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
-                        uptr *free_va_start, uptr *free_va_end) {
-  assert(bits_of_paddr(devicetree_start), "DeviceTree not initialized");
-  assert(!kernel_start.offset, "Kernel starting address not aligned");
-  assert(!kernel_end.offset, "Kernel ending address not aligned");
-
-  // Log reserved areas.
-  print("Memory reservations:");
-  print("  {paddr}-{paddr} (kernel)", kernel_start, kernel_end);
-  print("  {paddr}-{paddr} (DeviceTree)", devicetree_start, devicetree_end);
-  paddr next_reservation =
-      paddr_offset(devicetree_start, devicetree_header.off_mem_rsvmap);
-  for (;;) {
-    struct fdt_reserve_entry reservation =
-        physical_read_fdt_reserve_entry(next_reservation);
-    next_reservation =
-        paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
-    if (reservation.address == 0 && reservation.size == 0)
-      break;
-
-    paddr reservation_start = paddr_of_bits(reservation.address),
-          reservation_end =
-              paddr_of_bits(reservation.address + reservation.size);
-    print("  {paddr}-{paddr} (reservation)", reservation_start,
-          reservation_end);
-  }
-
-  // We log memory ranges as we find them.
-  print("Memory ranges:");
-
-  // Parse the structure block, looking for the memory node.
-  u32 address_cells = 0, size_cells = 0;
-  paddr reg_start = {0};
-  usize reg_len = 0, depth = 0;
-  char current_node_name[24] = {0};
-  usize current_node_name_len = 0;
-
-  bool has_device_type_memory = false, has_reg = false, in_chosen = false,
-       processed_memory_node = false;
-  paddr struct_start =
-      paddr_offset(devicetree_start, devicetree_header.off_dt_struct);
-  paddr here = struct_start;
-  while (bits_of_paddr(here) !=
-         bits_of_paddr(struct_start) + devicetree_header.size_dt_struct) {
-
-    // Parse token by token.
+  paddr here = paddr_offset(devicetree_start, header->off_dt_struct);
+  paddr struct_end = paddr_offset(here, header->size_dt_struct);
+  bool finished_root_node = false, got_end_token = false;
+  while (bits_of_paddr(here) != bits_of_paddr(struct_end)) {
     enum fdt_struct_token_type token_type = physical_read_u32be(here);
     here = paddr_offset(here, 4);
     switch (token_type) {
     case FDT_BEGIN_NODE: {
-      // Advance through the name.
-      current_node_name_len = 0;
-      for (;;) {
-        char byte = physical_read_u8(here);
-        current_node_name[current_node_name_len] = byte;
-        if (current_node_name_len < sizeof(current_node_name) - 1)
-          current_node_name_len++;
-        if (!byte)
-          break;
-        here = paddr_offset(here, 1);
+      if (finished_root_node) {
+        print("{cstr}: got FDT_BEGIN_NODE token after the root node?",
+              __func__);
+        goto fail;
       }
-      here = paddr_align_up(paddr_offset(here, 1), 2);
 
-      // Track the depth and reset information about props.
-      has_reg = false;
-      has_device_type_memory = false;
-      in_chosen = depth == 1 && current_node_name_len == 7 &&
-                  !memcmp(current_node_name, "chosen", 6);
-      processed_memory_node = false;
-      depth++;
+      // Compute the length of the name.
+      usize name_len = 0;
+      while (physical_read_u8(paddr_offset(here, name_len)))
+        name_len++;
+
+      // Construct the new node, making the current node its parent.
+      struct devicetree_node *node = alloc(sizeof(struct devicetree_node));
+      if (!node)
+        goto fail;
+      *node = (struct devicetree_node){
+          .parent = current_node,
+          .parent_children_head = LIST_INIT(node->parent_children_head),
+          .children = LIST_INIT(node->children),
+          .props = LIST_INIT(node->props),
+          .name = alloc(name_len + 1),
+      };
+      if (!node->name) {
+        free(node);
+        goto fail;
+      }
+      if (current_node)
+        list_push(&current_node->children, &node->parent_children_head);
+
+      // Copy the name into the new node and make the new node the current node.
+      copy_from_physical(node->name, here, name_len);
+      node->name[name_len] = '\0';
+      current_node = node;
+
+      // Advance to the next token.
+      here = align_up(paddr_offset(here, name_len + 1), 2);
     } break;
 
-      // Track the depth and reset information about props.
-    case FDT_END_NODE:
-      assert(depth > 0);
-      has_reg = false;
-      has_device_type_memory = false;
-      in_chosen = false;
-      processed_memory_node = false;
-      depth--;
-      break;
+    case FDT_END_NODE: {
+      if (!current_node || finished_root_node) {
+        print("{cstr}: got FDT_END_NODE token outside of a node?", __func__);
+        goto fail;
+      }
+
+      // If we're at the root node, save the node. Otherwise, traverse back to
+      // the parent.
+      if (current_node->parent)
+        current_node = current_node->parent;
+      else
+        finished_root_node = true;
+    } break;
 
     case FDT_PROP: {
+      if (!current_node || finished_root_node) {
+        print("{cstr}: got FDT_PROP token outside of a node?", __func__);
+        goto fail;
+      }
+
       // Read the fixed fields.
       u32 value_len = physical_read_u32be(here);
       here = paddr_offset(here, 4);
@@ -333,112 +138,672 @@ void devicetree_mm_init(paddr kernel_start, paddr kernel_end,
       here = paddr_offset(here, 4);
 
       // Find the bounds of the name.
-      paddr name_start = paddr_offset(
-          devicetree_start, devicetree_header.off_dt_strings + name_off);
-      paddr name_end = name_start;
-      while (physical_read_u8(name_end))
-        name_end = paddr_offset(name_end, 1);
-      usize name_len = paddr_diff(name_end, name_start);
+      paddr name_start =
+          paddr_offset(devicetree_start, header->off_dt_strings + name_off);
+      usize name_len = 0;
+      while (physical_read_u8(paddr_offset(name_start, name_len)))
+        name_len++;
 
       // Skip the value.
       paddr value_start = here;
-      here = paddr_align_up(paddr_offset(here, value_len), 2);
+      here = align_up(paddr_offset(here, value_len), 2);
 
-      // Read the property name in, if it's short enough.
-      char name[16] = {0};
-      if (name_len < 16) {
-        copy_from_physical(name, name_start, name_len);
-
-        // Try to recognize the property from its name.
-        switch (name_len) {
-        case 3:
-          if (!memcmp(name, "reg", 3)) {
-            reg_start = value_start;
-            reg_len = value_len;
-            has_reg = true;
-          }
-          break;
-        case 8:
-          if (in_chosen && !memcmp(name, "rng-seed", 8)) {
-            devicetree_mm_init_on_rng_seed(value_start, value_len);
-          }
-          break;
-        case 11:
-          if (!memcmp(name, "#size-cells", 11)) {
-            assert(value_len == 4);
-            if (depth == 1) {
-              size_cells = physical_read_u32be(value_start);
-              assert(size_cells == 1 || size_cells == 2);
-            }
-          } else if (!memcmp(name, "device_type", 11)) {
-            if (value_len == 7) {
-              char device_type[7];
-              copy_from_physical(device_type, value_start, 7);
-              if (!memcmp(device_type, "memory", 7)) {
-                has_device_type_memory = true;
-              }
-            }
-          }
-          break;
-        case 14:
-          if (!memcmp(name, "#address-cells", 14)) {
-            assert(value_len == 4);
-            if (depth == 1) {
-              address_cells = physical_read_u32be(value_start);
-              assert(address_cells == 1 || address_cells == 2);
-            }
-          }
-          break;
-        }
-
-        // Check if we found a memory node.
-        if (has_reg && has_device_type_memory && !processed_memory_node) {
-          usize entry_size = (address_cells + size_cells) * 4;
-          assert((reg_len % entry_size) == 0);
-
-          // Iterate over individual entries of the reg property.
-          u64 addr = 0, size = 0;
-          paddr reg = reg_start;
-          paddr reg_end = paddr_offset(reg_start, reg_len);
-          while (bits_of_paddr(reg) != bits_of_paddr(reg_end)) {
-            for (u32 i = 0; i < address_cells; i++) {
-              addr = (addr << 32) | (u64)physical_read_u32be(reg);
-              reg = paddr_offset(reg, 4);
-            }
-            for (u32 i = 0; i < size_cells; i++) {
-              size = (size << 32) | (u64)physical_read_u32be(reg);
-              reg = paddr_offset(reg, 4);
-            }
-
-            devicetree_mm_init_on_mem_range(current_node_name, kernel_start,
-                                            kernel_end, paddr_of_bits(addr),
-                                            size);
-          }
-
-          // Set a flag so we don't re-process the node for every additional
-          // prop we find.
-          processed_memory_node = true;
-        }
+      // Allocate the property.
+      struct devicetree_prop *prop = alloc(sizeof(struct devicetree_prop));
+      if (!prop)
+        goto fail;
+      *prop = (struct devicetree_prop){
+          .node = current_node,
+          .node_props_head = LIST_INIT(prop->node_props_head),
+          .name = alloc(name_len + 1),
+          .value_len = value_len,
+          .value = alloc(value_len),
+      };
+      if (!prop->name || !prop->value) {
+        free(prop->name);
+        free(prop->value);
+        free(prop);
+        goto fail;
       }
+
+      // Fill out the name and value, and link the prop into the current node.
+      copy_from_physical(prop->name, name_start, name_len + 1);
+      copy_from_physical(prop->value, value_start, value_len);
+      list_push(&current_node->props, &prop->node_props_head);
     } break;
 
-      // Just skip a no-op.
-    case FDT_NOP:
-      break;
+    case FDT_NOP: {
+      // Just skip the token.
+    } break;
 
-      // When we get to the end, check that we're in the right place to stop.
-    case FDT_END:
-      assert(bits_of_paddr(here) ==
-             bits_of_paddr(struct_start) + devicetree_header.size_dt_struct);
-      break;
+    case FDT_END: {
+      // Check that we're in the right place to stop.
+      if (bits_of_paddr(here) != bits_of_paddr(struct_end)) {
+        print("{cstr}: got FDT_END token not at the end?", __func__);
+        goto fail;
+      }
+      got_end_token = true;
+    } break;
 
     default:
-      panic("unknown token type in structure block: {u32}", token_type);
+      TODO("unknown token type {u32}", token_type);
     }
   }
 
-  // After we've added each chunk to the initial physical allocator, we can
-  // initialize the real allocator.
-  mm_init_physical(devicetree_start, devicetree_end, kernel_start, kernel_end,
-                   free_va_start, free_va_end);
+  if (!got_end_token) {
+    print("{cstr}: missing FDT_END token?", __func__);
+    goto fail;
+  }
+  if (!current_node) {
+    print("{cstr}: missing root node?", __func__);
+    goto fail;
+  }
+  if (!finished_root_node) {
+    print("{cstr}: Devicetree ended inside a node?", __func__);
+    goto fail;
+  }
+
+  return current_node;
+
+fail:
+  devicetree_free(current_node);
+  return nullptr;
+}
+
+static bool devicetree_add_prop(struct devicetree_node *node, const char *name,
+                                const u8 *value, usize value_len) {
+  struct devicetree_prop *prop = alloc(sizeof(struct devicetree_prop));
+  if (!prop)
+    return false;
+
+  *prop = (struct devicetree_prop){
+      .node = node,
+      .node_props_head = LIST_INIT(prop->node_props_head),
+      .name = strdup(name),
+      .value_len = value_len,
+      .value = memdup(value, value_len),
+  };
+  if (!prop->name || !prop->value) {
+    free(prop->name);
+    free(prop->value);
+    free(prop);
+    return false;
+  }
+
+  list_push(&node->props, &prop->node_props_head);
+  return true;
+}
+
+static bool devicetree_add_prop_u32(struct devicetree_node *node,
+                                    const char *name, u32 value) {
+  u8 bytes[4];
+  value = native_to_big(value);
+  memcpy(&bytes, &value, 4);
+  return devicetree_add_prop(node, name, bytes, 4);
+}
+
+static bool devicetree_add_reservation(struct devicetree_node *reserved_memory,
+                                       usize *reservation_num,
+                                       struct fdt_reserve_entry reservation,
+                                       u32 address_cells, u32 size_cells) {
+  // Allocate a node for the reservation.
+  struct devicetree_node *node = alloc(sizeof(struct devicetree_node));
+  if (!node)
+    return false;
+
+  // Choose a name for the reservation.
+  char *reservation_name = nullptr;
+  do {
+    if (reservation_name)
+      free(reservation_name);
+    reservation_name =
+        format("memory-reservation-block@{usize}", (*reservation_num)++);
+    if (!reservation_name)
+      goto fail;
+  } while (devicetree_child(reserved_memory, reservation_name));
+
+  // Initialize the node.
+  *node = (struct devicetree_node){
+      .parent = reserved_memory,
+      .parent_children_head = LIST_INIT(node->parent_children_head),
+      .children = LIST_INIT(node->children),
+      .props = LIST_INIT(node->props),
+      .name = reservation_name,
+  };
+  list_push(&reserved_memory->children, &node->parent_children_head);
+
+  // Add the reg field to the props.
+  u8 reg[16];
+  usize reg_len = 0;
+  switch (address_cells) {
+  case 1: {
+    u32 address = (u32)native_to_big(reservation.address);
+    memcpy(&reg[reg_len], &address, 4);
+    reg_len += 4;
+  } break;
+  case 2: {
+    u64 address = native_to_big(reservation.address);
+    memcpy(&reg[reg_len], &address, 8);
+    reg_len += 8;
+  } break;
+  default:
+    print("Invalid value for /reserved-memory's #address-cells: {u32}",
+          address_cells);
+    goto fail;
+  }
+  switch (size_cells) {
+  case 1: {
+    u32 size = (u32)native_to_big(reservation.size);
+    memcpy(&reg[reg_len], &size, 4);
+    reg_len += 4;
+  } break;
+  case 2: {
+    u64 size = native_to_big(reservation.size);
+    memcpy(&reg[reg_len], &size, 8);
+    reg_len += 8;
+  } break;
+  default:
+    print("Invalid value for /reserved-memory's #size-cells: {u32}",
+          size_cells);
+    goto fail;
+  }
+
+  if (!devicetree_add_prop(node, "reg", reg, reg_len))
+    goto fail;
+
+  return true;
+
+fail:
+  list_remove(&node->parent_children_head);
+  free(node->name);
+  free(node);
+  return false;
+}
+
+/**
+ * Adds reservations from the reserved memory block, and adds the kernel itself,
+ * to the /reserved-memory node of the Devicetree.
+ */
+static bool devicetree_add_reservations(paddr devicetree_start,
+                                        paddr kernel_start, paddr kernel_end,
+                                        struct fdt_header *header,
+                                        struct devicetree_node *devicetree) {
+  // Ensure the reserved-memory node exists.
+  struct devicetree_node *reserved_memory =
+      devicetree_child(devicetree, "reserved-memory");
+  if (!reserved_memory) {
+    // Create the reserved-memory node.
+    reserved_memory = alloc(sizeof(struct devicetree_node));
+    if (!reserved_memory)
+      return false;
+    *reserved_memory = (struct devicetree_node){
+        .parent = devicetree,
+        .parent_children_head =
+            LIST_INIT(reserved_memory->parent_children_head),
+        .children = LIST_INIT(reserved_memory->children),
+        .props = LIST_INIT(reserved_memory->props),
+        .name = strdup("reserved-memory"),
+    };
+    if (!reserved_memory->name) {
+      free(reserved_memory);
+      return false;
+    }
+    list_push(&devicetree->children, &reserved_memory->parent_children_head);
+
+    // Add its required props.
+    if (!devicetree_add_prop_u32(reserved_memory, "#address-cells", 2))
+      return false;
+    if (!devicetree_add_prop_u32(reserved_memory, "#size-cells", 2))
+      return false;
+    if (!devicetree_add_prop(reserved_memory, "ranges", nullptr, 0))
+      return false;
+  }
+
+  // Get the number of address and size cells.
+  struct devicetree_prop *address_cells_prop =
+                             devicetree_prop(reserved_memory, "#address-cells"),
+                         *size_cells_prop =
+                             devicetree_prop(reserved_memory, "#size-cells");
+  u32 address_cells, size_cells;
+
+  if (!address_cells_prop) {
+    print("Invalid value for /reserved-memory's #address-cells: missing");
+    return false;
+  }
+  if (!size_cells_prop) {
+    print("Invalid value for /reserved-memory's #size-cells: missing");
+    return false;
+  }
+  if (address_cells_prop->value_len != sizeof(address_cells)) {
+    print("Invalid value for /reserved-memory's #address-cells: too long");
+    return false;
+  }
+  if (size_cells_prop->value_len != sizeof(size_cells)) {
+    print("Invalid value for /reserved-memory's #size-cells: too long");
+    return false;
+  }
+
+  memcpy(&address_cells, address_cells_prop->value, sizeof(address_cells));
+  memcpy(&size_cells, size_cells_prop->value, sizeof(size_cells));
+  address_cells = big_to_native(address_cells);
+  size_cells = big_to_native(size_cells);
+
+  // Adds reservations from the memory reservations block to the reserved-memory
+  // node.
+  paddr next_reservation =
+      paddr_offset(devicetree_start, header->off_mem_rsvmap);
+  usize reservation_num = 0;
+  struct fdt_reserve_entry reservation = {0};
+  for (;;) {
+    reservation = physical_read_fdt_reserve_entry(next_reservation);
+    next_reservation =
+        paddr_offset(next_reservation, sizeof(struct fdt_reserve_entry));
+    if (reservation.address == 0 && reservation.size == 0)
+      break;
+
+    if (!devicetree_add_reservation(reserved_memory, &reservation_num,
+                                    reservation, address_cells, size_cells))
+      return false;
+  }
+
+  // Add a reservation for the kernel.
+  reservation.address = bits_of_paddr(kernel_start);
+  reservation.size = paddr_diff(kernel_end, kernel_start);
+  if (!devicetree_add_reservation(reserved_memory, &reservation_num,
+                                  reservation, address_cells, size_cells))
+    return false;
+
+  return true;
+}
+
+struct devicetree_node *devicetree_parse_from_physical(paddr devicetree_start,
+                                                       paddr kernel_start,
+                                                       paddr kernel_end) {
+  struct devicetree_node *devicetree = nullptr;
+
+  // Parse the header.
+  struct fdt_header header = physical_read_fdt_header(devicetree_start);
+  if (header.magic != 0xd00dfeed) {
+    print("Devicetree magic value did not match (got {u32:#010x}, expected "
+          "0xd00dfeed)",
+          header.magic);
+    goto fail;
+  }
+  if (header.last_comp_version > 17) {
+    print("Devicetree was not compatible with our parser");
+    goto fail;
+  }
+
+  // Parse the actual tree.
+  devicetree = devicetree_parse_structure_block(devicetree_start, &header);
+  if (!devicetree)
+    goto fail;
+
+  // Parse the memory reservations block and add it to the tree.
+  if (!devicetree_add_reservations(devicetree_start, kernel_start, kernel_end,
+                                   &header, devicetree))
+    goto fail;
+
+  return devicetree;
+
+fail:
+  devicetree_free(devicetree);
+  return nullptr;
+}
+
+static void devicetree_prop_free(struct devicetree_prop *prop) {
+  list_remove(&prop->node_props_head);
+  free(prop->name);
+  free(prop->value);
+  free(prop);
+}
+
+void devicetree_free(struct devicetree_node *node) {
+  assert(!node || !node->parent);
+  while (node) {
+    // Free every property.
+    while (!list_is_empty(&node->props))
+      devicetree_prop_free(container_of(
+          node->props.next, struct devicetree_prop, node_props_head));
+
+    // If we're childless, free ourselves and move up to our parent.
+    while (list_is_empty(&node->children)) {
+      assert(list_is_empty(&node->props));
+      struct devicetree_node *old_node = node;
+      node = old_node->parent;
+      if (node)
+        list_remove(&old_node->parent_children_head);
+      free(old_node->name);
+      free(old_node);
+      if (!node)
+        return;
+    }
+    assert(node);
+    assert(list_is_empty(&node->props));
+    assert(!list_is_empty(&node->children));
+
+    // Otherwise, descend into our first child.
+    node = container_of(node->children.next, struct devicetree_node,
+                        parent_children_head);
+  }
+}
+
+struct devicetree_node *devicetree_child(struct devicetree_node *parent,
+                                         const char *name) {
+  assert(parent);
+  for (struct list_head *child = parent->children.next;
+       child != &parent->children; child = child->next) {
+    struct devicetree_node *node =
+        container_of(child, struct devicetree_node, parent_children_head);
+    if (!strcmp(node->name, name))
+      return node;
+  }
+  return nullptr;
+}
+
+struct devicetree_prop *devicetree_prop(struct devicetree_node *parent,
+                                        const char *name) {
+  assert(parent);
+  for (struct list_head *child = parent->props.next; child != &parent->props;
+       child = child->next) {
+    struct devicetree_prop *prop =
+        container_of(child, struct devicetree_prop, node_props_head);
+    if (!strcmp(prop->name, name))
+      return prop;
+  }
+  return nullptr;
+}
+
+bool devicetree_address_size_cells(struct devicetree_node *node,
+                                   u32 *out_address_cells,
+                                   u32 *out_size_cells) {
+  struct devicetree_prop *address_cells_prop =
+                             devicetree_prop(node, "#address-cells"),
+                         *size_cells_prop =
+                             devicetree_prop(node, "#size-cells");
+  if (!address_cells_prop) {
+    print("Missing value for #address-cells");
+    return false;
+  }
+  if (!size_cells_prop) {
+    print("Missing value for #size-cells");
+    return false;
+  }
+  if (address_cells_prop->value_len != sizeof(*out_address_cells)) {
+    print("Invalid value for #address-cells: too long");
+    return false;
+  }
+  if (size_cells_prop->value_len != sizeof(*out_size_cells)) {
+    print("Invalid value for #size-cells: too long");
+    return false;
+  }
+
+  memcpy(out_address_cells, address_cells_prop->value,
+         sizeof(*out_address_cells));
+  memcpy(out_size_cells, size_cells_prop->value, sizeof(*out_size_cells));
+
+  *out_address_cells = big_to_native(*out_address_cells);
+  *out_size_cells = big_to_native(*out_size_cells);
+  return true;
+}
+
+bool devicetree_reg(struct devicetree_node *node, usize i, paddr *out_addr,
+                    usize *out_size) {
+  return devicetree_prop_reg(devicetree_prop(node, "reg"), i, out_addr,
+                             out_size);
+}
+
+bool devicetree_prop_reg(struct devicetree_prop *prop, usize i, paddr *out_addr,
+                         usize *out_size) {
+  u32 address_cells, size_cells;
+  if (!prop || !prop->node || !prop->node->parent)
+    return false;
+  if (!devicetree_address_size_cells(prop->node->parent, &address_cells,
+                                     &size_cells))
+    return false;
+  assert(address_cells == 1 || address_cells == 2);
+  assert(size_cells == 1 || size_cells == 2);
+
+  usize bytes_per_entry = (address_cells + size_cells) * 4;
+  if (prop->value_len % bytes_per_entry != 0)
+    return false;
+
+  u8 *entry = prop->value + (address_cells + size_cells) * 4 * i;
+  if (entry >= prop->value + prop->value_len)
+    return false;
+
+  switch (address_cells) {
+  case 1: {
+    u32 address32;
+    memcpy(&address32, entry, sizeof(address32));
+    *out_addr = paddr_of_bits(big_to_native(address32));
+    entry += 4;
+  } break;
+  case 2: {
+    u64 address64;
+    memcpy(&address64, entry, sizeof(address64));
+    *out_addr = paddr_of_bits(big_to_native(address64));
+    entry += 8;
+  } break;
+  default:
+    return false;
+  }
+  switch (size_cells) {
+  case 1: {
+    u32 size32;
+    memcpy(&size32, entry, sizeof(size32));
+    *out_size = big_to_native(size32);
+    entry += 4;
+  } break;
+  case 2: {
+    u64 size64;
+    memcpy(&size64, entry, sizeof(size64));
+    *out_size = big_to_native(size64);
+    entry += 8;
+  } break;
+  default:
+    return false;
+  }
+
+  return true;
+}
+
+static char *devicetree_path(struct devicetree_node *node) {
+  if (!node->parent)
+    return format("/");
+
+  char *out = format("{cstr}", node->name);
+
+  while (node->parent) {
+    node = node->parent;
+    char *next = format("{cstr}/{cstr}", node->name, out);
+    free(out);
+    out = next;
+  }
+
+  return out;
+}
+
+void devicetree_print(struct devicetree_node *node) {
+  if (!node) {
+    print("nullptr");
+    return;
+  }
+
+  char *path = devicetree_path(node);
+  print("{cstr} {{", path);
+  free(path);
+
+  usize depth = 2;
+  while (depth && node) {
+    // Print each property.
+    for (struct list_head *prop_list = node->props.next;
+         prop_list != &node->props; prop_list = prop_list->next) {
+      struct devicetree_prop *prop =
+          container_of(prop_list, struct devicetree_prop, node_props_head);
+      print("{indent}{cstr} = [{bytes}];", depth, prop->name, prop->value,
+            prop->value_len);
+    }
+
+    if (node->children.next != &node->children) {
+      // Traverse into the first child, if there is one.
+      node = container_of(node->children.next, struct devicetree_node,
+                          parent_children_head);
+      print("{indent}{cstr} {{", depth, node->name);
+      depth += 2;
+    } else {
+      // Go to the parent until we have a sibling or hit the root.
+      while (depth > 2 && node->parent &&
+             node->parent_children_head.next == &node->parent->children) {
+        node = node->parent;
+        depth -= 2;
+        print("{indent}}}", depth);
+      }
+
+      if (depth == 2 || !node->parent) {
+        // If we're at the root, finish.
+        node = node->parent;
+        depth -= 2;
+        print("{indent}}}", depth);
+      } else {
+        // Otherwise, traverse into that next sibling.
+        node = container_of(node->parent_children_head.next,
+                            struct devicetree_node, parent_children_head);
+        print("{indent}}}", depth - 2);
+        print("{indent}{cstr} {{", depth - 2, node->name);
+      }
+    }
+  }
+}
+
+void devicetree_add_entropy(struct devicetree_node *root) {
+  struct devicetree_node *chosen = devicetree_child(root, "chosen");
+  if (!chosen)
+    return;
+  struct devicetree_prop *rng_seed = devicetree_prop(chosen, "rng-seed");
+  if (!rng_seed)
+    return;
+
+  entropy_pool_mix(rng_seed->value, rng_seed->value_len);
+  entropy_pool_credit(8 * rng_seed->value_len);
+  devicetree_prop_free(rng_seed);
+}
+
+struct devicetree_handler {
+  const char *compatible;
+  usize compatible_len;
+  struct device *(*handler)(struct devicetree_node *node);
+};
+
+/**
+ * A vector of handlers.
+ *
+ * TODO: Replace this with a hashtable of vectors or similar.
+ */
+static struct devicetree_handler *handlers = nullptr;
+static usize handlers_cap = 0, handlers_len = 0;
+
+static void devicetree_enumerate_one(struct devicetree_node *node) {
+  assert(node);
+
+  struct devicetree_prop *prop = devicetree_prop(node, "compatible");
+  if (!prop)
+    return;
+
+  const u8 *str = prop->value;
+  usize len = prop->value_len;
+
+  while (len) {
+    usize item_len = strlen((const char *)str);
+
+    for (usize i = 0; i < handlers_len; i++) {
+      if (handlers[i].compatible_len != item_len)
+        continue;
+      if (memcmp(handlers[i].compatible, str, item_len) != 0)
+        continue;
+
+      struct device *device = handlers[i].handler(node);
+      if (device) {
+        device_add(&root_device, device);
+        return;
+      } else {
+        struct symbolicated symbolicated;
+        if (symbolicate(&symbolicated, addr_of_ptr(handlers[i].handler))) {
+          print("Devicetree handler <{cstr}+{usize}> failed to initialize a "
+                "device",
+                symbolicated.name, symbolicated.offset);
+        } else {
+          print("Devicetree handler <{uaddr}> failed to initialize a device",
+                addr_of_ptr(handlers[i].handler));
+        }
+      }
+    }
+
+    str += item_len + 1;
+    len -= item_len + 1;
+  }
+}
+
+void devicetree_enumerate(struct devicetree_node *root) {
+  assert(root);
+
+  struct devicetree_node *node = root;
+  for (;;) {
+    // Traverse down and to the left as far as we can.
+    if (!list_is_empty(&node->children)) {
+      node = container_of(node->children.next, struct devicetree_node,
+                          parent_children_head);
+      continue;
+    }
+
+    // At this point, we're at a leaf.
+    assert(list_is_empty(&node->children));
+
+    // While we're the right-most child, go up. This counts as leaving the node,
+    // so check the node for a `compatible` prop before doing so.
+    while (node->parent &&
+           node->parent_children_head.next == &node->parent->children) {
+      devicetree_enumerate_one(node);
+      node = node->parent;
+    }
+
+    // If we left the root, we're done.
+    if (!node->parent)
+      break;
+
+    // We now have a right sibling, which we can go to. This count as leaving
+    // the node, so we'll check the node for a `compatible` prop. Next
+    // iteration, we'll descend.
+    assert(node->parent_children_head.next != &node->parent->children);
+    devicetree_enumerate_one(node);
+    node = container_of(node->parent_children_head.next, struct devicetree_node,
+                        parent_children_head);
+  }
+}
+
+void devicetree_register(
+    const char *compatible,
+    struct device *(*handler)(struct devicetree_node *node)) {
+  assert(compatible && handler);
+
+  if (!handlers) {
+    assert(!handlers_len);
+    handlers_cap = 16;
+    handlers = alloc(sizeof(struct devicetree_handler) * handlers_cap);
+    assert(handlers, "Failed to allocate handlers vector");
+  }
+
+  if (handlers_cap == handlers_len) {
+    handlers_cap *= 2;
+    struct devicetree_handler *new_handlers =
+        realloc(handlers, sizeof(struct devicetree_handler) * handlers_cap);
+    assert(new_handlers, "Failed to reallocate handlers vector");
+    handlers = new_handlers;
+  }
+
+  handlers[handlers_len++] = (struct devicetree_handler){
+      .compatible = compatible,
+      .compatible_len = strlen(compatible),
+      .handler = handler,
+  };
 }

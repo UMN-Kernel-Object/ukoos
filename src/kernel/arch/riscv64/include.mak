@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+# SPDX-FileCopyrightText: ukoOS Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -8,7 +8,13 @@ kernel-cflags += \
 	-mabi=lp64 \
 	-mcmodel=medany
 kernel-objs-asm += arch/riscv64/start
-kernel-objs-c += arch/riscv64/backtrace arch/riscv64/hart_locals arch/riscv64/paging arch/riscv64/panic arch/riscv64/sbi
+kernel-objs-c += arch/riscv64/backtrace
+kernel-objs-c += arch/riscv64/hart_locals
+kernel-objs-c += arch/riscv64/paging
+kernel-objs-c += arch/riscv64/panic
+kernel-objs-c += arch/riscv64/physical
+kernel-objs-c += arch/riscv64/random
+kernel-objs-c += arch/riscv64/sbi
 
 $(eval $(call compute_component_variables,kernel))
 
@@ -20,6 +26,7 @@ install:: src/kernel/kernel.elf src/kernel/kernel.sym
 $(call defcleanable, \
 	src/kernel/arch/riscv64/bootstub.d \
 	src/kernel/arch/riscv64/bootstub.o \
+	src/kernel/arch/riscv64/bootstub_generated.ld \
 	src/kernel/arch/riscv64/bootstub_generated.o \
 	src/kernel/arch/riscv64/bootstub_generated.S \
 	src/kernel/arch/riscv64/kernel-unstripped.elf \
@@ -89,10 +96,13 @@ src/kernel/kernel.sym: src/kernel/arch/riscv64/kernel-unstripped.elf
 	$(Q)$(STRIP) --only-keep-debug -o $@ $<
 
 # Generate the bootstub.
-src/kernel/arch/riscv64/bootstub_generated.S: $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel.elf
+src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub_generated.S &: $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel.elf
 	@mkdir -p $(dir $@)
 	@echo "GEN     $@"
-	$(Q)$(PYTHON3) $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py src/kernel/arch/riscv64/kernel-unstripped.elf $@
+	$(Q)$(PYTHON3) $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py \
+		src/kernel/arch/riscv64/kernel-unstripped.elf \
+		src/kernel/arch/riscv64/bootstub_generated.ld \
+		src/kernel/arch/riscv64/bootstub_generated.S
 
 # Compile the bootstub.
 src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_generated.S
@@ -102,7 +112,7 @@ src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_g
 
 # Link the bootstub to produce the bootable ELF. The bootstub includes the
 # kernel, so we don't need to somehow include it.
-src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub.o src/kernel/arch/riscv64/bootstub_generated.o
+src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub.o src/kernel/arch/riscv64/bootstub_generated.o
 	@mkdir -p $(dir $@)
 	@echo "LD      $@"
 	$(Q)$(CC) $(kernel-cflags) $(kernel-ldflags) \

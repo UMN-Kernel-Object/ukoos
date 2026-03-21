@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -8,7 +8,6 @@
 #define UKO_OS_KERNEL__HART_LOCALS_H 1
 
 #include <crypto/subtle/random_internals.h>
-#include <mm/alloc_internals.h>
 
 /**
  * The data that is local to a hart.

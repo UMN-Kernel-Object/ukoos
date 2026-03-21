@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -9,18 +9,57 @@
 
 #include <physical.h>
 
-static inline uaddr uaddr_align_down(uaddr addr, usize bits) {
+static inline uaddr _align_down_uaddr(uaddr addr, usize bits) {
   uaddr low_mask = ((uaddr)1 << bits) - 1;
   return addr & ~low_mask;
 }
 
-static inline uaddr uaddr_align_up(uaddr addr, usize bits) {
-  return uaddr_align_down(addr + (((uaddr)1 << bits) - 1), bits);
+static inline uaddr _align_up_uaddr(uaddr addr, usize bits) {
+  return _align_down_uaddr(addr + (((uaddr)1 << bits) - 1), bits);
+}
+
+static inline bool _is_aligned_uaddr(uaddr addr, usize bits) {
+  return _align_down_uaddr(addr, bits) == addr;
+}
+
+static inline void *_align_down_ptr(void *ptr, usize bits) {
+  return ptr_with_addr(ptr, _align_down_uaddr(addr_of_ptr(ptr), bits));
+}
+
+static inline void *_align_up_ptr(void *ptr, usize bits) {
+  return ptr_with_addr(ptr, _align_up_uaddr(addr_of_ptr(ptr), bits));
+}
+
+static inline bool _is_aligned_ptr(const void *ptr, usize bits) {
+  return _is_aligned_uaddr(addr_of_ptr(ptr), bits);
 }
 
 #define align_down(ADDR, BITS)                                                 \
-  (_Generic(ADDR, paddr: paddr_align_down, uaddr: uaddr_align_down)(ADDR, BITS))
+  (_Generic(ADDR,                                                              \
+       void *: _align_down_ptr,                                                \
+       paddr: _align_down_paddr,                                               \
+       uaddr: _align_down_uaddr)(ADDR, BITS))
+
 #define align_up(ADDR, BITS)                                                   \
-  (_Generic(ADDR, paddr: paddr_align_up, uaddr: uaddr_align_up)(ADDR, BITS))
+  (_Generic(ADDR,                                                              \
+       void *: _align_up_ptr,                                                  \
+       paddr: _align_up_paddr,                                                 \
+       uaddr: _align_up_uaddr)(ADDR, BITS))
+
+#define is_aligned(ADDR, BITS)                                                 \
+  ({                                                                           \
+    const auto __is_aligned_ADDR = (ADDR);                                     \
+    constexpr auto __is_aligned_ADDR_type =                                    \
+        __builtin_classify_type(__is_aligned_ADDR);                            \
+    const auto __is_aligned_ADDR_or_null = __builtin_choose_expr(              \
+        __is_aligned_ADDR_type == __builtin_classify_type(void *),             \
+        __is_aligned_ADDR, (void **)nullptr);                                  \
+    const auto __is_aligned_func = _Generic(__is_aligned_ADDR,                 \
+        typeof(*__is_aligned_ADDR_or_null) *: _is_aligned_ptr,                 \
+        nullptr_t: _is_aligned_ptr,                                            \
+        paddr: _is_aligned_paddr,                                              \
+        uaddr: _is_aligned_uaddr);                                             \
+    __is_aligned_func(__is_aligned_ADDR, (BITS));                              \
+  })
 
 #endif // UKO_OS_KERNEL__ALIGN_H

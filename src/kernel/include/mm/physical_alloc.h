@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -7,21 +7,25 @@
 #ifndef UKO_OS_KERNEL__MM_PHYSICAL_ALLOC_H
 #define UKO_OS_KERNEL__MM_PHYSICAL_ALLOC_H 1
 
-#include <types.h>
+#include <devicetree.h>
 
 /**
- * Adds a chunk to the physical allocator. Enough memory has to be given to the
- * physical allocator with this function before calling `mm_init_physical` to
- * allocate the buddy bitmaps for physical and virtual memory. This should be
- * about 64MiB at most.
+ * Initializes the physical allocator with the memory discovered in the
+ * Devicetree, ignoring memory reservations.
  */
-void mm_init_add_physical_chunk(paddr start, paddr end);
+void mm_init_physical(struct devicetree_node *devicetree);
 
 /**
- * Sets up the physical memory allocator.
+ * Allocates a single frame of memory from the physical allocator, storing its
+ * physical address in `*out`.
+ *
+ * Returns whether it succeeded.
  */
-void mm_init_physical(paddr devicetree_start, paddr devicetree_end,
-                      paddr kernel_start, paddr kernel_end, uptr *free_va_start,
-                      uptr *free_va_end);
+bool mm_alloc_physical(paddr *out);
+
+/**
+ * Frees a single frame of memory.
+ */
+void mm_free_physical(paddr frame);
 
 #endif // UKO_OS_KERNEL__MM_PHYSICAL_ALLOC_H

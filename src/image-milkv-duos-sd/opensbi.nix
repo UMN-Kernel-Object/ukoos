@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+# SPDX-FileCopyrightText: ukoOS Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -33,6 +33,7 @@ stdenvNoCC.mkDerivation {
   ];
   patches = [
     ./opensbi-patches/0001-fix-build-with-binutils-238.patch
+    ./opensbi-patches/0002-fix-compiling-with-gcc-15.patch
     (fetchpatch {
       url = "https://github.com/riscv-software-src/opensbi/commit/360ab88569201f8d282cf98546b86b8576b6f2ad.patch";
       hash = "sha256-RjroyjFieP/fWsM5aEoY+BSm8pEKVXQrOxjLLFnmeRs=";

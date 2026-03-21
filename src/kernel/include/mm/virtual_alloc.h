@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -7,89 +7,87 @@
 #ifndef UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H
 #define UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H 1
 
-#include <types.h>
+#include <list.h>
 
 /**
- * Flags about a link of the free list.
+ * A virtual memory area. This struct represents a region of either free or
+ * allocated memory, with page granularity or greater.
  */
-enum virtual_buddy_free_list_flags : u16 {
-  /**
-   * This link was allocated in static memory as part of bootstrapping the
-   * allocator, and should not be freed.
-   */
-  VIRTUAL_BUDDY_FREE_LIST_BOOTSTRAP = 1 << 0,
-};
+struct vma;
 
 /**
- * A link in the free list for the buddy allocator for virtual address space.
- * These are heap-allocated.
+ * An instance of the virtual memory allocator.
  */
-struct virtual_buddy_free_list {
-  /**
-   * The next link in the list.
-   */
-  struct virtual_buddy_free_list *next;
-
-  /**
-   * Flags about this link.
-   */
-  enum virtual_buddy_free_list_flags flags : 12;
-
-  /**
-   * The high bits of the address of the allocatable block of memory.
-   */
-  uptr addr_hi_bits : (sizeof(uptr) * 8) - 12;
-};
-
-static_assert(sizeof(struct virtual_buddy_free_list) == 2 * sizeof(uptr));
-static_assert(alignof(struct virtual_buddy_free_list) == alignof(uptr));
+struct vma_allocator;
 
 /**
- * A buddy allocator for a 26-bit space. If pages are the leaves, this covers
- * 256GiB, i.e. either the lower or upper half of Sv39 (and still a convenient
- * size on x86_64, or on ARMv8-A with a 4KiB granule).
+ * The VMA allocator used for higher-half memory.
  */
-struct virtual_buddy {
-  /**
-   * The range of virtual addresses this allocator covers.
-   */
-  uaddr start, end;
-
-  /**
-   * The free lists.
-   */
-  struct virtual_buddy_free_list *free_lists[27];
-
-  /**
-   * The bitmap.
-   */
-  u8 bitmap[1 << 25];
-};
+extern struct vma_allocator kernel_virtual_allocator;
 
 /**
- * The kernel's virtual memory allocator.
+ * Attempts to initialize a VMA allocator to cover the given address range.
+ * Returns whether it succeded.
  */
-extern struct virtual_buddy *const mm_kernel_virtual_buddy;
+bool vma_allocator_init(struct vma_allocator *allocator, uaddr lo, uaddr hi);
 
 /**
- * Sets up `mm_kernel_virtual_buddy`.
+ * Creates a new instance of the virtual memory allocator, set to cover the
+ * given address range.
  */
-void mm_init_virtual(uptr free_va_start, uptr free_va_end);
+struct vma_allocator *vma_allocator_new(uaddr lo, uaddr hi);
 
 /**
- * Allocates a range of virtual address space from the given allocator.
+ * Prints the VMA allocator's state, for debugging purposes.
+ */
+void vma_allocator_print(struct vma_allocator *allocator);
+
+/**
+ * Attempts to allocate an contiguous address range of `num_pages` pages.
+ * Returns a used VMA of that size on success, or nullptr on failure.
  *
- * `size` must not be zero.
+ * Note that this does not (currently) create page table entries.
  */
-[[gnu::nonnull(1)]] uptr mm_va_alloc(struct virtual_buddy *allocator,
-                                     usize size);
+struct vma *vma_alloc(struct vma_allocator *allocator, usize num_pages);
 
 /**
- * Frees a range of virtual address space allocated with `mm_va_alloc`.
+ * Attempts to allocate an contiguous address range of `num_pages` pages, at an
+ * address aligned to `align_bits`. Returns a used VMA of that size on success,
+ * or nullptr on failure.
  *
- * `size` must be the size that was originally allocated.
+ * Note that this does not (currently) create page table entries.
  */
-[[gnu::nonnull(1)]] void mm_va_free(struct virtual_buddy *allocator, uptr ptr,
-                                    usize size);
+struct vma *vma_alloc_aligned(struct vma_allocator *allocator, usize num_pages,
+                              usize align_bits);
+
+/**
+ * Attempts to allocate the address range `lo` to `hi`. Returns a used VMA
+ * that covers exactly that range on success, or nullptr on failure.
+ *
+ * Note that this does not (currently) create page table entries.
+ *
+ * TODO: This should indicate "virtual memory already in use" separately from
+ * "OOM when trying to allocate a VMA."
+ */
+struct vma *vma_alloc_by_addr(struct vma_allocator *allocator, uaddr lo,
+                              uaddr hi);
+
+/**
+ * Frees a VMA.
+ *
+ * Note that this does not (currently) remove page table entries.
+ */
+void vma_free(struct vma *vma);
+
+/**
+ * Writes the bounds of a VMA to out_lo and out_hi.
+ */
+void vma_bounds(const struct vma *vma, uaddr *out_lo, uaddr *out_hi);
+
+/**
+ * Finds the VMA that contains the given address. Panics if the address is out
+ * of range.
+ */
+struct vma *vma_find(struct vma_allocator *allocator, uaddr addr);
 
 #endif // UKO_OS_KERNEL__MM_VIRTUAL_ALLOC_H

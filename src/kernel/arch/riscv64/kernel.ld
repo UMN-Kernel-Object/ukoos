@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -56,6 +56,12 @@ SECTIONS
 		*(.data .data.*)
 		PROVIDE(_kernel_end_data = .);
 	} :rw
+	.data.initializers :
+	{
+		PROVIDE(_kernel_start_initializers = .);
+		KEEP(*(.initializers))
+		PROVIDE(_kernel_end_initializers = .);
+	} :rw
 	.bss :
 	{
 		PROVIDE(_kernel_start_bss = .);
@@ -64,6 +70,4 @@ SECTIONS
 	} :rw
 
 	PROVIDE(_kernel_end = .);
-
-	PROVIDE(kernel_pgtbl2 = 0xffffffffffffd000);
 }

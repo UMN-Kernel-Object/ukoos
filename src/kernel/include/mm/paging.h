@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -55,14 +55,37 @@ enum page_permissions : u8 {
 };
 
 /**
- * A low-level function that constructs a mapping _without_ recording it in the
- * allocator. This is only exposed so the allocator can be bootstrapped.
+ * Maps a physical page to a virtual address.
  *
  * Returns whether it succeeded.
  *
  * This function may not take effect immediately -- call `mm_paging_fence` to
  * wait until it has taken effect.
  */
-bool _mm_map(uaddr va, paddr pa, enum page_permissions perms);
+bool mm_paging_map(uaddr va, paddr pa, enum page_permissions perms);
+
+/**
+ * Unmaps a physical page from a virtual address.
+ *
+ * Returns whether it succeeded, and writes the physical address to `*pa`.
+ *
+ * This function may not take effect immediately -- call `mm_paging_fence` to
+ * wait until it has taken effect.
+ */
+bool mm_paging_unmap(uaddr va, paddr *pa);
+
+/**
+ * Maps a region of memory for memory-mapped IO. This may involve special flags
+ * or other setup to prevent accesses from being cached.
+ *
+ * Returns a pointer to the virtual address for the region. Returns `nullptr` on
+ * error.
+ */
+void *iomem_map(paddr addr, usize size);
+
+/**
+ * Unmaps memory mapped with `iomem_map`.
+ */
+void iomem_unmap(void *ptr, usize size);
 
 #endif // UKO_OS_KERNEL__MM_PAGING_H

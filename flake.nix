@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+# SPDX-FileCopyrightText: ukoOS Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -96,7 +96,7 @@
             pkgs.dtc
             pkgs.gdb
             pkgs.minicom
-            pkgs.nixfmt-rfc-style
+            pkgs.nixfmt
             pkgs.qemu
             pkgs.reuse
             pkgs.shellcheck

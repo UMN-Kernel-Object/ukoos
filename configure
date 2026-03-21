@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# SPDX-FileCopyrightText: 2025 ukoOS Contributors
+# SPDX-FileCopyrightText: ukoOS Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -122,8 +122,6 @@ if [[ -e Makefile ]]; then
 	if [[ "$(realpath Makefile)" != "$(realpath "$repo/Makefile")" ]]; then
 		printf >&2 './configure: a different Makefile already exists\n'
 		exit 1
-	else
-		printf >&2 "./configure: already configured; you probably want to run \`make clean' to get rid of old build artifacts\n"
 	fi
 else
 	ln -s "$repo/Makefile" Makefile

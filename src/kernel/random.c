@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -49,7 +49,7 @@ static struct blake2s_hasher entropy_pool = {0};
  *   `wait_for_entropy` to block until this reaches 256 bits. Hopefully (though
  *   we cannot depend on this), this much entropy is gathered during boot;
  *   either from timing variations on real hardware, or from hypervisor-provided
- *   sources (DeviceTree and virtio) in virtual machines.
+ *   sources (Devicetree and virtio) in virtual machines.
  *
  * - We use this as a kind of age counter for hart-local RNGs, and reseed them
  *   every time an additional 256 bits of entropy are gathered.
@@ -114,6 +114,24 @@ usize random(void) {
 
   usize out;
   memcpy(&out, buf, sizeof(usize));
+  return out;
+}
+
+u32 random_u32(void) {
+  u8 buf[sizeof(u32)];
+  getrandom(buf, sizeof(u32));
+
+  u32 out;
+  memcpy(&out, buf, sizeof(u32));
+  return out;
+}
+
+u64 random_u64(void) {
+  u8 buf[sizeof(u64)];
+  getrandom(buf, sizeof(u64));
+
+  u64 out;
+  memcpy(&out, buf, sizeof(u64));
   return out;
 }
 
