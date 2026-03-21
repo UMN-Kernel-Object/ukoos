@@ -9,8 +9,8 @@
 #include <print.h>
 
 #include <device.h>
-#include <devices/pci.h>
 #include <devices/netdev.h>
+#include <devices/pci.h>
 #include <net/eth.h>
 #include <net/ipv6.h>
 
@@ -35,20 +35,14 @@ struct rtl8139 {
 bool send_packet(struct netdev *this, u8 packet[], usize length);
 struct mac get_mac(struct netdev *this);
 
-struct netdev_ops rtl8139_ops = {
-  .send_packet = send_packet,
-  .get_mac = get_mac
-};
+struct netdev_ops rtl8139_ops = {.send_packet = send_packet,
+                                 .get_mac = get_mac};
 
 constexpr usize TX_BUFF_SIZE = 0x1700;
 constexpr u16 rtl8139_vid = 0x10ec;
 constexpr u16 rtl8139_did = 0x8139;
 
-enum rtl8139_registers {
-  REG_COM = 0x37,
-  REG_TCR = 0x40,
-  REG_CONFIG1 = 0x52
-};
+enum rtl8139_registers { REG_COM = 0x37, REG_TCR = 0x40, REG_CONFIG1 = 0x52 };
 
 enum rtl8139_flags {
   TSD_TOK = (1 << 15),
@@ -61,10 +55,10 @@ enum rtl8139_flags {
 
 u8 rtl8139_tbuff[4][TX_BUFF_SIZE] __attribute__((aligned(256)));
 
-static_assert( offsetof(struct rtl8139_regs, tsad) == 0x20);
-static_assert( offsetof(struct rtl8139_regs, tsd) == 0x10);
-static_assert( offsetof(struct rtl8139_regs, com) == 0x37);
-static_assert( offsetof(struct rtl8139_regs, config1) == 0x52);
+static_assert(offsetof(struct rtl8139_regs, tsad) == 0x20);
+static_assert(offsetof(struct rtl8139_regs, tsd) == 0x10);
+static_assert(offsetof(struct rtl8139_regs, com) == 0x37);
+static_assert(offsetof(struct rtl8139_regs, config1) == 0x52);
 
 bool mm_paging_walk(uaddr va, paddr *pte, bool alloc);
 
@@ -82,7 +76,7 @@ u32 walkaddr(uaddr addr) {
 
   pte = (pte >> 10) << 12;
   assert(pte < U32_MAX);
-  return (u32) pte | off;
+  return (u32)pte | off;
 }
 
 struct mac get_mac(struct netdev *this) {
@@ -90,19 +84,19 @@ struct mac get_mac(struct netdev *this) {
   volatile struct rtl8139_regs *rtl_regs = rtl_this->regs;
   struct mac mac;
 
-  for (usize i = 0; i<6; ++i) {
+  for (usize i = 0; i < 6; ++i) {
     mac.addr[i] = rtl_regs->mac[i];
   }
   return mac;
 }
 
 bool send_packet(struct netdev *this, u8 packet[], usize length) {
-  struct rtl8139 *rtl_this = (struct rtl8139 *) this->device;
+  struct rtl8139 *rtl_this = (struct rtl8139 *)this->device;
   volatile struct rtl8139_regs *rtl_regs = rtl_this->regs;
-  u32 phys_buffer = walkaddr((uaddr) (&rtl8139_tbuff[0]));
+  u32 phys_buffer = walkaddr((uaddr)(&rtl8139_tbuff[0]));
   u64 i;
 
-  for (i=0; i<length; ++i) {
+  for (i = 0; i < length; ++i) {
     rtl8139_tbuff[rtl_this->current_buffer][i] = packet[i];
   }
 
@@ -111,31 +105,29 @@ bool send_packet(struct netdev *this, u8 packet[], usize length) {
   }
 
   rtl_regs->tsad[rtl_this->current_buffer] = phys_buffer;
-  rtl_regs->tsd[rtl_this->current_buffer] = (u32) length;
+  rtl_regs->tsd[rtl_this->current_buffer] = (u32)length;
 
   ++rtl_this->current_buffer;
   return true;
 }
 
-
 void rtl8139_test(struct rtl8139 *rtl_device) {
   volatile struct rtl8139_regs *rtl_regs = rtl_device->regs;
   struct mac mac;
-  memcpy(mac.addr, (const u8*) "\xff\xff\xff\xff\xff\xff", 6);
+  memcpy(mac.addr, (const u8 *)"\xff\xff\xff\xff\xff\xff", 6);
 
-//  eth_send_packet(&rtl_device->netdev, mac,
-//	(u8*) "yellow submarine", 16);
+  //  eth_send_packet(&rtl_device->netdev, mac,
+  //	(u8*) "yellow submarine", 16);
 
-	u8 src_address[16] = {6};
-	u8 dst_address[16] = {4};
-	struct ipv6_header header = ipv6_create_header(src_address,dst_address,UDP);
-	u8 data[] = "yellow submarines are so cool";
-	ipv6_send_packet(header, data, ARRAY_SIZE(data) -1);
+  struct ip_address src_address = {{6}};
+  struct ip_address dst_address = {{4}};
+  struct ipv6_header header = ipv6_create_header(src_address, dst_address, UDP);
+  u8 data[] = "yellow submarines are so cool";
+  ipv6_send_packet(header, data, ARRAY_SIZE(data) - 1);
 
   assert(rtl_regs->tsad[0] != 0);
   assert((rtl_regs->tsd[0] & TSD_TOK) != 0);
 }
-
 
 static struct device *add_device(paddr reg_addr, usize reg_size) {
   struct rtl8139 *device = nullptr;
@@ -171,7 +163,6 @@ fail:
   }
   free(device);
   return nullptr;
-
 }
 
 void rtl8139_init(struct pci_regs *pci_device) {
@@ -180,8 +171,9 @@ void rtl8139_init(struct pci_regs *pci_device) {
   volatile struct rtl8139_regs *rtl_regs;
   u32 reg_addr = 0x40000000;
 
-  struct device *device = add_device(paddr_of_bits(reg_addr), sizeof(struct rtl8139_regs));
-  struct rtl8139 *rtl_device = (struct rtl8139 *) device;
+  struct device *device =
+      add_device(paddr_of_bits(reg_addr), sizeof(struct rtl8139_regs));
+  struct rtl8139 *rtl_device = (struct rtl8139 *)device;
   rtl_regs = rtl_device->regs;
 
   /* TODO: Maybe move PCI init to pci.c? */
@@ -192,7 +184,8 @@ void rtl8139_init(struct pci_regs *pci_device) {
   rtl_regs->config1 = 0;
 
   rtl_regs->com = COM_RST;
-  while (rtl_regs->com & COM_RST) ;
+  while (rtl_regs->com & COM_RST)
+    ;
   rtl_regs->com = COM_RE | COM_TE;
 
   rtl_regs->tsad[0] = 0x12;
