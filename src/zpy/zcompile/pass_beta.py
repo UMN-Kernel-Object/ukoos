@@ -13,13 +13,13 @@ def pass_beta(func: ssa.Func):
     replacements: dict[ssa.Insn, ssa.Insn] = {}
     # TODO: If we do this as a pre-order traversal on the dominator tree, we
     # only need one loop.
-    for block in func.blocks:
-        for insn in block.insns:
+    for block in func:
+        for insn in block:
             match insn:
                 case ssa.InsnGetValue((ssa.InsnMakeValueList(values),), i):
                     replacements[insn] = values[i]
-    for block in func.blocks:
-        for insn in block.insns:
+    for block in func:
+        for insn in block:
             for i, arg in enumerate(insn.args):
                 if arg in replacements:
                     insn.args[i] = replacements[arg]

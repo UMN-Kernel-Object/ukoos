@@ -20,6 +20,7 @@ VarBinding = Literal["GLOBAL", "SYMBOL-MACRO"] | ssa.Insn
 
 SPECIAL_FORMS = [
     ZSym.z("FUNCTION"),
+    ZSym.z("IF"),
     ZSym.z("LET"),
     ZSym.z("PROGN"),
 ]
@@ -131,6 +132,14 @@ class IRBuilder:
             env = self.env
         return IRBuilder(block, env)
 
+    @property
+    def func(self) -> ssa.Func:
+        assert self.block.parent is not None
+        return self.block.parent[0]
+
+    def new_block(self, name: str | None = None) -> "IRBuilder":
+        return self.copy_with(block=self.func.new_block(name=name))
+
     def absurd_list(self, never: ssa.Insn) -> ssa.InsnAbsurdList:
         return self.block.add(ssa.InsnAbsurdList(never))
 
@@ -148,9 +157,9 @@ class IRBuilder:
         if_ne: ssa.Block | None = None,
     ) -> tuple[ssa.InsnBranchEq, "IRBuilder", "IRBuilder"]:
         if if_eq is None:
-            if_eq = self.block.parent.new_block()
+            if_eq = self.func.new_block()
         if if_ne is None:
-            if_ne = self.block.parent.new_block()
+            if_ne = self.func.new_block()
         return (
             self.block.add(ssa.InsnBranchEq(lhs, rhs, if_eq, if_ne)),
             self.copy_with(block=if_eq),
@@ -166,9 +175,9 @@ class IRBuilder:
         if_ne: ssa.Block | None = None,
     ) -> tuple[ssa.InsnBranchIntEQ, "IRBuilder", "IRBuilder"]:
         if if_eq is None:
-            if_eq = self.block.parent.new_block()
+            if_eq = self.func.new_block()
         if if_ne is None:
-            if_ne = self.block.parent.new_block()
+            if_ne = self.func.new_block()
         return (
             self.block.add(ssa.InsnBranchIntEQ(lhs, rhs, if_eq, if_ne)),
             self.copy_with(block=if_eq),
@@ -184,9 +193,9 @@ class IRBuilder:
         if_ge: ssa.Block | None = None,
     ) -> tuple[ssa.InsnBranchIntLT, "IRBuilder", "IRBuilder"]:
         if if_lt is None:
-            if_lt = self.block.parent.new_block()
+            if_lt = self.func.new_block()
         if if_ge is None:
-            if_ge = self.block.parent.new_block()
+            if_ge = self.func.new_block()
         return (
             self.block.add(ssa.InsnBranchIntLT(lhs, rhs, if_lt, if_ge)),
             self.copy_with(block=if_lt),
@@ -205,11 +214,14 @@ class IRBuilder:
     def get_value(self, value_list: ssa.Insn, i: int) -> ssa.InsnGetValue:
         return self.block.add(ssa.InsnGetValue(value_list, i))
 
+    def goto(self, dst: ssa.Block) -> ssa.InsnGoto:
+        return self.block.add(ssa.InsnGoto(dst))
+
     def make_value_list(self, *values: ssa.Insn) -> ssa.InsnMakeValueList:
         return self.block.add(ssa.InsnMakeValueList(*values))
 
-    def phi(self) -> ssa.InsnPhi:
-        return self.block.add(ssa.InsnPhi())
+    def phi(self, ty: ssa.Type) -> ssa.InsnPhi:
+        return self.block.add(ssa.InsnPhi(ty))
 
     def ptr_read(self, ptr: ssa.Insn) -> ssa.InsnPtrRead:
         return self.block.add(ssa.InsnPtrRead(ptr))
@@ -272,7 +284,7 @@ class LambdaList:
         """
 
         env = LexicalEnv(ir.env)
-        length = ir.value_list_length(ir.block.parent.args)
+        length = ir.value_list_length(ir.func.args)
         expected_length = 0
 
         for arg in self.required:
@@ -314,7 +326,7 @@ def zcompile(form: ZVal, env: Env) -> ssa.Func:
 
     # Make a builder pointing at the entry block.
     func = ssa.Func(name=func_name)
-    ir = IRBuilder(func.blocks[0], env)
+    ir = IRBuilder(func.entry, env)
 
     # Compile the argument list.
     args_env = LambdaList(args).compile(ir)
@@ -363,7 +375,13 @@ def compile_form(ir: IRBuilder, form: ZVal, *, tail: bool = False) -> ssa.Insn:
             elif binding == "MACRO":
                 raise Exception(f"TODO: compile_form {form}")
             elif binding == "SPECIAL-FORM":
-                raise Exception(f"TODO: compile_form {form}")
+                return compile_special_form(
+                    ir,
+                    str(form.car.name),
+                    ZCons.collect(form.cdr),
+                    form=form,
+                    tail=tail,
+                )
             else:
                 raise Exception(f"TODO: compile_form {form} {binding}")
         else:
@@ -374,6 +392,33 @@ def compile_form(ir: IRBuilder, form: ZVal, *, tail: bool = False) -> ssa.Insn:
             # return compile_call(ir, func, args)
     else:
         return ir.make_value_list(ir.const(form))
+
+
+def compile_special_form(
+    ir: IRBuilder, car: str, cdr: list[ZVal], *, form: ZVal, tail: bool = False
+) -> ssa.Insn:
+    match car:
+        case "IF":
+            if len(cdr) == 2:
+                cdr.append(NIL)
+            if len(cdr) != 3:
+                raise Exception(f"compile_special_form: invalid IF form: {form}")
+            c = ir.get_value(compile_form(ir, cdr[0]), 0)
+            _, on_f, on_t = ir.branch_eq(c, ir.const(NIL))
+            merge = ir.new_block()
+            phi = merge.phi("value-list")
+            on_t.upsilon(compile_form(on_t, cdr[1]), phi)
+            on_t.goto(merge.block)
+            on_f.upsilon(compile_form(on_f, cdr[2]), phi)
+            on_f.goto(merge.block)
+            ir.copy_from(merge)
+            return phi
+        case "PROGN":
+            if len(cdr) == 0:
+                cdr = [NIL]
+            return compile_progn(ir, cdr[:-1], cdr[-1], tail=tail)
+        case _:
+            raise Exception(f"TODO: compile_special_form {car}")
 
 
 def compile_call(

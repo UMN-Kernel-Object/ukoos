@@ -13,7 +13,7 @@ certain way, check there first.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterable, Literal
+from typing import Iterable, Iterator, Literal
 from zval import NIL, ZSym, ZVal
 
 
@@ -123,27 +123,38 @@ class Insn(ABC):
     @property
     def func(self) -> "Func":
         assert self.parent is not None
-        return self.parent.parent
+        assert self.parent.parent is not None
+        return self.parent.parent[0]
+
+    @property
+    def jumps_to(self) -> tuple["Block", ...] | None:
+        return None
 
     def tyck(self):
-        cls = type(self)
-        if cls.insn_vararg_ty is None:
-            assert len(self.args) == len(cls.insn_arg_tys)
-        else:
-            assert len(self.args) >= len(cls.insn_arg_tys)
-            for arg in self.args[len(cls.insn_arg_tys) :]:
-                assert arg.type == cls.insn_vararg_ty
+        arg_tys, vararg_ty = self.type_args
 
-        for arg, ty in zip(self.args, cls.insn_arg_tys):
+        if vararg_ty is None:
+            assert len(self.args) == len(arg_tys)
+        else:
+            assert len(self.args) >= len(arg_tys)
+            for arg in self.args[len(arg_tys) :]:
+                assert arg.type == vararg_ty
+
+        for arg, ty in zip(self.args, arg_tys):
             assert arg.type == ty
 
-        if self.parent is not None:
+        if self.parent is not None and self.parent.parent is not None:
             for arg in self.args:
-                assert self.parent is arg.parent
+                assert self.func is arg.func
 
     @property
     def type(self) -> Type:
         return type(self).insn_ret_ty
+
+    @property
+    def type_args(self) -> tuple[tuple[Type, ...], Type | None]:
+        cls = type(self)
+        return (cls.insn_arg_tys, cls.insn_vararg_ty)
 
     def __repr__(self) -> str:
         insn_name = type(self).insn_name
@@ -159,81 +170,288 @@ class Insn(ABC):
 @dataclass(init=False)
 class Block:
     name: str
-    insns: list[Insn]
-    parent: "Func"
+    _insns: list[Insn]
+    parent: tuple["Func", int] | None
 
-    def __init__(self, parent: "Func", *, name: str | None = None):
+    def __init__(self, parent: tuple["Func", int], *, name: str | None = None):
         if name is None:
             name = default_block_name()
         self.name = name
-        self.insns = []
+        self._insns = []
         self.parent = parent
+
+    def __iter__(self) -> Iterator[Insn]:
+        return iter(self._insns)
+
+    def __len__(self) -> int:
+        return len(self._insns)
 
     def add[T: Insn](self, insn: T) -> T:
         insn.parent = self
-        self.insns.append(insn)
+        self._insns.append(insn)
+        if self.parent is not None:
+            self.parent[0]._dom = None
+            self.parent[0]._preds = None
         return insn
+
+    @property
+    def jumps_to(self) -> tuple["Block", ...]:
+        """
+        Returns the blocks this block can jump to (i.e., its successors).
+        """
+
+        for insn in self:
+            jumps_to = insn.jumps_to
+            if jumps_to is not None:
+                return jumps_to
+        raise Exception(f"Block {self} had no terminator")
 
     def remove_all(self, indices: list[int]) -> list[Insn]:
         for i in indices:
-            assert 0 <= i < len(self.insns)
+            assert 0 <= i < len(self)
         to_remove = frozenset(indices)
         removed: dict[int, Insn] = {}
         new_insns = []
-        for i, insn in enumerate(self.insns):
+        for i, insn in enumerate(self):
             if (i - len(removed)) in to_remove:
                 insn.parent = None
                 removed[i] = insn
             else:
                 new_insns.append(insn)
 
-        self.insns.clear()
+        self._insns.clear()
         for insn in new_insns:
-            self.insns.append(insn)
+            self._insns.append(insn)
+        if self.parent is not None:
+            self.parent[0].invalidate()
 
         return [removed[i] for i in indices]
 
     def tyck(self):
-        for insn in self.insns:
+        for insn in self:
             insn.tyck()
 
     def __repr__(self) -> str:
         out = f"{self.name}:"
-        for insn in self.insns:
+        for insn in self:
             out += f"\n\t{insn!r}"
         return out
+
+
+@dataclass(init=False)
+class DomTree:
+    """
+    A dominator tree. This is a tree where the parent-child relation is the
+    "immediately dominates" relation.
+    """
+
+    func: "Func"
+    _idom: list[int]
+    children: list[list[int]]
+
+    def __init__(self, func: "Func", idom: list[int]):
+        self.func = func
+        self._idom = idom
+        self.children = [
+            [j for j in range(len(idom)) if idom[j] == i and j != 0]
+            for i in range(len(idom))
+        ]
+
+    def preorder(self) -> Iterator[Block]:
+        def traverse(i: int):
+            yield self.func._blocks[i]
+            for child in self.children[i]:
+                yield from traverse(child)
+
+        yield from traverse(0)
+
+    def postorder(self) -> Iterator[Block]:
+        def traverse(i: int):
+            for child in self.children[i]:
+                yield from traverse(child)
+            yield self.func._blocks[i]
+
+        yield from traverse(0)
 
 
 @dataclass(init=False)
 class Func:
     name: ZSym
     args: Insn
-    blocks: list[Block]
     effect_registry: EffectRegistry
+    _blocks: list[Block]
+    _dom: DomTree | None
+    _preds: list[set[int]] | None
 
     def __init__(self, name: ZSym = NIL):
         self.name = name
-        self.blocks = []
         self.effect_registry = EffectRegistry()
+        self._blocks = []
+        self._dom = None
+        self._preds = None
 
         entry_block = self.new_block()
         self.args = entry_block.add(InsnGetArgs())
 
-    def new_block(self) -> Block:
-        block = Block(parent=self)
-        self.blocks.append(block)
-        return block
+    def __iter__(self) -> Iterator[Block]:
+        return iter(self._blocks)
 
-    def tyck(self):
-        for block in self.blocks:
-            block.tyck()
+    def __len__(self) -> int:
+        return len(self._blocks)
 
     def __repr__(self) -> str:
         out = f"func ({self.name} {self.args.name}) {{\n"
-        for block in self.blocks:
+        for block in self:
             out += f"{block!r}\n"
         out += "}"
         return out
+
+    def _compute_dom(self) -> DomTree:
+        """
+        Computes the dominator tree.
+        """
+
+        # Reorder to be in reverse post-order. This lets intersect take
+        # advantage of indices being in this order.
+        self.reorder_blocks()
+        if self._preds is None:
+            self._preds = self._compute_preds()
+        preds = self._preds
+        assert preds is not None
+
+        doms: list[int | None] = [None] * len(self)
+        doms[0] = 0
+
+        def intersect(i: int, j: int) -> int:
+            """
+            Logically, intersect computes the intersection of the dominance
+            sets. Thanks to the other properties established by this algorithm,
+            it "really" just finds the nearest common dominator.
+
+            Because of the reverse post-ordering established above, we have the
+            invariant "for x!=0, doms[x] < x." This makes sense: any dominator
+            must be a predecessor.
+
+            We take turns walking up the dominator tree until we find a common
+            ancestor. Because it's an ancestor of each, it must dominate both.
+            """
+
+            while i != j:
+                while i > j:
+                    di = doms[i]
+                    assert di is not None
+                    i = di
+                while j > i:
+                    dj = doms[j]
+                    assert dj is not None
+                    j = dj
+            return i
+
+        # We run to a fixed point. In each step, we might "discover" another
+        # path from the root to a block, and so have to change its expected
+        # immediate dominator to be further up the tree.
+        changed = True
+        while changed:
+            changed = False
+            for i in range(1, len(self)):
+                index = None
+                for p in preds[i]:
+                    if doms[p] is not None:
+                        if index is None:
+                            index = p
+                        else:
+                            index = intersect(index, p)
+                # For us to have reached a block, we must have reached at least
+                # one predecessor.
+                assert index is not None
+                if doms[i] != index:
+                    doms[i] = index
+                    changed = True
+
+        def ensure(i: int | None) -> int:
+            assert i is not None
+            return i
+
+        return DomTree(self, [ensure(i) for i in doms])
+
+    def _compute_preds(self) -> list[set[int]]:
+        """
+        Computes the predecessors of the block.
+        """
+
+        preds: list[set[int]] = [set() for _ in range(len(self))]
+        for block in self:
+            assert block.parent is not None
+            assert block.parent[0] is self
+            for succ in block.jumps_to:
+                assert succ.parent is not None
+                assert succ.parent[0] is self
+                preds[succ.parent[1]].add(block.parent[1])
+        return preds
+
+    @property
+    def dom(self) -> DomTree:
+        if self._dom is None:
+            self._dom = self._compute_dom()
+        return self._dom
+
+    @property
+    def entry(self) -> Block:
+        return self._blocks[0]
+
+    def invalidate(self):
+        """
+        Marks analyses stored on the function itself that depend on the blocks
+        as invalid.
+        """
+
+        self._dom = None
+        self._preds = None
+
+    def new_block(self, *, name: str | None = None) -> Block:
+        block = Block(parent=(self, len(self._blocks)), name=name)
+        self._blocks.append(block)
+        self.invalidate()
+        return block
+
+    def preds(self, block: Block) -> Iterator[Block]:
+        if self._preds is None:
+            self._preds = self._compute_preds()
+        assert block.parent is not None
+        assert block.parent[0] is self
+        return (self._blocks[i] for i in self._preds[block.parent[1]])
+
+    def reorder_blocks(self):
+        new_blocks: list[Block] = []
+        seen = set()
+
+        def traverse(block: Block):
+            assert block.parent is not None
+            assert block.parent[0] is self
+            if block.parent[1] in seen:
+                return
+            seen.add(block.parent[1])
+
+            for child in reversed(block.jumps_to):
+                traverse(child)
+            new_blocks.append(block)
+
+        entry = self.entry
+        traverse(entry)
+
+        self._blocks.clear()
+        for block in self:
+            block.parent = None
+        for i, block in enumerate(reversed(new_blocks)):
+            block.parent = (self, i)
+            self._blocks.append(block)
+        self.invalidate()
+
+        assert self.entry is entry
+
+    def tyck(self):
+        for block in self:
+            block.tyck()
 
 
 class InsnBranchBinop(Insn):
@@ -255,6 +473,10 @@ class InsnBranchBinop(Insn):
 
     def effects(self) -> Iterable[Effect]:
         yield Effect("control", "w")
+
+    @property
+    def jumps_to(self) -> tuple[Block, ...] | None:
+        return (self.if_t, self.if_f)
 
 
 class InsnPure(Insn):
@@ -364,6 +586,32 @@ class InsnGetValue(InsnPure):
         return f"{self.name} <- get-value {self.args[0].name}, {self.i}"
 
 
+class InsnGoto(Insn):
+    insn_name = "goto"
+    insn_ret_ty = "never"
+    insn_arg_tys = ()
+    insn_vararg_ty = None
+    __match_args__ = ("args", "dst")
+
+    dst: Block
+
+    def __init__(self, dst: Block):
+        self.dst = dst
+        super().__init__()
+
+    def __repr__(self):
+        return f"{self.name} <- goto {self.dst.name}"
+
+    def effects(self) -> Iterable[Effect]:
+        # No control write, because it's unconditional and therefore safe to
+        # hoist across?
+        return ()
+
+    @property
+    def jumps_to(self) -> tuple[Block, ...] | None:
+        return (self.dst,)
+
+
 class InsnMakeValueList(InsnPure):
     insn_name = "make-value-list"
     insn_ret_ty = "value-list"
@@ -374,16 +622,25 @@ class InsnMakeValueList(InsnPure):
 
 class InsnPhi(Insn):
     insn_name = "phi"
-    insn_ret_ty = "value"
     insn_arg_tys = ()
     insn_vararg_ty = None
-    __match_args__ = ("args",)
+    __match_args__ = ("type", "args")
+
+    _type: Type
+
+    def __init__(self, ty: Type):
+        self._type = ty
+        super().__init__()
+
+    def __repr__(self):
+        return f"{self.name} <- phi {self.type}"
 
     def effects(self) -> Iterable[Effect]:
         yield Effect("phi-upsilon", "r")
 
-    def new_upsilon(self, value: Insn) -> "InsnUpsilon":
-        return InsnUpsilon(value, self)
+    @property
+    def type(self) -> Type:
+        return self._type
 
 
 class InsnPtrRead(Insn):
@@ -418,6 +675,10 @@ class InsnRet(Insn):
     def effects(self) -> Iterable[Effect]:
         yield Effect("control", "w")
 
+    @property
+    def jumps_to(self) -> tuple[Block, ...] | None:
+        return ()
+
 
 class InsnSymbolFunction(Insn):
     insn_name = "symbol-function"
@@ -440,6 +701,10 @@ class InsnTailCall(Insn):
     def effects(self) -> Iterable[Effect]:
         yield Effect("control", "w")
 
+    @property
+    def jumps_to(self) -> tuple[Block, ...] | None:
+        return ()
+
 
 class InsnUnreachable(Insn):
     insn_name = "unreachable"
@@ -451,12 +716,14 @@ class InsnUnreachable(Insn):
     def effects(self) -> Iterable[Effect]:
         yield Effect("control", "w")
 
+    @property
+    def jumps_to(self) -> tuple[Block, ...] | None:
+        return ()
+
 
 class InsnUpsilon(Insn):
     insn_name = "upsilon"
     insn_ret_ty = "unit"
-    insn_arg_tys = ("value",)
-    insn_vararg_ty = None
     __match_args__ = ("args", "shadow")
 
     shadow: InsnPhi
@@ -467,10 +734,14 @@ class InsnUpsilon(Insn):
         super().__init__(value)
 
     def __repr__(self):
-        return f"{self.name} <- upsilon {self.args[0]}, ^{self.shadow}"
+        return f"{self.name} <- upsilon {self.args[0].name}, ^{self.shadow.name}"
 
     def effects(self) -> Iterable[Effect]:
         yield Effect("phi-upsilon", "w")
+
+    @property
+    def type_args(self) -> tuple[tuple[Type, ...], Type | None]:
+        return ((self.shadow.type,), None)
 
 
 class InsnValueListLength(InsnPure):
