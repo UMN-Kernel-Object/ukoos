@@ -30,21 +30,21 @@ stdenvNoCC.mkDerivation (self: {
 
   dontUnpack = true;
   buildPhase = ''
-    runHook preBuild
-	
-    mkdir -p root/boot
-    ${lib.optionalString (!dev) '' 
-      install -Dt root/boot ${ukoos-milkv-jupiter}/sys/kernel.elf
-    ''}
-    install -Dt input ${u-boot-spacemit-k1}/FSBL.bin
-    install -Dt input ${u-boot-spacemit-k1}/u-boot.itb
-    install -Dt input ${u-boot-spacemit-k1}/bootinfo_sd.bin
-    install -Dt input ${self.passthru.opensbi-milkv-jupiter}/fw_dynamic.itb
-    mkenvimage -s 0x20000 -o input/uboot.env ${./u-boot.txt}
-    cp -r input/uboot.env root/boot/uboot.env
-    genimage --config ${./genimage.cfg}
+        runHook preBuild
+    	
+        mkdir -p root/boot
+        ${lib.optionalString (!dev) ''
+          install -Dt root/boot ${ukoos-milkv-jupiter}/sys/kernel.elf
+        ''}
+        install -Dt input ${u-boot-spacemit-k1}/FSBL.bin
+        install -Dt input ${u-boot-spacemit-k1}/u-boot.itb
+        install -Dt input ${u-boot-spacemit-k1}/bootinfo_sd.bin
+        install -Dt input ${self.passthru.opensbi-milkv-jupiter}/fw_dynamic.itb
+        mkenvimage -s 0x20000 -o input/uboot.env ${./u-boot.txt}
+        cp -r input/uboot.env root/boot/uboot.env
+        genimage --config ${./genimage.cfg}
 
-    runHook postBuild
+        runHook postBuild
   '';
   installPhase = ''
     runHook preInstall
