@@ -351,9 +351,7 @@ def zcompile(form: ZVal, env: Env) -> ssa.Func:
 
     # Run the optimizer.
     print(form)
-    print(func)
-    optimize(func)
-    print(func)
+    optimize(func, log=True)
 
     return func
 
