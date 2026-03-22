@@ -180,6 +180,9 @@ class Block:
         self._insns = []
         self.parent = parent
 
+    def __getitem__(self, i: int) -> Insn:
+        return self._insns[i]
+
     def __iter__(self) -> Iterator[Insn]:
         return iter(self._insns)
 
@@ -213,7 +216,7 @@ class Block:
         removed: dict[int, Insn] = {}
         new_insns = []
         for i, insn in enumerate(self):
-            if (i - len(removed)) in to_remove:
+            if i in to_remove:
                 insn.parent = None
                 removed[i] = insn
             else:
@@ -259,7 +262,7 @@ class DomTree:
 
     def preorder(self) -> Iterator[Block]:
         def traverse(i: int):
-            yield self.func._blocks[i]
+            yield self.func[i]
             for child in self.children[i]:
                 yield from traverse(child)
 
@@ -269,7 +272,7 @@ class DomTree:
         def traverse(i: int):
             for child in self.children[i]:
                 yield from traverse(child)
-            yield self.func._blocks[i]
+            yield self.func[i]
 
         yield from traverse(0)
 
@@ -292,6 +295,9 @@ class Func:
 
         entry_block = self.new_block()
         self.args = entry_block.add(InsnGetArgs())
+
+    def __getitem__(self, i: int) -> Block:
+        return self._blocks[i]
 
     def __iter__(self) -> Iterator[Block]:
         return iter(self._blocks)
@@ -397,7 +403,7 @@ class Func:
 
     @property
     def entry(self) -> Block:
-        return self._blocks[0]
+        return self[0]
 
     def invalidate(self):
         """
@@ -419,7 +425,7 @@ class Func:
             self._preds = self._compute_preds()
         assert block.parent is not None
         assert block.parent[0] is self
-        return (self._blocks[i] for i in self._preds[block.parent[1]])
+        return (self[i] for i in self._preds[block.parent[1]])
 
     def reorder_blocks(self):
         new_blocks: list[Block] = []
