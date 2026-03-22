@@ -31,10 +31,12 @@ class EffectRegistry:
 
     def __init__(self):
         self.effects = {"world": EffectNode(-1, -1, [])}
-        self.add_effect("control", parent="world")
-        self.add_effect("memory", parent="world")
-        self.add_effect("phi-upsilon", parent="world")
-        self.add_effect("symbol-function", parent="world")
+        self.add("local", parent="world")
+        self.add("control", parent="local")
+        self.add("phi", parent="local")
+        self.add("global", parent="world")
+        self.add("memory", parent="global")
+        self.add("symbol-function", parent="global")
         self.validate()
 
     def __getitem__(self, name: str) -> tuple[int, int]:
@@ -42,15 +44,23 @@ class EffectRegistry:
         effect = self.effects[name]
         return effect.preorder, effect.postorder
 
-    def add_effect(self, name: str, *, parent: str):
+    def add(self, name: str, *, parent: str):
         self.valid = False
         assert name not in self.effects
         self.effects[parent].children.append(name)
         self.effects[name] = EffectNode(-1, -1, [])
 
+    def descendants(self, name: str) -> Iterator[str]:
+        yield name
+        yield from (
+            name
+            for child in self.effects[name].children
+            for name in self.descendants(child)
+        )
+
     def interferes(self, eff_a: "Effect", eff_b: "Effect") -> bool:
         self.validate()
-        if eff_a.rw == "r" and eff_b.rw == "r":
+        if not eff_a.writes and not eff_b.writes:
             return False
         if eff_a.name == eff_b.name:
             return True
@@ -79,7 +89,15 @@ class EffectRegistry:
 @dataclass
 class Effect:
     name: str
-    rw: Literal["r", "w"]
+    rw: Literal["r", "w", "rw"]
+
+    @property
+    def reads(self) -> bool:
+        return self.rw == "r" or self.rw == "rw"
+
+    @property
+    def writes(self) -> bool:
+        return self.rw == "rw" or self.rw == "w"
 
 
 class Namer:
@@ -117,9 +135,6 @@ class Insn(ABC):
         self.parent = None
         self.tyck()
 
-    @abstractmethod
-    def effects(self) -> Iterable[Effect]: ...
-
     def dominates(self, other: "Insn") -> bool:
         """
         Returns whether self strictly dominates other.
@@ -131,6 +146,13 @@ class Insn(ABC):
             return self.parent[1] < other.parent[1]
         else:
             return self.parent[0].dominates(other.parent[0])
+
+    @abstractmethod
+    def effects(self) -> Iterable[Effect]: ...
+
+    @property
+    def exit(self) -> bool:
+        return False
 
     @property
     def func(self) -> "Func":
@@ -186,10 +208,8 @@ class Block:
     _insns: list[Insn]
     parent: tuple["Func", int] | None
 
-    def __init__(self, parent: tuple["Func", int], *, name: str | None = None):
-        if name is None:
-            name = default_block_name()
-        self.name = name
+    def __init__(self, parent: tuple["Func", int], *, name: str = ""):
+        self.name = name + default_block_name()
         self._insns = []
         self.parent = parent
 
@@ -203,11 +223,12 @@ class Block:
         return len(self._insns)
 
     def add[T: Insn](self, insn: T) -> T:
+        assert self.parent is not None
         insn.parent = (self, len(self))
         self._insns.append(insn)
-        if self.parent is not None:
-            self.parent[0]._dom = None
-            self.parent[0]._preds = None
+        if isinstance(insn, InsnPhi):
+            self.func.effect_registry.add(f"phi/{insn.name}", parent="phi")
+        self.func.invalidate()
         return insn
 
     def dominates(self, other: "Block") -> bool:
@@ -217,7 +238,7 @@ class Block:
 
         assert self.parent is not None
         assert other.parent is not None
-        assert self.parent[0] is other.parent[0]
+        assert self.func is other.func
 
         func = self.parent[0]
         if self is other:
@@ -231,16 +252,28 @@ class Block:
                 return False
 
     @property
+    def exit(self) -> bool:
+        return self.terminator.exit
+
+    @property
+    def func(self) -> "Func":
+        assert self.parent is not None
+        return self.parent[0]
+
+    @property
     def jumps_to(self) -> tuple["Block", ...]:
         """
         Returns the blocks this block can jump to (i.e., its successors).
         """
 
-        for insn in self:
-            jumps_to = insn.jumps_to
-            if jumps_to is not None:
-                return jumps_to
-        raise Exception(f"Block {self} had no terminator")
+        jumps_to = self.terminator.jumps_to
+        assert jumps_to is not None
+        return jumps_to
+
+    @property
+    def parent_index(self) -> int:
+        assert self.parent is not None
+        return self.parent[1]
 
     def remove_all(self, indices: list[int]) -> list[Insn]:
         for i in indices:
@@ -259,10 +292,16 @@ class Block:
         for insn in new_insns:
             insn.parent = (self, len(self))
             self._insns.append(insn)
-        if self.parent is not None:
-            self.parent[0].invalidate()
+        self.func.invalidate()
 
         return [removed[i] for i in indices]
+
+    @property
+    def terminator(self) -> Insn:
+        for insn in self:
+            if insn.jumps_to is not None:
+                return insn
+        raise Exception(f"Block {self} had no terminator")
 
     def tyck(self):
         for insn in self:
@@ -295,9 +334,8 @@ class DomTree:
         ]
 
     def idom(self, block: Block) -> Block:
-        assert block.parent is not None
-        assert block.parent[0] is self.func
-        return self.func[self._idom[block.parent[1]]]
+        assert block.func is self.func
+        return self.func[self._idom[block.parent_index]]
 
     def preorder(self) -> Iterator[Block]:
         def traverse(i: int):
@@ -332,7 +370,7 @@ class Func:
         self._dom = None
         self._preds = None
 
-        entry_block = self.new_block()
+        entry_block = self.new_block(name="entry")
         self.args = entry_block.add(InsnGetArgs())
 
     def __getitem__(self, i: int) -> Block:
@@ -426,12 +464,10 @@ class Func:
 
         preds: list[set[int]] = [set() for _ in range(len(self))]
         for block in self:
-            assert block.parent is not None
-            assert block.parent[0] is self
+            assert block.func is self
             for succ in block.jumps_to:
-                assert succ.parent is not None
-                assert succ.parent[0] is self
-                preds[succ.parent[1]].add(block.parent[1])
+                assert succ.func is self
+                preds[succ.parent_index].add(block.parent_index)
         return preds
 
     @property
@@ -453,7 +489,7 @@ class Func:
         self._dom = None
         self._preds = None
 
-    def new_block(self, *, name: str | None = None) -> Block:
+    def new_block(self, *, name: str = "") -> Block:
         block = Block(parent=(self, len(self._blocks)), name=name)
         self._blocks.append(block)
         self.invalidate()
@@ -462,20 +498,18 @@ class Func:
     def preds(self, block: Block) -> Iterator[Block]:
         if self._preds is None:
             self._preds = self._compute_preds()
-        assert block.parent is not None
-        assert block.parent[0] is self
-        return (self[i] for i in self._preds[block.parent[1]])
+        assert block.func is self
+        return (self[i] for i in self._preds[block.parent_index])
 
     def reorder_blocks(self):
         new_blocks: list[Block] = []
         seen = set()
 
         def traverse(block: Block):
-            assert block.parent is not None
-            assert block.parent[0] is self
-            if block.parent[1] in seen:
+            assert block.func is self
+            if block.parent_index in seen:
                 return
-            seen.add(block.parent[1])
+            seen.add(block.parent_index)
 
             for child in reversed(block.jumps_to):
                 traverse(child)
@@ -517,7 +551,7 @@ class InsnBranchBinop(Insn):
         return f"{self.name} <- {cls.insn_name} {self.args[0].name}, {self.args[1].name}, {self.if_t.name}, {self.if_f.name}"
 
     def effects(self) -> Iterable[Effect]:
-        yield Effect("control", "w")
+        yield Effect("control", "rw")
 
     @property
     def jumps_to(self) -> tuple[Block, ...] | None:
@@ -581,7 +615,8 @@ class InsnCall(Insn):
     __match_args__ = ("args",)
 
     def effects(self) -> Iterable[Effect]:
-        yield Effect("world", "w")
+        yield Effect("control", "rw")
+        yield Effect("global", "rw")
 
 
 class InsnConst(InsnPure):
@@ -681,7 +716,7 @@ class InsnPhi(Insn):
         return f"{self.name} <- phi {self.type}"
 
     def effects(self) -> Iterable[Effect]:
-        yield Effect("phi-upsilon", "r")
+        yield Effect(f"phi/{self.name}", "r")
 
     @property
     def type(self) -> Type:
@@ -718,7 +753,11 @@ class InsnRet(Insn):
     __match_args__ = ("args",)
 
     def effects(self) -> Iterable[Effect]:
-        yield Effect("control", "w")
+        yield Effect("control", "rw")
+
+    @property
+    def exit(self) -> bool:
+        return True
 
     @property
     def jumps_to(self) -> tuple[Block, ...] | None:
@@ -744,7 +783,12 @@ class InsnTailCall(Insn):
     __match_args__ = ("args",)
 
     def effects(self) -> Iterable[Effect]:
-        yield Effect("control", "w")
+        yield Effect("control", "rw")
+        yield Effect("global", "rw")
+
+    @property
+    def exit(self) -> bool:
+        return True
 
     @property
     def jumps_to(self) -> tuple[Block, ...] | None:
@@ -759,7 +803,11 @@ class InsnUnreachable(Insn):
     __match_args__ = ("args",)
 
     def effects(self) -> Iterable[Effect]:
-        yield Effect("control", "w")
+        yield Effect("control", "rw")
+
+    @property
+    def exit(self) -> bool:
+        return True
 
     @property
     def jumps_to(self) -> tuple[Block, ...] | None:
@@ -771,22 +819,29 @@ class InsnUpsilon(Insn):
     insn_ret_ty = "unit"
     __match_args__ = ("args", "shadow")
 
-    shadow: InsnPhi
+    phi: InsnPhi
 
     def __init__(self, value: Insn, shadow: Insn):
         assert isinstance(shadow, InsnPhi)
-        self.shadow = shadow
+        self.phi = shadow
         super().__init__(value)
 
     def __repr__(self):
-        return f"{self.name} <- upsilon {self.args[0].name}, ^{self.shadow.name}"
+        return f"{self.name} <- upsilon {self.args[0].name}, ^{self.phi.name}"
 
     def effects(self) -> Iterable[Effect]:
-        yield Effect("phi-upsilon", "w")
+        yield Effect(f"phi/{self.phi.name}", "w")
+
+    def tyck(self):
+        super().tyck()
+
+        # TODO: How to check single-static use?
+        if self.parent is not None and self.parent[0].parent is not None:
+            assert self.func is self.phi.func
 
     @property
     def type_args(self) -> tuple[tuple[Type, ...], Type | None]:
-        return ((self.shadow.type,), None)
+        return ((self.phi.type,), None)
 
 
 class InsnValueListLength(InsnPure):

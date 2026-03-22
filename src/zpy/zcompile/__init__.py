@@ -137,7 +137,7 @@ class IRBuilder:
         assert self.block.parent is not None
         return self.block.parent[0]
 
-    def new_block(self, name: str | None = None) -> "IRBuilder":
+    def new_block(self, name: str = "") -> "IRBuilder":
         return self.copy_with(block=self.func.new_block(name=name))
 
     def absurd_list(self, never: ssa.Insn) -> ssa.InsnAbsurdList:
@@ -153,13 +153,13 @@ class IRBuilder:
         lhs: ssa.Insn,
         rhs: ssa.Insn,
         *,
-        if_eq: ssa.Block | None = None,
-        if_ne: ssa.Block | None = None,
+        if_eq: ssa.Block | str = "",
+        if_ne: ssa.Block | str = "",
     ) -> tuple[ssa.InsnBranchEq, "IRBuilder", "IRBuilder"]:
-        if if_eq is None:
-            if_eq = self.func.new_block()
-        if if_ne is None:
-            if_ne = self.func.new_block()
+        if isinstance(if_eq, str):
+            if_eq = self.func.new_block(name=if_eq)
+        if isinstance(if_ne, str):
+            if_ne = self.func.new_block(name=if_ne)
         return (
             self.block.add(ssa.InsnBranchEq(lhs, rhs, if_eq, if_ne)),
             self.copy_with(block=if_eq),
@@ -171,13 +171,13 @@ class IRBuilder:
         lhs: ssa.Insn,
         rhs: ssa.Insn,
         *,
-        if_eq: ssa.Block | None = None,
-        if_ne: ssa.Block | None = None,
+        if_eq: ssa.Block | str = "",
+        if_ne: ssa.Block | str = "",
     ) -> tuple[ssa.InsnBranchIntEQ, "IRBuilder", "IRBuilder"]:
-        if if_eq is None:
-            if_eq = self.func.new_block()
-        if if_ne is None:
-            if_ne = self.func.new_block()
+        if isinstance(if_eq, str):
+            if_eq = self.func.new_block(name=if_eq)
+        if isinstance(if_ne, str):
+            if_ne = self.func.new_block(name=if_ne)
         return (
             self.block.add(ssa.InsnBranchIntEQ(lhs, rhs, if_eq, if_ne)),
             self.copy_with(block=if_eq),
@@ -189,13 +189,13 @@ class IRBuilder:
         lhs: ssa.Insn,
         rhs: ssa.Insn,
         *,
-        if_lt: ssa.Block | None = None,
-        if_ge: ssa.Block | None = None,
+        if_lt: ssa.Block | str = "",
+        if_ge: ssa.Block | str = "",
     ) -> tuple[ssa.InsnBranchIntLT, "IRBuilder", "IRBuilder"]:
-        if if_lt is None:
-            if_lt = self.func.new_block()
-        if if_ge is None:
-            if_ge = self.func.new_block()
+        if isinstance(if_lt, str):
+            if_lt = self.func.new_block(name=if_lt)
+        if isinstance(if_ge, str):
+            if_ge = self.func.new_block(name=if_ge)
         return (
             self.block.add(ssa.InsnBranchIntLT(lhs, rhs, if_lt, if_ge)),
             self.copy_with(block=if_lt),
@@ -294,7 +294,9 @@ class LambdaList:
             raise Exception(f"LambdaList.compile {self}")
 
         if self.rest is None:
-            _, if_eq, if_ne = ir.branch_int_eq(length, ir.const(expected_length))
+            _, if_eq, if_ne = ir.branch_int_eq(
+                length, ir.const(expected_length), if_ne="bad-arg-count"
+            )
             ir.copy_from(if_eq)
             # TODO
             if_ne.unreachable()
