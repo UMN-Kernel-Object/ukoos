@@ -63,7 +63,12 @@ def read_one_from_string(src: ZStr) -> tuple[ZVal, ZStr | None]:
             case ",":
                 raise Exception("read_one_from_string: TODO")
             case ";":
-                raise Exception("read_one_from_string: TODO")
+                while len(src) != 0:
+                    rune, rune_len = src.decode_one_utf8()
+                    src = src[rune_len:]
+                    if chr(rune) == "\n":
+                        break
+                continue
             case "`":
                 raise Exception("read_one_from_string: TODO")
             case rune:
