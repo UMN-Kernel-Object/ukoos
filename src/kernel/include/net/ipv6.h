@@ -63,4 +63,10 @@ struct fragment_header {
 //}
 //
 
+u64 ip_send_packet(struct ip_header header, u8 *data, usize len);
+
+struct ip_header ip_create_header(struct ip_address src_address,
+                                  struct ip_address dst_address,
+                                  enum ip_next_protocol_value protocol);
+
 #endif // UKO_OS_NET_IPV6_H
