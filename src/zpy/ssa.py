@@ -135,6 +135,11 @@ class Insn(ABC):
         self.parent = None
         self.tyck()
 
+    @property
+    def block(self) -> "Block":
+        assert self.parent is not None
+        return self.parent[0]
+
     def dominates(self, other: "Insn") -> bool:
         """
         Returns whether self strictly dominates other.
@@ -142,27 +147,22 @@ class Insn(ABC):
 
         assert self.parent is not None
         assert other.parent is not None
-        if self.parent[0] is other.parent[0]:
-            return self.parent[1] < other.parent[1]
+        if self.block is other.block:
+            return self.parent_index < other.parent_index
         else:
-            return self.parent[0].dominates(other.parent[0])
+            return self.block.dominates(other.block)
 
     @abstractmethod
     def effects(self) -> Iterable[Effect]: ...
 
     @property
-    def exit(self) -> bool:
-        return False
-
-    @property
     def func(self) -> "Func":
-        assert self.parent is not None
-        assert self.parent[0].parent is not None
-        return self.parent[0].parent[0]
+        return self.block.func
 
     @property
-    def jumps_to(self) -> tuple["Block", ...] | None:
-        return None
+    def parent_index(self) -> int:
+        assert self.parent is not None
+        return self.parent[1]
 
     def tyck(self):
         arg_tys, vararg_ty = self.type_args
@@ -177,7 +177,7 @@ class Insn(ABC):
         for arg, ty in zip(self.args, arg_tys):
             assert arg.type == ty
 
-        if self.parent is not None and self.parent[0].parent is not None:
+        if self.parent is not None:
             for arg in self.args:
                 assert self.func is arg.func
                 assert arg.dominates(self)
@@ -202,6 +202,42 @@ class Insn(ABC):
         return out
 
 
+class Term(Insn):
+    """
+    The common parent class of terminators.
+    """
+
+    jumps_to: list["Block"]
+
+    def __init__(self, args: list[Insn], jumps_to: list["Block"]):
+        self.jumps_to = jumps_to
+        super().__init__(*args)
+
+    def __repr__(self) -> str:
+        insn_name = type(self).insn_name
+        out = f"{self.name} <- {insn_name}"
+        first = True
+        for arg in self.args:
+            if first:
+                first = False
+            else:
+                out += ","
+            out += " "
+            out += arg.name
+        for block in self.jumps_to:
+            if first:
+                first = False
+            else:
+                out += ","
+            out += " "
+            out += block.name
+        return out
+
+    @property
+    def exit(self) -> bool:
+        return False
+
+
 @dataclass(init=False)
 class Block:
     name: str
@@ -222,6 +258,16 @@ class Block:
     def __len__(self) -> int:
         return len(self._insns)
 
+    def __setitem__[T: Insn](self, i: int, insn: T) -> T:
+        assert self.parent is not None
+        self._insns[i].parent = None
+        insn.parent = (self, i)
+        self._insns[i] = insn
+        if isinstance(insn, InsnPhi):
+            self.func.effect_registry.add(f"phi/{insn.name}", parent="phi")
+        self.func.invalidate()
+        return insn
+
     def add[T: Insn](self, insn: T) -> T:
         assert self.parent is not None
         insn.parent = (self, len(self))
@@ -240,15 +286,14 @@ class Block:
         assert other.parent is not None
         assert self.func is other.func
 
-        func = self.parent[0]
         if self is other:
             return False
 
         while True:
-            other = func.dom.idom(other)
+            other = self.func.dom.idom(other)
             if self is other:
                 return True
-            if other is func.entry:
+            if other is self.func.entry:
                 return False
 
     @property
@@ -268,7 +313,7 @@ class Block:
 
         jumps_to = self.terminator.jumps_to
         assert jumps_to is not None
-        return jumps_to
+        return tuple(jumps_to)
 
     @property
     def parent_index(self) -> int:
@@ -297,9 +342,9 @@ class Block:
         return [removed[i] for i in indices]
 
     @property
-    def terminator(self) -> Insn:
+    def terminator(self) -> Term:
         for insn in self:
-            if insn.jumps_to is not None:
+            if isinstance(insn, Term):
                 return insn
         raise Exception(f"Block {self} had no terminator")
 
@@ -533,29 +578,16 @@ class Func:
             block.tyck()
 
 
-class InsnBranchBinop(Insn):
+class InsnBranchBinop(Term):
     """
     The common parent instruction of branching binops.
     """
 
-    if_t: Block
-    if_f: Block
-
     def __init__(self, lhs: Insn, rhs: Insn, if_t: Block, if_f: Block):
-        self.if_t = if_t
-        self.if_f = if_f
-        super().__init__(lhs, rhs)
-
-    def __repr__(self):
-        cls = type(self)
-        return f"{self.name} <- {cls.insn_name} {self.args[0].name}, {self.args[1].name}, {self.if_t.name}, {self.if_f.name}"
+        super().__init__(args=[lhs, rhs], jumps_to=[if_t, if_f])
 
     def effects(self) -> Iterable[Effect]:
         yield Effect("control", "rw")
-
-    @property
-    def jumps_to(self) -> tuple[Block, ...] | None:
-        return (self.if_t, self.if_f)
 
 
 class InsnPure(Insn):
@@ -666,30 +698,20 @@ class InsnGetValue(InsnPure):
         return f"{self.name} <- get-value {self.args[0].name}, {self.i}"
 
 
-class InsnGoto(Insn):
+class InsnGoto(Term):
     insn_name = "goto"
     insn_ret_ty = "never"
     insn_arg_tys = ()
     insn_vararg_ty = None
-    __match_args__ = ("args", "dst")
-
-    dst: Block
+    __match_args__ = ("args", "jumps_to")
 
     def __init__(self, dst: Block):
-        self.dst = dst
-        super().__init__()
-
-    def __repr__(self):
-        return f"{self.name} <- goto {self.dst.name}"
+        super().__init__(args=[], jumps_to=[dst])
 
     def effects(self) -> Iterable[Effect]:
         # No control write, because it's unconditional and therefore safe to
         # hoist across?
         return ()
-
-    @property
-    def jumps_to(self) -> tuple[Block, ...] | None:
-        return (self.dst,)
 
 
 class InsnMakeValueList(InsnPure):
@@ -745,12 +767,15 @@ class InsnPtrWrite(Insn):
         yield Effect("memory", "w")
 
 
-class InsnRet(Insn):
+class InsnRet(Term):
     insn_name = "ret"
     insn_ret_ty = "never"
     insn_arg_tys = ("value-list",)
     insn_vararg_ty = None
     __match_args__ = ("args",)
+
+    def __init__(self, ret: Insn):
+        super().__init__(args=[ret], jumps_to=[])
 
     def effects(self) -> Iterable[Effect]:
         yield Effect("control", "rw")
@@ -758,10 +783,6 @@ class InsnRet(Insn):
     @property
     def exit(self) -> bool:
         return True
-
-    @property
-    def jumps_to(self) -> tuple[Block, ...] | None:
-        return ()
 
 
 class InsnSymbolFunction(Insn):
@@ -775,12 +796,15 @@ class InsnSymbolFunction(Insn):
         yield Effect("symbol-function", "r")
 
 
-class InsnTailCall(Insn):
+class InsnTailCall(Term):
     insn_name = "tailcall"
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value-list")
     insn_vararg_ty = None
     __match_args__ = ("args",)
+
+    def __init__(self, func: Insn, args: Insn):
+        super().__init__(args=[func, args], jumps_to=[])
 
     def effects(self) -> Iterable[Effect]:
         yield Effect("control", "rw")
@@ -790,17 +814,16 @@ class InsnTailCall(Insn):
     def exit(self) -> bool:
         return True
 
-    @property
-    def jumps_to(self) -> tuple[Block, ...] | None:
-        return ()
 
-
-class InsnUnreachable(Insn):
+class InsnUnreachable(Term):
     insn_name = "unreachable"
     insn_ret_ty = "never"
     insn_arg_tys = ()
     insn_vararg_ty = None
     __match_args__ = ("args",)
+
+    def __init__(self):
+        super().__init__(args=[], jumps_to=[])
 
     def effects(self) -> Iterable[Effect]:
         yield Effect("control", "rw")
@@ -808,10 +831,6 @@ class InsnUnreachable(Insn):
     @property
     def exit(self) -> bool:
         return True
-
-    @property
-    def jumps_to(self) -> tuple[Block, ...] | None:
-        return ()
 
 
 class InsnUpsilon(Insn):
@@ -836,7 +855,7 @@ class InsnUpsilon(Insn):
         super().tyck()
 
         # TODO: How to check single-static use?
-        if self.parent is not None and self.parent[0].parent is not None:
+        if self.parent is not None:
             assert self.func is self.phi.func
 
     @property
