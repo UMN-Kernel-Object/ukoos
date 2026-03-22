@@ -52,6 +52,7 @@ kernel-objs-c += random
 kernel-objs-c += selftest
 kernel-objs-c += swar_test
 kernel-objs-c += symbolicate
+kernel-objs-c += net/ipv6
 include $(srcdir)/src/kernel/drivers/include.mak
 include $(srcdir)/src/kernel/net/include.mak
 
