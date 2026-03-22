@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef UKO_OS_KERNEL__PCI_H
 #define UKO_OS_KERNEL__PCI_H 1
 
