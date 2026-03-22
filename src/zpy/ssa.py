@@ -11,9 +11,75 @@ certain way, check there first.
 [0]: https://gist.github.com/pizlonator/cf1e72b8600b1437dda8153ea3fdb963
 """
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Literal
+from typing import Iterable, Literal
 from zval import NIL, ZSym, ZVal
+
+
+@dataclass
+class EffectNode:
+    preorder: int
+    postorder: int
+    children: list[str]
+
+
+@dataclass(init=False)
+class EffectRegistry:
+    effects: dict[str, EffectNode]
+    valid: bool
+
+    def __init__(self):
+        self.effects = {"world": EffectNode(-1, -1, [])}
+        self.add_effect("control", parent="world")
+        self.add_effect("memory", parent="world")
+        self.add_effect("phi-upsilon", parent="world")
+        self.add_effect("symbol-function", parent="world")
+        self.validate()
+
+    def __getitem__(self, name: str) -> tuple[int, int]:
+        self.validate()
+        effect = self.effects[name]
+        return effect.preorder, effect.postorder
+
+    def add_effect(self, name: str, *, parent: str):
+        self.valid = False
+        assert name not in self.effects
+        self.effects[parent].children.append(name)
+        self.effects[name] = EffectNode(-1, -1, [])
+
+    def interferes(self, eff_a: "Effect", eff_b: "Effect") -> bool:
+        self.validate()
+        if eff_a.rw == "r" and eff_b.rw == "r":
+            return False
+        if eff_a.name == eff_b.name:
+            return True
+        a = self.effects[eff_a.name]
+        b = self.effects[eff_b.name]
+        return (a.preorder < b.preorder) != (a.postorder < b.postorder)
+
+    def validate(self):
+        if self.valid:
+            return
+
+        def traverse(node: str, pre: int, post: int) -> tuple[int, int]:
+            self.effects[node].preorder = pre
+            pre += 1
+            for child in self.effects[node].children:
+                pre, post = traverse(child, pre, post)
+            self.effects[node].postorder = post
+            post += 1
+            return pre, post
+
+        pre, post = traverse("world", 0, 0)
+        assert pre == len(self.effects) and post == len(self.effects)
+        self.valid = True
+
+
+@dataclass
+class Effect:
+    name: str
+    rw: Literal["r", "w"]
 
 
 class Namer:
@@ -34,7 +100,7 @@ default_insn_name = Namer("%")
 Type = Literal["never", "unit", "value", "value-list", "value-ptr"]
 
 
-class Insn:
+class Insn(ABC):
     insn_name: str
     insn_ret_ty: Type
     insn_arg_tys: tuple[Type, ...]
@@ -50,6 +116,9 @@ class Insn:
         self.args = list(args)
         self.parent = None
         self.tyck()
+
+    @abstractmethod
+    def effects(self) -> Iterable[Effect]: ...
 
     @property
     def func(self) -> "Func":
@@ -140,10 +209,12 @@ class Func:
     name: ZSym
     args: Insn
     blocks: list[Block]
+    effect_registry: EffectRegistry
 
     def __init__(self, name: ZSym = NIL):
         self.name = name
         self.blocks = []
+        self.effect_registry = EffectRegistry()
 
         entry_block = self.new_block()
         self.args = entry_block.add(InsnGetArgs())
@@ -165,22 +236,6 @@ class Func:
         return out
 
 
-class InsnAbsurdList(Insn):
-    insn_name = "absurd-list"
-    insn_ret_ty = "value-list"
-    insn_arg_tys = ("never",)
-    insn_vararg_ty = None
-    __match_args__ = ("args",)
-
-
-class InsnAlloca(Insn):
-    insn_name = "alloca"
-    insn_ret_ty = "value-ptr"
-    insn_arg_tys = ()
-    insn_vararg_ty = None
-    __match_args__ = ("args",)
-
-
 class InsnBranchBinop(Insn):
     """
     The common parent instruction of branching binops.
@@ -197,6 +252,34 @@ class InsnBranchBinop(Insn):
     def __repr__(self):
         cls = type(self)
         return f"{self.name} <- {cls.insn_name} {self.args[0].name}, {self.args[1].name}, {self.if_t.name}, {self.if_f.name}"
+
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("control", "w")
+
+
+class InsnPure(Insn):
+    """
+    A class for instructions with no effects.
+    """
+
+    def effects(self) -> Iterable[Effect]:
+        return ()
+
+
+class InsnAbsurdList(InsnPure):
+    insn_name = "absurd-list"
+    insn_ret_ty = "value-list"
+    insn_arg_tys = ("never",)
+    insn_vararg_ty = None
+    __match_args__ = ("args",)
+
+
+class InsnAlloca(InsnPure):
+    insn_name = "alloca"
+    insn_ret_ty = "value-ptr"
+    insn_arg_tys = ()
+    insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnBranchEq(InsnBranchBinop):
@@ -230,8 +313,11 @@ class InsnCall(Insn):
     insn_vararg_ty = None
     __match_args__ = ("args",)
 
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("world", "w")
 
-class InsnConst(Insn):
+
+class InsnConst(InsnPure):
     insn_name = "const"
     insn_ret_ty = "value"
     insn_arg_tys = ()
@@ -248,7 +334,7 @@ class InsnConst(Insn):
         return f"{self.name} <- const {self.value}"
 
 
-class InsnGetArgs(Insn):
+class InsnGetArgs(InsnPure):
     insn_name = "get-args"
     insn_ret_ty = "value-list"
     insn_arg_tys = ()
@@ -256,7 +342,12 @@ class InsnGetArgs(Insn):
     __match_args__ = ("args",)
 
 
-class InsnGetValue(Insn):
+class InsnGetValue(InsnPure):
+    """
+    This can be InsnPure (instead of reading memory) because it's UB to mutate
+    a cons list used in a value-list.
+    """
+
     insn_name = "get-value"
     insn_ret_ty = "value"
     insn_arg_tys = ("value-list",)
@@ -273,7 +364,7 @@ class InsnGetValue(Insn):
         return f"{self.name} <- get-value {self.args[0].name}, {self.i}"
 
 
-class InsnMakeValueList(Insn):
+class InsnMakeValueList(InsnPure):
     insn_name = "make-value-list"
     insn_ret_ty = "value-list"
     insn_arg_tys = ()
@@ -288,6 +379,9 @@ class InsnPhi(Insn):
     insn_vararg_ty = None
     __match_args__ = ("args",)
 
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("phi-upsilon", "r")
+
     def new_upsilon(self, value: Insn) -> "InsnUpsilon":
         return InsnUpsilon(value, self)
 
@@ -299,6 +393,9 @@ class InsnPtrRead(Insn):
     insn_vararg_ty = None
     __match_args__ = ("args",)
 
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("memory", "r")
+
 
 class InsnPtrWrite(Insn):
     insn_name = "ptr-write"
@@ -306,6 +403,9 @@ class InsnPtrWrite(Insn):
     insn_arg_tys = ("value-ptr", "value")
     insn_vararg_ty = None
     __match_args__ = ("args",)
+
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("memory", "w")
 
 
 class InsnRet(Insn):
@@ -315,6 +415,9 @@ class InsnRet(Insn):
     insn_vararg_ty = None
     __match_args__ = ("args",)
 
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("control", "w")
+
 
 class InsnSymbolFunction(Insn):
     insn_name = "symbol-function"
@@ -322,6 +425,9 @@ class InsnSymbolFunction(Insn):
     insn_arg_tys = ("value",)
     insn_vararg_ty = None
     __match_args__ = ("args",)
+
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("symbol-function", "r")
 
 
 class InsnTailCall(Insn):
@@ -331,6 +437,9 @@ class InsnTailCall(Insn):
     insn_vararg_ty = None
     __match_args__ = ("args",)
 
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("control", "w")
+
 
 class InsnUnreachable(Insn):
     insn_name = "unreachable"
@@ -338,6 +447,9 @@ class InsnUnreachable(Insn):
     insn_arg_tys = ()
     insn_vararg_ty = None
     __match_args__ = ("args",)
+
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("control", "w")
 
 
 class InsnUpsilon(Insn):
@@ -357,8 +469,11 @@ class InsnUpsilon(Insn):
     def __repr__(self):
         return f"{self.name} <- upsilon {self.args[0]}, ^{self.shadow}"
 
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("phi-upsilon", "w")
 
-class InsnValueListLength(Insn):
+
+class InsnValueListLength(InsnPure):
     insn_name = "value-list-length"
     insn_ret_ty = "value"
     insn_arg_tys = ("value-list",)
