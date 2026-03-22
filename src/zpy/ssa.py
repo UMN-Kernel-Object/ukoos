@@ -4,6 +4,11 @@
 
 """
 An SSA-based IR in phi/upsilon form for interpreting (pre-)Z code.
+
+This is heavily based on [0] -- if you're curious why something is done a
+certain way, check there first.
+
+[0]: https://gist.github.com/pizlonator/cf1e72b8600b1437dda8153ea3fdb963
 """
 
 from dataclasses import dataclass
@@ -36,13 +41,13 @@ class Insn:
     insn_vararg_ty: Type | None
 
     name: str
-    args: tuple["Insn", ...]
+    args: list["Insn"]
     parent: "Block | None"
 
     def __init__(self, *args: "Insn"):
         assert type(self) is not Insn
         self.name = default_insn_name()
-        self.args = args
+        self.args = list(args)
         self.parent = None
         self.tyck()
 
@@ -165,6 +170,7 @@ class InsnAbsurdList(Insn):
     insn_ret_ty = "value-list"
     insn_arg_tys = ("never",)
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnAlloca(Insn):
@@ -172,6 +178,7 @@ class InsnAlloca(Insn):
     insn_ret_ty = "value-ptr"
     insn_arg_tys = ()
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnBranchBinop(Insn):
@@ -197,6 +204,7 @@ class InsnBranchEq(InsnBranchBinop):
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
+    __match_args__ = ("args", "if_t", "if_f")
 
 
 class InsnBranchIntEQ(InsnBranchBinop):
@@ -204,6 +212,7 @@ class InsnBranchIntEQ(InsnBranchBinop):
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
+    __match_args__ = ("args", "if_t", "if_f")
 
 
 class InsnBranchIntLT(InsnBranchBinop):
@@ -211,6 +220,7 @@ class InsnBranchIntLT(InsnBranchBinop):
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
+    __match_args__ = ("args", "if_t", "if_f")
 
 
 class InsnCall(Insn):
@@ -218,6 +228,7 @@ class InsnCall(Insn):
     insn_ret_ty = "value-list"
     insn_arg_tys = ("value", "value-list")
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnConst(Insn):
@@ -225,6 +236,7 @@ class InsnConst(Insn):
     insn_ret_ty = "value"
     insn_arg_tys = ()
     insn_vararg_ty = None
+    __match_args__ = ("args", "value")
 
     value: ZVal
 
@@ -241,6 +253,7 @@ class InsnGetArgs(Insn):
     insn_ret_ty = "value-list"
     insn_arg_tys = ()
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnGetValue(Insn):
@@ -248,6 +261,7 @@ class InsnGetValue(Insn):
     insn_ret_ty = "value"
     insn_arg_tys = ("value-list",)
     insn_vararg_ty = None
+    __match_args__ = ("args", "i")
 
     i: int
 
@@ -264,6 +278,7 @@ class InsnMakeValueList(Insn):
     insn_ret_ty = "value-list"
     insn_arg_tys = ()
     insn_vararg_ty = "value"
+    __match_args__ = ("args",)
 
 
 class InsnPhi(Insn):
@@ -271,6 +286,7 @@ class InsnPhi(Insn):
     insn_ret_ty = "value"
     insn_arg_tys = ()
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
     def new_upsilon(self, value: Insn) -> "InsnUpsilon":
         return InsnUpsilon(value, self)
@@ -281,6 +297,7 @@ class InsnPtrRead(Insn):
     insn_ret_ty = "value"
     insn_arg_tys = ("value-ptr",)
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnPtrWrite(Insn):
@@ -288,6 +305,7 @@ class InsnPtrWrite(Insn):
     insn_ret_ty = "unit"
     insn_arg_tys = ("value-ptr", "value")
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnRet(Insn):
@@ -295,6 +313,7 @@ class InsnRet(Insn):
     insn_ret_ty = "never"
     insn_arg_tys = ("value-list",)
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnSymbolFunction(Insn):
@@ -302,6 +321,7 @@ class InsnSymbolFunction(Insn):
     insn_ret_ty = "value"
     insn_arg_tys = ("value",)
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnTailCall(Insn):
@@ -309,6 +329,7 @@ class InsnTailCall(Insn):
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value-list")
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnUnreachable(Insn):
@@ -316,6 +337,7 @@ class InsnUnreachable(Insn):
     insn_ret_ty = "never"
     insn_arg_tys = ()
     insn_vararg_ty = None
+    __match_args__ = ("args",)
 
 
 class InsnUpsilon(Insn):
@@ -323,6 +345,9 @@ class InsnUpsilon(Insn):
     insn_ret_ty = "unit"
     insn_arg_tys = ("value",)
     insn_vararg_ty = None
+    __match_args__ = ("args", "shadow")
+
+    shadow: InsnPhi
 
     def __init__(self, value: Insn, shadow: Insn):
         assert isinstance(shadow, InsnPhi)
@@ -338,3 +363,4 @@ class InsnValueListLength(Insn):
     insn_ret_ty = "value"
     insn_arg_tys = ("value-list",)
     insn_vararg_ty = None
+    __match_args__ = ("args",)

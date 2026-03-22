@@ -17,4 +17,4 @@ def pass_never_elim(func: ssa.Func):
 def on_block(block: ssa.Block):
     for i, insn in enumerate(block.insns):
         if insn.type == "never":
-            print(block.remove_all(list(range(i + 1, len(block.insns)))))
+            block.remove_all(list(range(i + 1, len(block.insns))))
