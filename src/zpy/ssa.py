@@ -108,7 +108,7 @@ class Insn(ABC):
 
     name: str
     args: list["Insn"]
-    parent: "Block | None"
+    parent: tuple["Block", int] | None
 
     def __init__(self, *args: "Insn"):
         assert type(self) is not Insn
@@ -120,11 +120,23 @@ class Insn(ABC):
     @abstractmethod
     def effects(self) -> Iterable[Effect]: ...
 
+    def dominates(self, other: "Insn") -> bool:
+        """
+        Returns whether self strictly dominates other.
+        """
+
+        assert self.parent is not None
+        assert other.parent is not None
+        if self.parent[0] is other.parent[0]:
+            return self.parent[1] < other.parent[1]
+        else:
+            return self.parent[0].dominates(other.parent[0])
+
     @property
     def func(self) -> "Func":
         assert self.parent is not None
-        assert self.parent.parent is not None
-        return self.parent.parent[0]
+        assert self.parent[0].parent is not None
+        return self.parent[0].parent[0]
 
     @property
     def jumps_to(self) -> tuple["Block", ...] | None:
@@ -143,9 +155,10 @@ class Insn(ABC):
         for arg, ty in zip(self.args, arg_tys):
             assert arg.type == ty
 
-        if self.parent is not None and self.parent.parent is not None:
+        if self.parent is not None and self.parent[0].parent is not None:
             for arg in self.args:
                 assert self.func is arg.func
+                assert arg.dominates(self)
 
     @property
     def type(self) -> Type:
@@ -190,12 +203,32 @@ class Block:
         return len(self._insns)
 
     def add[T: Insn](self, insn: T) -> T:
-        insn.parent = self
+        insn.parent = (self, len(self))
         self._insns.append(insn)
         if self.parent is not None:
             self.parent[0]._dom = None
             self.parent[0]._preds = None
         return insn
+
+    def dominates(self, other: "Block") -> bool:
+        """
+        Returns whether self strictly dominates other.
+        """
+
+        assert self.parent is not None
+        assert other.parent is not None
+        assert self.parent[0] is other.parent[0]
+
+        func = self.parent[0]
+        if self is other:
+            return False
+
+        while True:
+            other = func.dom.idom(other)
+            if self is other:
+                return True
+            if other is func.entry:
+                return False
 
     @property
     def jumps_to(self) -> tuple["Block", ...]:
@@ -216,14 +249,15 @@ class Block:
         removed: dict[int, Insn] = {}
         new_insns = []
         for i, insn in enumerate(self):
+            insn.parent = None
             if i in to_remove:
-                insn.parent = None
                 removed[i] = insn
             else:
                 new_insns.append(insn)
 
         self._insns.clear()
         for insn in new_insns:
+            insn.parent = (self, len(self))
             self._insns.append(insn)
         if self.parent is not None:
             self.parent[0].invalidate()
@@ -259,6 +293,11 @@ class DomTree:
             [j for j in range(len(idom)) if idom[j] == i and j != 0]
             for i in range(len(idom))
         ]
+
+    def idom(self, block: Block) -> Block:
+        assert block.parent is not None
+        assert block.parent[0] is self.func
+        return self.func[self._idom[block.parent[1]]]
 
     def preorder(self) -> Iterator[Block]:
         def traverse(i: int):
