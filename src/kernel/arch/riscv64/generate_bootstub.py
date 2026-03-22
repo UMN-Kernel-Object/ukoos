@@ -244,8 +244,10 @@ def main():
     arg_parser.add_argument("kernel", type=Path)
     arg_parser.add_argument("linker_script", type=Path)
     arg_parser.add_argument("bootstub", type=Path)
+    arg_parser.add_argument("bootstub_startaddr", type=lambda x: int(x,0))
     args = arg_parser.parse_args()
-
+    print(args.bootstub_startaddr)    
+    
     # Configure the logger.
     logging.basicConfig(
         format="{message}",
@@ -333,7 +335,7 @@ def main():
         physical_memory_layout.append((old_paddr, next_paddr, size_kib, label))
         return old_paddr
 
-    total_start_paddr = next_paddr = 0x8200000  # start address
+    total_start_paddr = next_paddr = args.bootstub_startaddr # start address
     reserve("bootstub", 4096)
     kernel_tables_start_paddr = reserve(
         "symbol and string tables", symtab.size + strtab.size
