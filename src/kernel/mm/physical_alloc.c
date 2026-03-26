@@ -215,11 +215,11 @@ void mm_init_physical(struct devicetree_node *devicetree) {
   free(reservations);
 }
 
-bool mm_alloc_physical(paddr *out, enum flags f) {
+bool mm_alloc_physical(paddr *out, enum paging_flags f) {
   // TODO: There should be a lock around essentially this whole function.
   struct physical_free_list link;
 
-  if (f != must_be_below_4g) {
+  if (f != PAGING_BELOW_4G) {
     if (!bits_of_paddr(free_list_head_above_4g)) {
         *out = free_list_head_above_4g;
     } else {
