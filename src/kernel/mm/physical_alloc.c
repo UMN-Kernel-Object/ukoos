@@ -38,14 +38,14 @@ static void add_physical_chunk(paddr start, paddr end) {
   // Otherwise, write a link header to it.
   // TODO: The rest of this should have a lock around it.
   print("Found usable physical memory: {paddr}-{paddr}", start, end);
-  if (bits_of_paddr(start) > 0x100000000) {
+  if (bits_of_paddr(start) >= 0x100000000) {
       struct physical_free_list link = {
 	  .next = free_list_head_above_4g,
 	  .length = paddr_diff(end, start) >> 12,
       };
       copy_to_physical(start, &link, sizeof(struct physical_free_list));
       free_list_head_above_4g = start;
-  } else if (bits_of_paddr(start) < 0x100000000 && bits_of_paddr(end) > 0x100000000) {
+  } else if (bits_of_paddr(start) < 0x100000000 && bits_of_paddr(end) >= 0x100000000) {
       paddr old_end = end;
       end = paddr_of_bits(0x100000000 - bits_of_paddr(end));
       struct physical_free_list link = {
