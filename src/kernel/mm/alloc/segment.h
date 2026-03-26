@@ -9,6 +9,7 @@
 
 #include "page.h"
 #include "size_classes.h"
+#include <arch/riscv64/constants.h>
 
 struct mm_alloc_heap;
 
@@ -48,7 +49,7 @@ struct mm_alloc_segment {
   struct mm_alloc_page pages[64];
 };
 
-static_assert(sizeof(struct mm_alloc_segment) <= (1 << 12));
+static_assert(sizeof(struct mm_alloc_segment) <= PAGE_SIZE);
 static_assert(alignof(struct mm_alloc_segment) <= (1 << SEGMENT_SHIFT));
 
 /**

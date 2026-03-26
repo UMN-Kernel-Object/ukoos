@@ -7,6 +7,7 @@
 #include "segment.h"
 #include "heap.h"
 #include <align.h>
+#include <arch/riscv64/constants.h>
 #include <hart_locals.h>
 #include <mm/paging.h>
 #include <mm/physical_alloc.h>
@@ -33,7 +34,7 @@ struct mm_alloc_segment *segment_alloc(usize size) {
   usize va = segment_start;
   paddr pa;
   while (va < segment_end) {
-    if (!mm_alloc_physical(&pa))
+    if (!mm_alloc_physical(&pa, PHYSICAL_ALLOC_DEFAULT))
       goto physical_oom;
     if (!mm_paging_map(va, pa, PGPERM_KRW)) {
       mm_free_physical(pa);
