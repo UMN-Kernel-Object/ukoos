@@ -111,7 +111,7 @@ static bool mm_paging_walk(uaddr va, paddr *pte, bool alloc) {
   if (!pte2.valid) {
     if (!alloc)
       return false;
-    if (!mm_alloc_physical(&pgtbl1, PAGING_DEFAULT))
+    if (!mm_alloc_physical(&pgtbl1, PHYSICAL_ALLOC_DEFAULT))
       return false;
     bzero_physical(pgtbl1, sizeof(struct pgtbl));
     pte2 = (struct pte){
@@ -127,7 +127,7 @@ static bool mm_paging_walk(uaddr va, paddr *pte, bool alloc) {
   if (!pte1.valid) {
     if (!alloc)
       return false;
-    if (!mm_alloc_physical(&pgtbl0, PAGING_DEFAULT))
+    if (!mm_alloc_physical(&pgtbl0, PHYSICAL_ALLOC_DEFAULT))
       return false;
     bzero_physical(pgtbl0, sizeof(struct pgtbl));
     pte1 = (struct pte){

@@ -25,7 +25,7 @@ struct physical_free_list {
 static paddr free_list_head_above_4g = {0};
 static paddr free_list_head_below_4g = {0};
 
-static void add_physical_chunk_helper(usize length, paddr start, paddr free_list_head) {
+static void physical_free_list_push(usize length, paddr start, paddr free_list_head) {
       struct physical_free_list link = {
 	  .next = free_list_head,
 	  .length = length,
@@ -47,11 +47,11 @@ static void add_physical_chunk(paddr start, paddr end) {
   // Otherwise, write a link header to it.
   // TODO: The rest of this should have a lock around it.
   print("Found usable physical memory: {paddr}-{paddr}", start, end);
-  if (bits_of_paddr(start) >= 0x100000000) {
+  if (bits_of_paddr(start) >= (1 << 32)) {
       add_physical_chunk_helper(paddr_diff(end, start) >> 12, start, free_list_head_above_4g);
   } else if (bits_of_paddr(start) < 0x100000000 && bits_of_paddr(end) >= 0x100000000) {
       paddr old_end = end;
-      end = paddr_of_bits(0x100000000 - bits_of_paddr(end));
+      end = paddr_of_bits(1 << 32);
       add_physical_chunk_helper(paddr_diff(end, start) >> 12, start, free_list_head_below_4g);
       start = end;
       end = old_end;
@@ -232,10 +232,10 @@ bool mm_alloc_physical_helper(paddr *out, paddr free_list_head) {
   return true;
 }
 
-bool mm_alloc_physical(paddr *out, enum paging_flags f) {
+bool mm_alloc_physical(paddr *out, enum physical_alloc_flags flags) {
   // TODO: There should be a lock around essentially this whole function.
 
-  if (f != PAGING_BELOW_4G) {
+  if (flags != PAGING_BELOW_4G) {
     return mm_alloc_physical_helper(out, free_list_head_above_4g);
   } else {
     return mm_alloc_physical_helper(out, free_list_head_below_4g);

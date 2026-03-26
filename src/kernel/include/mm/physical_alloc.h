@@ -12,9 +12,9 @@
 /**
  * The possible flags to pass to the allocator
  */
-enum paging_flags {
-  PAGING_DEFAULT,
-  PAGING_BELOW_4G,
+enum physical_alloc_flags {
+  PHYSICAL_ALLOC_DEFAULT = 0,
+  PHYSICAL_ALLOC_BELOW_4G = (1 << 0),
 };
 
 /**
@@ -29,7 +29,7 @@ void mm_init_physical(struct devicetree_node *devicetree);
  *
  * Returns whether it succeeded.
  */
-bool mm_alloc_physical(paddr *out, enum paging_flags f);
+bool mm_alloc_physical(paddr *out, enum physical_alloc_flags flags);
 
 /**
  * Frees a single frame of memory.
