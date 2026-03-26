@@ -25,7 +25,7 @@ struct physical_free_list {
 static paddr free_list_head_above_4g = {0};
 static paddr free_list_head_below_4g = {0};
 
-static void add_physical_chunk_helper(paddr length, paddr free_list_head) {
+static void add_physical_chunk_helper(usize length, paddr start, paddr free_list_head) {
       struct physical_free_list link = {
 	  .next = free_list_head,
 	  .length = length,
@@ -48,16 +48,16 @@ static void add_physical_chunk(paddr start, paddr end) {
   // TODO: The rest of this should have a lock around it.
   print("Found usable physical memory: {paddr}-{paddr}", start, end);
   if (bits_of_paddr(start) >= 0x100000000) {
-      add_physical_chunk_helper(start, end, free_list_head_above_4g);
+      add_physical_chunk_helper(paddr_diff(end, start) >> 12, start, free_list_head_above_4g);
   } else if (bits_of_paddr(start) < 0x100000000 && bits_of_paddr(end) >= 0x100000000) {
       paddr old_end = end;
       end = paddr_of_bits(0x100000000 - bits_of_paddr(end));
-      add_physical_chunk_helper(paddr_diff(end, start) >> 12, free_list_head_below_4g);
+      add_physical_chunk_helper(paddr_diff(end, start) >> 12, start, free_list_head_below_4g);
       start = end;
       end = old_end;
-      add_physical_chunk_helper(paddr_diff(end, start) >> 12, free_list_head_above_4g);
+      add_physical_chunk_helper(paddr_diff(end, start) >> 12, start, free_list_head_above_4g);
   } else {
-      add_physical_chunk_helper(paddr_diff(end, start) >> 12, free_list_head_below_4g);
+      add_physical_chunk_helper(paddr_diff(end, start) >> 12, start, free_list_head_below_4g);
   }
 }
 
@@ -275,8 +275,8 @@ void mm_free_physical(paddr frame) {
   assert(bits_of_paddr(frame));
 
   if (bits_of_paddr(frame) > 0x100000000) {
-    add_physical_chunk_helper(1, free_list_above_4g);
+    add_physical_chunk_helper(1, frame, free_list_head_above_4g);
   } else {
-    add_physical_chunk_helper(1, free_list_below_4g);
+    add_physical_chunk_helper(1, frame, free_list_head_below_4g);
   }
 }
