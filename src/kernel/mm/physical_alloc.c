@@ -209,64 +209,36 @@ void mm_init_physical(struct devicetree_node *devicetree) {
   free(reservations);
 }
 
+bool mm_alloc_physical_helper(paddr *out, paddr free_list_head) {
+  // TODO: There should be a lock around essentially this whole function.
+  *out = free_list_head;
+  if (!bits_of_paddr(*out))
+    return false;
+
+  struct physical_free_list link;
+  copy_from_physical(&link, free_list_head, sizeof(struct physical_free_list));
+  assert(link.length > 0);
+  if (link.length == 1) {
+    // This is the only page in the link, so update the head pointer to point
+    // at the next link.
+    free_list_head = link.next;
+  } else {
+    // There were multiple pages in the link. We'll use the first one, so we
+    // write back the link to the next one.
+    free_list_head = paddr_offset(free_list_head, 1 << 12);
+    link.length--;
+    copy_to_physical(free_list_head, &link, sizeof(struct physical_free_list));
+  }
+  return true;
+}
+
 bool mm_alloc_physical(paddr *out, enum paging_flags f) {
   // TODO: There should be a lock around essentially this whole function.
-  struct physical_free_list link;
 
   if (f != PAGING_BELOW_4G) {
-    if (!bits_of_paddr(free_list_head_above_4g)) {
-        *out = free_list_head_above_4g;
-    } else {
-        *out = free_list_head_below_4g;
-    }
-    if (!bits_of_paddr(*out))
-      return false;
-
-    if (!bits_of_paddr(free_list_head_above_4g)) {
-      copy_from_physical(&link, free_list_head_above_4g, sizeof(struct physical_free_list));
-    } else {
-      copy_from_physical(&link, free_list_head_below_4g, sizeof(struct physical_free_list));
-    }
-    assert(link.length > 0);
-    if (link.length == 1) {
-      // This is the only page in the link, so update the head pointer to point
-      // at the next link.
-      if (!bits_of_paddr(free_list_head_above_4g)) {
-        free_list_head_above_4g = link.next;
-      } else {
-        free_list_head_below_4g = link.next;
-      }
-    } else {
-      // There were multiple pages in the link. We'll use the first one, so we
-      // write back the link to the next one.
-      if (!bits_of_paddr(free_list_head_above_4g)) {
-        free_list_head_above_4g = paddr_offset(free_list_head_above_4g, 1 << 12);
-      } else {
-        free_list_head_below_4g = paddr_offset(free_list_head_below_4g, 1 << 12);
-      }
-      link.length--;
-      if (!bits_of_paddr(free_list_head_above_4g)) {
-        copy_to_physical(free_list_head_above_4g, &link, sizeof(struct physical_free_list));
-      } else {
-        copy_to_physical(free_list_head_below_4g, &link, sizeof(struct physical_free_list));
-      }
-    }
-    return true;
+    return mm_alloc_physical_helper(out, free_list_head_above_4g);
   } else {
-    *out = free_list_head_below_4g;
-    if (!bits_of_paddr(*out))
-      return false;
-
-    copy_from_physical(&link, free_list_head_below_4g, sizeof(struct physical_free_list));
-    assert(link.length > 0);
-    if (link.length == 1) {
-      free_list_head_below_4g = link.next;
-    } else {
-      free_list_head_below_4g = paddr_offset(free_list_head_below_4g, 1 << 12);
-      link.length--;
-      copy_to_physical(free_list_head_above_4g, &link, sizeof(struct physical_free_list));
-    }
-    return true;
+    return mm_alloc_physical_helper(out, free_list_head_below_4g);
   }
 }
 
