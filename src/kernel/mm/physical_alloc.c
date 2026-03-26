@@ -253,7 +253,7 @@ void mm_free_physical(paddr frame) {
   // TODO: There should be a lock around essentially this whole function.
   assert(bits_of_paddr(frame));
 
-  if (bits_of_paddr(frame) > (1ul << 32)) {
+  if (bits_of_paddr(frame) >= (1ul << 32)) {
     physical_free_list_push(1, frame, free_list_head_above_4g);
   } else {
     physical_free_list_push(1, frame, free_list_head_below_4g);
