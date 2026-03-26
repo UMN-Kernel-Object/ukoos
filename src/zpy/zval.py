@@ -3,7 +3,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from dataclasses import dataclass, field
-from typing import Literal, overload
+from typing import Literal, TYPE_CHECKING, overload
+
+if TYPE_CHECKING:
+    from ssa import Func
 
 """
 The basic object model.
@@ -231,4 +234,9 @@ class ZCons:
         return out
 
 
-ZVal = float | int | ZCons | ZStr | ZSym
+@dataclass
+class ZFunc:
+    func: "Func"
+
+
+ZVal = float | int | ZCons | ZFunc | ZStr | ZSym

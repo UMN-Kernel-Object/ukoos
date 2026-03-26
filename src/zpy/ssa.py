@@ -620,7 +620,7 @@ class InsnBranchEq(InsnBranchBinop):
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
-    __match_args__ = ("args", "if_t", "if_f")
+    __match_args__ = ("args", "jumps_to")
 
 
 class InsnBranchIntEQ(InsnBranchBinop):
@@ -628,7 +628,7 @@ class InsnBranchIntEQ(InsnBranchBinop):
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
-    __match_args__ = ("args", "if_t", "if_f")
+    __match_args__ = ("args", "jumps_to")
 
 
 class InsnBranchIntLT(InsnBranchBinop):
@@ -636,7 +636,7 @@ class InsnBranchIntLT(InsnBranchBinop):
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
-    __match_args__ = ("args", "if_t", "if_f")
+    __match_args__ = ("args", "jumps_to")
 
 
 class InsnCall(Insn):
@@ -836,13 +836,13 @@ class InsnUnreachable(Term):
 class InsnUpsilon(Insn):
     insn_name = "upsilon"
     insn_ret_ty = "unit"
-    __match_args__ = ("args", "shadow")
+    __match_args__ = ("args", "phi")
 
     phi: InsnPhi
 
-    def __init__(self, value: Insn, shadow: Insn):
-        assert isinstance(shadow, InsnPhi)
-        self.phi = shadow
+    def __init__(self, value: Insn, phi: Insn):
+        assert isinstance(phi, InsnPhi)
+        self.phi = phi
         super().__init__(value)
 
     def __repr__(self):

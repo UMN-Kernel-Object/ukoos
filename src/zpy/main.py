@@ -9,7 +9,7 @@ from sys import argv
 from reader import read_one_from_string
 from zcompile import GlobalEnv, zcompile
 from zeval import apply
-from zval import NIL, ZCons, ZStr, ZSym, ZVal
+from zval import NIL, ZCons, ZFunc, ZStr, ZSym, ZVal
 
 
 def main(src_path: Path, *args: str):
@@ -40,8 +40,7 @@ def zeval_toplevel(form: ZVal) -> tuple[ZVal, ...]:
     # Wrap the form in a lambda and compile it.
     form = ZCons.of_list(ZSym.impl("LAMBDA"), NIL, ZCons.of_list(), form)
     func = zcompile(form, GlobalEnv())
-
-    raise Exception(f"zeval_toplevel {func}")
+    return apply(ZFunc(func))
 
 
 if __name__ == "__main__":
