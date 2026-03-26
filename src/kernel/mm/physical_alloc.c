@@ -25,6 +25,15 @@ struct physical_free_list {
 static paddr free_list_head_above_4g = {0};
 static paddr free_list_head_below_4g = {0};
 
+static void add_physical_chunk_helper(paddr start, paddr end, paddr free_list_head) {
+      struct physical_free_list link = {
+	  .next = free_list_head,
+	  .length = paddr_diff(end, start) >> 12,
+      };
+      copy_to_physical(start, &link, sizeof(struct physical_free_list));
+      free_list_head = start;
+}
+
 static void add_physical_chunk(paddr start, paddr end) {
   // Align up the start address and align down the end address, to page
   // boundaries.
@@ -39,31 +48,16 @@ static void add_physical_chunk(paddr start, paddr end) {
   // TODO: The rest of this should have a lock around it.
   print("Found usable physical memory: {paddr}-{paddr}", start, end);
   if (bits_of_paddr(start) >= 0x100000000) {
-      struct physical_free_list link = {
-	  .next = free_list_head_above_4g,
-	  .length = paddr_diff(end, start) >> 12,
-      };
-      copy_to_physical(start, &link, sizeof(struct physical_free_list));
-      free_list_head_above_4g = start;
+      add_physical_chunk_helper(start, end, free_list_head_above_4g);
   } else if (bits_of_paddr(start) < 0x100000000 && bits_of_paddr(end) >= 0x100000000) {
       paddr old_end = end;
       end = paddr_of_bits(0x100000000 - bits_of_paddr(end));
-      struct physical_free_list link = {
-	  .next = free_list_head_below_4g,
-	  .length = paddr_diff(end, start) >> 12,
-      };
-      copy_to_physical(start, &link, sizeof(struct physical_free_list));
-      free_list_head_below_4g = start;
+      add_physical_chunk_helper(start, end, free_list_head_below_4g);
       start = end;
       end = old_end;
-      add_physical_chunk(start, end);
+      add_physical_chunk_helper(start, end, free_list_head_above_4g);
   } else {
-      struct physical_free_list link = {
-	  .next = free_list_head_below_4g,
-	  .length = paddr_diff(end, start) >> 12,
-      };
-      copy_to_physical(start, &link, sizeof(struct physical_free_list));
-      free_list_head_below_4g = start;
+      add_physical_chunk_helper(start, end, free_list_head_below_4g);
   }
 }
 
