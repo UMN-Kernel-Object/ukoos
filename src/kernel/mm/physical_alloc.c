@@ -26,13 +26,14 @@ struct physical_free_list {
 static paddr free_list_head_above_4g = {0};
 static paddr free_list_head_below_4g = {0};
 
-static void physical_free_list_push(usize length, paddr start, paddr free_list_head) {
-      struct physical_free_list link = {
-	  .next = free_list_head,
-	  .length = length,
-      };
-      copy_to_physical(start, &link, sizeof(struct physical_free_list));
-      free_list_head = start;
+static void physical_free_list_push(usize length, paddr start,
+                                    paddr free_list_head) {
+  struct physical_free_list link = {
+      .next = free_list_head,
+      .length = length,
+  };
+  copy_to_physical(start, &link, sizeof(struct physical_free_list));
+  free_list_head = start;
 }
 
 static bool physical_free_list_pop(paddr *out, paddr free_list_head) {
@@ -71,16 +72,21 @@ static void add_physical_chunk(paddr start, paddr end) {
   // TODO: The rest of this should have a lock around it.
   print("Found usable physical memory: {paddr}-{paddr}", start, end);
   if (bits_of_paddr(start) >= (1ul << 32)) {
-      physical_free_list_push(paddr_diff(end, start) >> 12, start, free_list_head_above_4g);
-  } else if (bits_of_paddr(start) < (1ul << 32) && bits_of_paddr(end) >= (1ul << 32)) {
-      paddr old_end = end;
-      end = paddr_of_bits(1ul << 32);
-      physical_free_list_push(paddr_diff(end, start) >> 12, start, free_list_head_below_4g);
-      start = end;
-      end = old_end;
-      physical_free_list_push(paddr_diff(end, start) >> 12, start, free_list_head_above_4g);
+    physical_free_list_push(paddr_diff(end, start) >> 12, start,
+                            free_list_head_above_4g);
+  } else if (bits_of_paddr(start) < (1ul << 32) &&
+             bits_of_paddr(end) >= (1ul << 32)) {
+    paddr old_end = end;
+    end = paddr_of_bits(1ul << 32);
+    physical_free_list_push(paddr_diff(end, start) >> 12, start,
+                            free_list_head_below_4g);
+    start = end;
+    end = old_end;
+    physical_free_list_push(paddr_diff(end, start) >> 12, start,
+                            free_list_head_above_4g);
   } else {
-      physical_free_list_push(paddr_diff(end, start) >> 12, start, free_list_head_below_4g);
+    physical_free_list_push(paddr_diff(end, start) >> 12, start,
+                            free_list_head_below_4g);
   }
 }
 
