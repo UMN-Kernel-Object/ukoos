@@ -275,18 +275,8 @@ void mm_free_physical(paddr frame) {
   assert(bits_of_paddr(frame));
 
   if (bits_of_paddr(frame) > 0x100000000) {
-    struct physical_free_list link = {
-        .next = free_list_head_above_4g,
-        .length = 1,
-    };
-    copy_to_physical(frame, &link, sizeof(struct physical_free_list));
-    free_list_head_above_4g = frame;
+    add_physical_chunk_helper(1, free_list_above_4g);
   } else {
-    struct physical_free_list link = {
-        .next = free_list_head_below_4g,
-        .length = 1,
-    };
-    copy_to_physical(frame, &link, sizeof(struct physical_free_list));
-    free_list_head_below_4g = frame;
+    add_physical_chunk_helper(1, free_list_below_4g);
   }
 }
