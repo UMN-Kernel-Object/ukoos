@@ -25,10 +25,10 @@ struct physical_free_list {
 static paddr free_list_head_above_4g = {0};
 static paddr free_list_head_below_4g = {0};
 
-static void add_physical_chunk_helper(paddr start, paddr end, paddr free_list_head) {
+static void add_physical_chunk_helper(paddr length, paddr free_list_head) {
       struct physical_free_list link = {
 	  .next = free_list_head,
-	  .length = paddr_diff(end, start) >> 12,
+	  .length = length,
       };
       copy_to_physical(start, &link, sizeof(struct physical_free_list));
       free_list_head = start;
@@ -52,12 +52,12 @@ static void add_physical_chunk(paddr start, paddr end) {
   } else if (bits_of_paddr(start) < 0x100000000 && bits_of_paddr(end) >= 0x100000000) {
       paddr old_end = end;
       end = paddr_of_bits(0x100000000 - bits_of_paddr(end));
-      add_physical_chunk_helper(start, end, free_list_head_below_4g);
+      add_physical_chunk_helper(paddr_diff(end, start) >> 12, free_list_head_below_4g);
       start = end;
       end = old_end;
-      add_physical_chunk_helper(start, end, free_list_head_above_4g);
+      add_physical_chunk_helper(paddr_diff(end, start) >> 12, free_list_head_above_4g);
   } else {
-      add_physical_chunk_helper(start, end, free_list_head_below_4g);
+      add_physical_chunk_helper(paddr_diff(end, start) >> 12, free_list_head_below_4g);
   }
 }
 
