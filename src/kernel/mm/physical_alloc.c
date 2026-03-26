@@ -35,7 +35,7 @@ static void physical_free_list_push(usize length, paddr start, paddr free_list_h
       free_list_head = start;
 }
 
-bool physical_free_list_pop(paddr *out, paddr free_list_head) {
+static bool physical_free_list_pop(paddr *out, paddr free_list_head) {
   // TODO: There should be a lock around essentially this whole function.
   *out = free_list_head;
   if (!bits_of_paddr(*out))
