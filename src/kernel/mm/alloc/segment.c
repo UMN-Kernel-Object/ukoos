@@ -7,6 +7,7 @@
 #include "segment.h"
 #include "heap.h"
 #include <align.h>
+#include <arch/riscv64/constants.h>
 #include <hart_locals.h>
 #include <mm/paging.h>
 #include <mm/physical_alloc.h>

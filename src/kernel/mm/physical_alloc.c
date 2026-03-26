@@ -5,6 +5,7 @@
  */
 
 #include <align.h>
+#include <arch/riscv64/constants.h>
 #include <devicetree.h>
 #include <mm/physical_alloc.h>
 #include <physical.h>
@@ -51,7 +52,7 @@ static bool physical_free_list_pop(paddr *out, paddr free_list_head) {
   } else {
     // There were multiple pages in the link. We'll use the first one, so we
     // write back the link to the next one.
-    free_list_head = paddr_offset(free_list_head, 1 << 12);
+    free_list_head = paddr_offset(free_list_head, PAGE_SIZE);
     link.length--;
     copy_to_physical(free_list_head, &link, sizeof(struct physical_free_list));
   }
