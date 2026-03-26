@@ -242,7 +242,7 @@ void mm_init_physical(struct devicetree_node *devicetree) {
 bool mm_alloc_physical(paddr *out, enum physical_alloc_flags flags) {
   // TODO: There should be a lock around essentially this whole function.
 
-  if (flags != PHYSICAL_ALLOC_BELOW_4G) {
+  if (!(flags & PHYSICAL_ALLOC_BELOW_4G)) {
     return physical_free_list_pop(out, free_list_head_above_4g);
   } else {
     return physical_free_list_pop(out, free_list_head_below_4g);
