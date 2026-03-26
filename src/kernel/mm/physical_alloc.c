@@ -246,7 +246,11 @@ bool mm_alloc_physical(paddr *out, enum physical_alloc_flags flags) {
     return physical_free_list_pop(out, free_list_head_above_4g);
   } else {
     return physical_free_list_pop(out, free_list_head_below_4g);
-  }
+  if (!(flags & PHYSICAL_ALLOC_BELOW_4G)
+    && physical_free_list_pop(out, free_list_head_above_4g))
+      return true;
+
+  return physical_free_list_pop(out, free_list_head_below_4g);
 }
 
 void mm_free_physical(paddr frame) {
