@@ -25,6 +25,16 @@ def defbuiltin(mod_name: str, name: str, *, export: bool = True):
 
         assert sym.function is None
         sym.function = ZFunc(func=func, lambda_list=lambda_list)
-        print(sym.function)
 
     return decorator
+
+
+def defvar(mod_name: str, name: str, value: ZVal, *, export: bool = True):
+    mod = ZMod.find(mod_name)
+    sym, sym_status = mod.intern(name)
+    assert sym_status != "INHERITED"
+    if export:
+        mod.export(sym)
+
+    assert sym.value is None
+    sym.value = value

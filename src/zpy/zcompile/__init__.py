@@ -355,8 +355,8 @@ def zcompile(form: ZVal, env: Env) -> ZFunc:
     assert return_values.type == "value-list"
 
     # Run the optimizer.
-    print(form)
-    optimize(func, log=True)
+    optimizer_logp = ZSym.impl("OPTIMIZER/LOG?").value is not NIL
+    optimize(func, log=optimizer_logp)
 
     return ZFunc(func=func, lambda_list=args)
 
