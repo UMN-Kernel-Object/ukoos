@@ -9,8 +9,8 @@ The compiler.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import ssa
-from typing import Literal
-from zval import NIL, ZCons, ZSym, ZVal
+from typing import Callable, Literal
+from zval import NIL, ZCons, ZFunc, ZSym, ZVal
 from .optimizer import optimize
 
 
@@ -202,6 +202,11 @@ class IRBuilder:
             self.copy_with(block=if_ge),
         )
 
+    def builtin(
+        self, func: Callable[[tuple[ZVal, ...]], tuple[ZVal, ...]], args: ssa.Insn
+    ) -> ssa.InsnBuiltin:
+        return self.block.add(ssa.InsnBuiltin(func, args))
+
     def call(self, func: ssa.Insn, args: ssa.Insn) -> ssa.InsnCall:
         return self.block.add(ssa.InsnCall(func, args))
 
@@ -307,7 +312,7 @@ class LambdaList:
         return env
 
 
-def zcompile(form: ZVal, env: Env) -> ssa.Func:
+def zcompile(form: ZVal, env: Env) -> ZFunc:
     """
     Compiles a function definition to an SSA function.
     """
@@ -353,7 +358,7 @@ def zcompile(form: ZVal, env: Env) -> ssa.Func:
     print(form)
     optimize(func, log=True)
 
-    return func
+    return ZFunc(func=func, lambda_list=args)
 
 
 def compile_form(ir: IRBuilder, form: ZVal, *, tail: bool = False) -> ssa.Insn:

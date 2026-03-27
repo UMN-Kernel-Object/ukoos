@@ -4,15 +4,17 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import zbuiltins
 from pathlib import Path
 from sys import argv
 from reader import read_one_from_string
 from zcompile import GlobalEnv, zcompile
-from zeval import apply
-from zval import NIL, ZCons, ZFunc, ZStr, ZSym, ZVal
+from zeval import eval_toplevel
+from zval import NIL, ZCons, ZStr, ZSym, ZVal
 
 
 def main(src_path: Path, *args: str):
+    zbuiltins.ensure()
     load(src_path)
 
 
@@ -40,7 +42,7 @@ def zeval_toplevel(form: ZVal) -> tuple[ZVal, ...]:
     # Wrap the form in a lambda and compile it.
     form = ZCons.of_list(ZSym.impl("LAMBDA"), NIL, ZCons.of_list(), form)
     func = zcompile(form, GlobalEnv())
-    return apply(ZFunc(func))
+    return eval_toplevel(func.func)
 
 
 if __name__ == "__main__":

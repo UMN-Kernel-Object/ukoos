@@ -13,7 +13,7 @@ certain way, check there first.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterable, Iterator, Literal
+from typing import Callable, Iterable, Iterator, Literal
 from zval import NIL, ZSym, ZVal
 
 
@@ -637,6 +637,29 @@ class InsnBranchIntLT(InsnBranchBinop):
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
     __match_args__ = ("args", "jumps_to")
+
+
+class InsnBuiltin(Insn):
+    insn_name = "builtin"
+    insn_ret_ty = "value-list"
+    insn_arg_tys = ("value-list",)
+    insn_vararg_ty = None
+    __match_args__ = ("args", "builtin")
+
+    builtin: Callable[[tuple[ZVal, ...]], tuple[ZVal, ...]]
+
+    def __init__(
+        self, builtin: Callable[[tuple[ZVal, ...]], tuple[ZVal, ...]], args: Insn
+    ):
+        self.builtin = builtin
+        super().__init__(args)
+
+    def __repr__(self):
+        return f"{self.name} <- builtin {self.builtin.__name__}, {self.args[0].name}"
+
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("control", "rw")
+        yield Effect("global", "rw")
 
 
 class InsnCall(Insn):

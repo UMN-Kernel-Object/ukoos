@@ -125,6 +125,11 @@ class ZMod:
         ALL_MODS[name] = out
         return out
 
+    def export(self, sym: "ZSym") -> None:
+        assert sym.name in self.syms
+        assert self.syms[sym.name][0] is sym
+        self.syms[sym.name] = (sym, "EXTERNAL")
+
     def intern(self, name: str | ZStr) -> tuple["ZSym", ZSymStatus]:
         if not isinstance(name, ZStr):
             name = ZStr(name)
@@ -139,7 +144,7 @@ class ZMod:
             return out
 
 
-ZMod.make(ZStr("%Z"))
+ZMod.make(ZStr("%ZPY"))
 ZMod.make(ZStr("KEYWORD"))
 ZMod.make(ZStr("Z"))
 
@@ -149,10 +154,10 @@ class ZSym:
     mod: ZMod
     name: ZStr
 
-    function: "ZSym | None" = field(default=None, init=False)
-    macro: "ZSym | None" = field(default=None, init=False)
-    setf: "ZSym | None" = field(default=None, init=False)
-    value: "ZSym | None" = field(default=None, init=False)
+    function: "ZVal | None" = field(default=None, init=False)
+    macro: "ZVal | None" = field(default=None, init=False)
+    setf: "ZVal | None" = field(default=None, init=False)
+    value: "ZVal | None" = field(default=None, init=False)
 
     @staticmethod
     def keyword(name: str) -> "ZSym":
@@ -160,7 +165,7 @@ class ZSym:
 
     @staticmethod
     def impl(name: str) -> "ZSym":
-        return ZMod.find("%Z").intern(name)[0]
+        return ZMod.find("%ZPY").intern(name)[0]
 
     @staticmethod
     def z(name: str) -> "ZSym":
@@ -237,6 +242,7 @@ class ZCons:
 @dataclass
 class ZFunc:
     func: "Func"
+    lambda_list: "ZVal"
 
 
 ZVal = float | int | ZCons | ZFunc | ZStr | ZSym
