@@ -9,8 +9,8 @@ from pathlib import Path
 from sys import argv
 from reader import read_one_from_string
 from zcompile import GlobalEnv, zcompile
-from zeval import eval_toplevel
-from zval import NIL, ZCons, ZStr, ZSym, ZVal
+from zeval import call
+from zval import NIL, ZCons, ZStr, ZVal
 
 
 def main(src_path: Path, *args: str):
@@ -27,6 +27,7 @@ def load(path: Path):
         if new_src is None:
             break
         src = new_src
+        print(form)
 
         zeval_toplevel(form)
 
@@ -40,9 +41,8 @@ def zeval_toplevel(form: ZVal) -> tuple[ZVal, ...]:
     """
 
     # Wrap the form in a lambda and compile it.
-    form = ZCons.of_list(ZSym.impl("LAMBDA"), NIL, ZCons.of_list(), form)
-    func = zcompile(form, GlobalEnv())
-    return eval_toplevel(func.func)
+    func = zcompile(NIL, ZCons.of_list(), form, GlobalEnv())
+    return call(func)
 
 
 if __name__ == "__main__":

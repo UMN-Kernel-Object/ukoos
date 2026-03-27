@@ -14,7 +14,7 @@ certain way, check there first.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, Iterable, Iterator, Literal
-from zval import NIL, ZSym, ZVal
+from zval import ZVal
 
 
 @dataclass
@@ -401,15 +401,17 @@ class DomTree:
 
 @dataclass(init=False)
 class Func:
-    name: ZSym
+    name: ZVal
+    lambda_list: ZVal
     args: Insn
     effect_registry: EffectRegistry
     _blocks: list[Block]
     _dom: DomTree | None
     _preds: list[set[int]] | None
 
-    def __init__(self, name: ZSym = NIL):
+    def __init__(self, name: ZVal, lambda_list: ZVal):
         self.name = name
+        self.lambda_list = lambda_list
         self.effect_registry = EffectRegistry()
         self._blocks = []
         self._dom = None

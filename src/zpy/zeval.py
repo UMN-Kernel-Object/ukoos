@@ -32,11 +32,10 @@ class CallFrame:
 SSAFrame = CallFrame
 
 
-def eval_toplevel(func: ssa.Func) -> tuple[ZVal, ...]:
+def call(func: ssa.Func, *args: ZVal) -> tuple[ZVal, ...]:
     stack: list[SSAFrame] = []
     ssa_storage: dict[ssa.Insn, SSAValue] = {}
     insn = func.entry[0]
-    args: tuple[ZVal, ...] = ()
 
     while True:
         match insn:

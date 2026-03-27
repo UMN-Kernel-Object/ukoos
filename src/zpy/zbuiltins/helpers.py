@@ -5,7 +5,7 @@
 import ssa
 from typing import Callable
 from zcompile import GlobalEnv, IRBuilder
-from zval import ZCons, ZFunc, ZMod, ZVal
+from zval import ZCons, ZFunc, ZMod, ZSym, ZVal
 
 
 def defbuiltin(mod_name: str, name: str, *, export: bool = True):
@@ -18,7 +18,7 @@ def defbuiltin(mod_name: str, name: str, *, export: bool = True):
     def decorator(builtin: Callable[[tuple[ZVal, ...]], tuple[ZVal, ...]]):
         lambda_list = ZCons.of_list()
 
-        func = ssa.Func(name=sym)
+        func = ssa.Func(sym, ZSym.keyword("BUILTIN"))
         ir = IRBuilder(func.entry, GlobalEnv())
         ir.ret(ir.builtin(builtin, func.args))
         func.tyck()
@@ -38,3 +38,8 @@ def defvar(mod_name: str, name: str, value: ZVal, *, export: bool = True):
 
     assert sym.value is None
     sym.value = value
+
+
+def export(*syms: ZSym):
+    for sym in syms:
+        sym.mod.export(sym)

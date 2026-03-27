@@ -11,3 +11,17 @@ def int_add(args: tuple[ZVal, ...]) -> tuple[ZVal, ...]:
     l, r = args
     assert isinstance(l, int) and isinstance(r, int)
     return (l + r,)
+
+
+@defbuiltin("%ZPY", "INT/-")
+def int_sub(args: tuple[ZVal, ...]) -> tuple[ZVal, ...]:
+    l, r = args
+    assert isinstance(l, int) and isinstance(r, int)
+    return (l - r,)
+
+
+@defbuiltin("%ZPY", "INT/*")
+def int_mul(args: tuple[ZVal, ...]) -> tuple[ZVal, ...]:
+    l, r = args
+    assert isinstance(l, int) and isinstance(r, int)
+    return (l * r,)

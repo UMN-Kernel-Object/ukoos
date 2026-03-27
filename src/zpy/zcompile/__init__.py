@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import ssa
 from typing import Callable, Literal
-from zval import NIL, ZCons, ZFunc, ZSym, ZVal
+from zval import NIL, ZCons, ZSym, ZVal
 from .optimizer import optimize
 
 
@@ -21,8 +21,10 @@ VarBinding = Literal["GLOBAL", "SYMBOL-MACRO"] | ssa.Insn
 SPECIAL_FORMS = [
     ZSym.z("FUNCTION"),
     ZSym.z("IF"),
+    ZSym.impl("LAMBDA"),
     ZSym.z("LET"),
     ZSym.z("PROGN"),
+    ZSym.z("QUOTE"),
 ]
 
 
@@ -312,27 +314,13 @@ class LambdaList:
         return env
 
 
-def zcompile(form: ZVal, env: Env) -> ZFunc:
+def zcompile(func_name: ZVal, args: ZVal, body: ZVal, env: Env) -> ssa.Func:
     """
     Compiles a function definition to an SSA function.
     """
 
-    # Check that it's a lambda and take it apart.
-    assert isinstance(form, ZCons)
-    assert form.car is ZSym.impl("LAMBDA")
-    assert isinstance(form.cdr, ZCons)
-    assert isinstance(form.cdr.car, ZSym)
-    func_name = form.cdr.car
-    assert isinstance(form.cdr.cdr, ZCons)
-    assert isinstance(form.cdr.cdr.car, ZCons) or form.cdr.cdr.car is NIL
-    args = form.cdr.cdr.car
-    assert isinstance(form.cdr.cdr.cdr, ZCons)
-    body = form.cdr.cdr.cdr.collect()
-    body_init = body[:-1]
-    body_last = body[-1]
-
     # Make a builder pointing at the entry block.
-    func = ssa.Func(name=func_name)
+    func = ssa.Func(func_name, args)
     ir = IRBuilder(func.entry, env)
 
     # Compile the argument list.
@@ -340,7 +328,7 @@ def zcompile(form: ZVal, env: Env) -> ZFunc:
     assert ir.env is args_env
 
     # Compile the body.
-    return_values = compile_progn(ir, body_init, body_last, tail=True)
+    return_values = compile_form(ir, body, tail=True)
 
     # Add a return to the exit block.
     ir.ret(return_values)
@@ -358,7 +346,7 @@ def zcompile(form: ZVal, env: Env) -> ZFunc:
     optimizer_logp = ZSym.impl("OPTIMIZER/LOG?").value is not NIL
     optimize(func, log=optimizer_logp)
 
-    return ZFunc(func=func, lambda_list=args)
+    return func
 
 
 def compile_form(ir: IRBuilder, form: ZVal, *, tail: bool = False) -> ssa.Insn:
@@ -367,7 +355,7 @@ def compile_form(ir: IRBuilder, form: ZVal, *, tail: bool = False) -> ssa.Insn:
     value-list. Expands macros.
     """
 
-    if isinstance(form, ZSym):
+    if isinstance(form, ZSym) and form is not NIL:
         raise Exception(f"TODO: compile_form {form}")
     elif isinstance(form, ZCons):
         if isinstance(form.car, ZSym):
@@ -418,10 +406,20 @@ def compile_special_form(
             on_f.goto(merge.block)
             ir.copy_from(merge)
             return phi
+        case "LAMBDA":
+            if len(cdr) != 3:
+                raise Exception(f"compile_special_form: invalid LAMBDA form: {form}")
+            func_name, args, body = cdr
+            func = zcompile(func_name, args, body, ir.env)
+            raise Exception(f"TODO: lambda {func}")
         case "PROGN":
             if len(cdr) == 0:
                 cdr = [NIL]
             return compile_progn(ir, cdr[:-1], cdr[-1], tail=tail)
+        case "QUOTE":
+            if len(cdr) != 1:
+                raise Exception(f"compile_special_form: invalid QUOTE form: {form}")
+            return ir.make_value_list(ir.const(cdr[0]))
         case _:
             raise Exception(f"TODO: compile_special_form {car}")
 

@@ -7,7 +7,7 @@ The S-expression parser.
 """
 
 from dataclasses import dataclass
-from zval import NIL, ZCons, ZMod, ZStr, ZVal
+from zval import NIL, ZCons, ZMod, ZStr, ZSym, ZVal
 
 CURRENT_MOD = ZMod.find("Z")
 
@@ -55,13 +55,20 @@ def read_one_from_string(src: ZStr) -> tuple[ZVal, ZStr | None]:
             case "#":
                 raise Exception("read_one_from_string: TODO")
             case "'":
-                raise Exception("read_one_from_string: TODO")
+                src = src[rune_len:]
+                return read_quote_from_string(ZSym.z("QUOTE"), src)
             case "(":
                 return read_list_from_string(src[rune_len:])
             case ")":
                 raise FoundRightParenException(src[rune_len:])
             case ",":
-                raise Exception("read_one_from_string: TODO")
+                src = src[rune_len:]
+                if src[:1] == ZStr("@"):
+                    src = src[rune_len:]
+                    quote = ZSym.impl("UNQUOTE-SPLICING")
+                else:
+                    quote = ZSym.impl("UNQUOTE")
+                return read_quote_from_string(quote, src)
             case ";":
                 while len(src) != 0:
                     rune, rune_len = src.decode_one_utf8()
@@ -70,7 +77,8 @@ def read_one_from_string(src: ZStr) -> tuple[ZVal, ZStr | None]:
                         break
                 continue
             case "`":
-                raise Exception("read_one_from_string: TODO")
+                src = src[rune_len:]
+                return read_quote_from_string(ZSym.impl("QUASIQUOTE"), src)
             case rune:
                 raise Exception(f"read_one_from_string: unexpected character: {rune!r}")
 
@@ -112,6 +120,13 @@ def read_list_from_string(src: ZStr) -> tuple[ZVal, ZStr | None]:
             return box.cdr, exc.src
 
 
+def read_quote_from_string(quote: ZVal, src: ZStr) -> tuple[ZVal, ZStr | None]:
+    form, new_src = read_one_from_string(src)
+    if new_src is None:
+        raise Exception("read_quote_from_string: unexpected EOF")
+    return ZCons.of_list(quote, form), new_src
+
+
 def read_token_from_string(src: ZStr) -> tuple[ZVal, ZStr | None]:
     colon_index = None
     has_double_colon = False
@@ -147,7 +162,10 @@ def read_token_from_string(src: ZStr) -> tuple[ZVal, ZStr | None]:
     # integer.)
     if colon_index is not None:
         token = ZStr(token)
-        mod = ZMod.find(token[:colon_index])
+        if colon_index == 0:
+            mod = ZMod.find("KEYWORD")
+        else:
+            mod = ZMod.find(token[:colon_index])
         sym, status = mod.intern(token[colon_index:])
         if status != "EXTERNAL" and not has_double_colon:
             raise Exception(
