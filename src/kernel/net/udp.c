@@ -4,9 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <mm/alloc.h>
 #include <net/udp.h>
 #include <panic.h>
 #include <selftest.h>
+#include <types.h>
 
 [[gnu::access(read_only, 1)]]
 u16 calculate_checksum(u8 *buf, usize size) {
@@ -64,4 +66,29 @@ DEFINE_SELFTEST() {
   // in real code this needs to convert from big endian to little endian.
   // excluded here because its not neccesary to test.
   assert(calculate_checksum(buffer, sizeof(buffer)) == expected);
+}
+
+u64 udp_send_datagram(u16 src_port, u16 dst_port, struct ip_address src_addr,
+                      struct ip_address dst_addr, u8 *data, usize len) {
+
+  u16 checksum = calculate_checksum(data, len);
+  assert(len < U16_MAX, "length of a udp datagram must be less than {{u16}}",
+         U16_MAX);
+  struct udp_header udp_header = {.src_port = src_port,
+                                  .dst_port = dst_port,
+                                  .len = (u16)len,
+                                  .checksum = checksum};
+  usize bufsiz = len + sizeof(struct udp_header);
+  u8 *buf = alloc(bufsiz);
+  if (!buf) {
+    return 1;
+  }
+
+  memcpy(buf, &udp_header, sizeof(udp_header));
+  memcpy(buf + sizeof(udp_header), data, len);
+
+  struct ipv6_header ipv6_header = ipv6_create_header(src_addr, dst_addr, NET_PROTOCOL_UDP);
+  ipv6_send_packet(ipv6_header, buf, len);
+  free(buf);
+  return 0;
 }

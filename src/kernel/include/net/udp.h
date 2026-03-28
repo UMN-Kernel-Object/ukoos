@@ -6,6 +6,7 @@
 #ifndef UKO_OS_NET_UDP_H
 #define UKO_OS_NET_UDP_H 1
 
+#include <net/ipv6.h>
 #include <types.h>
 
 // Implementation of https://www.rfc-editor.org/rfc/rfc768
@@ -46,4 +47,7 @@ struct udp_header {
  *
  */
 u16 calculate_checksum(u8 *buf, usize size);
+
+u64 udp_send_datagram(u16 src_port, u16 dst_port, struct ip_address src_addr,
+                      struct ip_address dst_addr, u8 *data, usize len);
 #endif // UKO_OS_NET_UDP_H
