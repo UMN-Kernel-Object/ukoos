@@ -14,7 +14,8 @@ from zval import NIL, ZCons, ZSym, ZVal
 from .optimizer import optimize
 
 
-Decls = list[tuple[ZSym, ZVal]]
+Decl = tuple[ZSym, ZVal]
+Decls = list[Decl]
 FuncBinding = Literal["GLOBAL", "MACRO", "SPECIAL-FORM"] | ssa.Insn
 VarBinding = Literal["GLOBAL", "SYMBOL-MACRO"] | ssa.Insn
 
@@ -90,9 +91,13 @@ class LexicalEnv(Env):
         self.funcs = {}
         self.vars = {}
 
-    def add_lexical_var(self, sym: ZSym, alloca: ssa.Insn):
+    def add_lexical_var(
+        self, sym: ZSym, alloca: ssa.InsnAlloca, *decls: Decl
+    ) -> ssa.InsnAlloca:
         assert not sym.is_keyword
-        raise Exception("LexicalEnv.add_lexical_var")
+        assert sym not in self.vars
+        self.vars[sym] = alloca, list(decls)
+        return alloca
 
     def find_decl(self, sym: ZSym) -> Decls:
         if sym in self.decls:
@@ -147,7 +152,7 @@ class IRBuilder:
 
     def alloca(self, name: ZSym) -> ssa.InsnAlloca:
         insn = ssa.InsnAlloca()
-        insn.name = f"lexical({name})"
+        insn.name = f"(lexical {name})"
         return self.block.add(insn)
 
     def branch_eq(
@@ -212,20 +217,20 @@ class IRBuilder:
     def call(self, func: ssa.Insn, args: ssa.Insn) -> ssa.InsnCall:
         return self.block.add(ssa.InsnCall(func, args))
 
+    def capture(self, capture: ssa.Insn) -> ssa.InsnCapture:
+        return self.block.add(ssa.InsnCapture(capture))
+
     def const(self, value: ZVal) -> ssa.InsnConst:
         return self.block.add(ssa.InsnConst(value))
 
     def get_args(self) -> ssa.InsnGetArgs:
         return self.block.add(ssa.InsnGetArgs())
 
-    def get_value(self, value_list: ssa.Insn, i: int) -> ssa.InsnGetValue:
-        return self.block.add(ssa.InsnGetValue(value_list, i))
-
     def goto(self, dst: ssa.Block) -> ssa.InsnGoto:
         return self.block.add(ssa.InsnGoto(dst))
 
-    def make_value_list(self, *values: ssa.Insn) -> ssa.InsnMakeValueList:
-        return self.block.add(ssa.InsnMakeValueList(*values))
+    def oops(self, msg: str) -> ssa.InsnOops:
+        return self.block.add(ssa.InsnOops(msg))
 
     def phi(self, ty: ssa.Type) -> ssa.InsnPhi:
         return self.block.add(ssa.InsnPhi(ty))
@@ -251,17 +256,30 @@ class IRBuilder:
     def upsilon(self, value: ssa.Insn, shadow: ssa.Insn) -> ssa.InsnUpsilon:
         return self.block.add(ssa.InsnUpsilon(value, shadow))
 
+    def value_list_get(self, value_list: ssa.Insn, i: int) -> ssa.InsnValueListGet:
+        return self.block.add(ssa.InsnValueListGet(value_list, i))
+
     def value_list_length(self, values: ssa.Insn) -> ssa.InsnValueListLength:
         return self.block.add(ssa.InsnValueListLength(values))
+
+    def value_list_make(self, *values: ssa.Insn) -> ssa.InsnValueListMake:
+        return self.block.add(ssa.InsnValueListMake(*values))
+
+    def value_list_nthcdr_as_cons_list(
+        self, value_list: ssa.Insn, i: int
+    ) -> ssa.InsnValueListNthcdrAsConsList:
+        return self.block.add(ssa.InsnValueListNthcdrAsConsList(value_list, i))
 
 
 @dataclass(init=False)
 class LambdaList:
+    lambda_list: ZVal
     required: list[ZSym]
     optional: list[ZSym]
     rest: ZSym | None
 
     def __init__(self, lambda_list: ZVal):
+        self.lambda_list = lambda_list
         self.required = []
         self.optional = []
         self.rest = None
@@ -274,10 +292,27 @@ class LambdaList:
             arg = args[i]
             assert isinstance(arg, ZSym)
             if arg.is_keyword:
-                raise Exception(f"LambdaList {args[i:]}")
+                break
             else:
                 self.required.append(arg)
                 i += 1
+
+        # Check for optional parameters.
+        if i < len(args) and args[i] is ZSym.keyword("OPTIONAL"):
+            i += 1
+            raise Exception(f"LambdaList {args[i:]}")
+
+        # Check for a rest parameter.
+        if i < len(args) and args[i] is ZSym.keyword("REST"):
+            i += 1
+            if i == len(args):
+                raise Exception(
+                    f"a parameter must follow :REST in lambda list {lambda_list}"
+                )
+            arg = args[i]
+            assert isinstance(arg, ZSym) and not arg.is_keyword
+            self.rest = arg
+            i += 1
 
         # Check that there are no leftover parameters.
         if i < len(args):
@@ -290,26 +325,41 @@ class LambdaList:
         against the lambda list, pushing and returning a lexical environment.
         """
 
+        # Create a new environment for the lambda.
         env = LexicalEnv(ir.env)
+
+        # Check that we have the required number of parameters.
         length = ir.value_list_length(ir.func.args)
-        expected_length = 0
+        _, if_lt, if_ge = ir.branch_int_lt(
+            length, ir.const(len(self.required)), if_lt="too-few-args"
+        )
+        if_lt.oops(f"not enough args to {self.lambda_list}")
+        ir.copy_from(if_ge)
 
-        for arg in self.required:
-            raise Exception(f"LambdaList.compile {self}")
+        # Bind each required parameter.
+        for i, arg in enumerate(self.required):
+            ir.ptr_write(
+                env.add_lexical_var(arg, ir.alloca(arg)),
+                ir.value_list_get(ir.func.args, i),
+            )
 
-        for arg in self.optional:
-            raise Exception(f"LambdaList.compile {self}")
+        assert len(self.optional) == 0, "TODO"
 
+        # Convert the rest of the arguments to a cons list, if requested. If
+        # not, check that there's no more arguments.
         if self.rest is None:
             _, if_eq, if_ne = ir.branch_int_eq(
-                length, ir.const(expected_length), if_ne="bad-arg-count"
+                length, ir.const(len(self.required)), if_ne="too-many-args"
             )
+            if_ne.oops(f"too many args to {self.lambda_list}")
             ir.copy_from(if_eq)
-            # TODO
-            if_ne.unreachable()
         else:
-            raise Exception(f"LambdaList.compile {self}")
+            ir.ptr_write(
+                env.add_lexical_var(self.rest, ir.alloca(self.rest)),
+                ir.value_list_nthcdr_as_cons_list(ir.func.args, len(self.required)),
+            )
 
+        # Return the environment.
         ir.env = env
         return env
 
@@ -356,10 +406,20 @@ def compile_form(ir: IRBuilder, form: ZVal, *, tail: bool = False) -> ssa.Insn:
     """
 
     if isinstance(form, ZSym) and form is not NIL:
-        raise Exception(f"TODO: compile_form {form}")
+        binding, decls = ir.env.find_var(form)
+        assert len(decls) == 0, "TODO: decls"
+        if binding == "GLOBAL" or binding is None:
+            raise Exception(f"TODO: compile_form {form}")
+        elif isinstance(binding, ssa.Insn):
+            return compile_lexical(ir, binding)
+        elif binding == "SYMBOL-MACRO":
+            raise Exception(f"TODO: compile_form {form}")
+        else:
+            raise Exception(f"TODO: compile_form {form} {binding}")
     elif isinstance(form, ZCons):
         if isinstance(form.car, ZSym):
-            binding, _ = ir.env.find_func(form.car)
+            binding, decls = ir.env.find_func(form.car)
+            assert len(decls) == 0, "TODO: decls"
             if binding == "GLOBAL" or binding is None:
                 func = ir.symbol_function(ir.const(form.car))
                 return compile_call(ir, func, ZCons.collect(form.cdr), tail=tail)
@@ -384,7 +444,7 @@ def compile_form(ir: IRBuilder, form: ZVal, *, tail: bool = False) -> ssa.Insn:
             # args = ZCons.collect(form.cdr)
             # return compile_call(ir, func, args)
     else:
-        return ir.make_value_list(ir.const(form))
+        return ir.value_list_make(ir.const(form))
 
 
 def compile_special_form(
@@ -396,7 +456,7 @@ def compile_special_form(
                 cdr.append(NIL)
             if len(cdr) != 3:
                 raise Exception(f"compile_special_form: invalid IF form: {form}")
-            c = ir.get_value(compile_form(ir, cdr[0]), 0)
+            c = ir.value_list_get(compile_form(ir, cdr[0]), 0)
             _, on_f, on_t = ir.branch_eq(c, ir.const(NIL))
             merge = ir.new_block()
             phi = merge.phi("value-list")
@@ -419,7 +479,7 @@ def compile_special_form(
         case "QUOTE":
             if len(cdr) != 1:
                 raise Exception(f"compile_special_form: invalid QUOTE form: {form}")
-            return ir.make_value_list(ir.const(cdr[0]))
+            return ir.value_list_make(ir.const(cdr[0]))
         case _:
             raise Exception(f"TODO: compile_special_form {car}")
 
@@ -432,13 +492,29 @@ def compile_call(
     value-list.
     """
 
-    args_insn = ir.make_value_list(
-        *(ir.get_value(compile_form(ir, arg), 0) for arg in args)
+    args_insn = ir.value_list_make(
+        *(ir.value_list_get(compile_form(ir, arg), 0) for arg in args)
     )
     if tail:
         return ir.absurd_list(ir.tail_call(func, args_insn))
     else:
         return ir.call(func, args_insn)
+
+
+def compile_lexical(ir: IRBuilder, binding: ssa.Insn) -> ssa.Insn:
+    """
+    Compiles a reference to a lexical variable.
+    """
+
+    assert binding.type == "value-ptr"
+
+    # If the variable is in the same function, just grab it.
+    if ir.func is binding.func:
+        return ir.value_list_make(ir.ptr_read(binding))
+
+    # Otherwise, close over it.
+    ir.func.captures.add(binding)
+    return ir.value_list_make(ir.ptr_read(ir.capture(binding)))
 
 
 def compile_progn(

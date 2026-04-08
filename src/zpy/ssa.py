@@ -404,6 +404,7 @@ class Func:
     name: ZVal
     lambda_list: ZVal
     args: Insn
+    captures: set[Insn]
     effect_registry: EffectRegistry
     _blocks: list[Block]
     _dom: DomTree | None
@@ -412,6 +413,7 @@ class Func:
     def __init__(self, name: ZVal, lambda_list: ZVal):
         self.name = name
         self.lambda_list = lambda_list
+        self.captures = set()
         self.effect_registry = EffectRegistry()
         self._blocks = []
         self._dom = None
@@ -431,6 +433,19 @@ class Func:
 
     def __repr__(self) -> str:
         out = f"func ({self.name} {self.args.name}) {{\n"
+
+        out += "captures {"
+        if len(self.captures) == 0:
+            out += "}\n"
+        else:
+            for i, capture in enumerate(self.captures):
+                if i == 0:
+                    out += " "
+                else:
+                    out += ", "
+                out += f"({capture.func.name} {capture.name})\n{' ' * 9}"
+            out += "}\n"
+
         for block in self:
             out += f"{block!r}\n"
         out += "}"
@@ -618,7 +633,7 @@ class InsnAlloca(InsnPure):
 
 
 class InsnBranchEq(InsnBranchBinop):
-    insn_name = "branch-eq"
+    insn_name = "branch/eq"
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
@@ -626,7 +641,7 @@ class InsnBranchEq(InsnBranchBinop):
 
 
 class InsnBranchIntEQ(InsnBranchBinop):
-    insn_name = "branch-int-eq"
+    insn_name = "branch/int-eq"
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
@@ -634,7 +649,7 @@ class InsnBranchIntEQ(InsnBranchBinop):
 
 
 class InsnBranchIntLT(InsnBranchBinop):
-    insn_name = "branch-int-lt"
+    insn_name = "branch/int-lt"
     insn_ret_ty = "never"
     insn_arg_tys = ("value", "value")
     insn_vararg_ty = None
@@ -676,6 +691,23 @@ class InsnCall(Insn):
         yield Effect("global", "rw")
 
 
+class InsnCapture(InsnPure):
+    insn_name = "capture"
+    insn_ret_ty = "value-ptr"
+    insn_arg_tys = ()
+    insn_vararg_ty = None
+    __match_args__ = ("args", "capture")
+
+    capture: Insn
+
+    def __init__(self, capture: Insn):
+        self.capture = capture
+        super().__init__()
+
+    def __repr__(self):
+        return f"{self.name} <- capture {self.capture.name}"
+
+
 class InsnConst(InsnPure):
     insn_name = "const"
     insn_ret_ty = "value"
@@ -701,28 +733,6 @@ class InsnGetArgs(InsnPure):
     __match_args__ = ("args",)
 
 
-class InsnGetValue(InsnPure):
-    """
-    This can be InsnPure (instead of reading memory) because it's UB to mutate
-    a cons list used in a value-list.
-    """
-
-    insn_name = "get-value"
-    insn_ret_ty = "value"
-    insn_arg_tys = ("value-list",)
-    insn_vararg_ty = None
-    __match_args__ = ("args", "i")
-
-    i: int
-
-    def __init__(self, value: Insn, i: int):
-        self.i = i
-        super().__init__(value)
-
-    def __repr__(self):
-        return f"{self.name} <- get-value {self.args[0].name}, {self.i}"
-
-
 class InsnGoto(Term):
     insn_name = "goto"
     insn_ret_ty = "never"
@@ -739,12 +749,45 @@ class InsnGoto(Term):
         return ()
 
 
-class InsnMakeValueList(InsnPure):
-    insn_name = "make-value-list"
-    insn_ret_ty = "value-list"
+class InsnLambda(InsnPure):
+    insn_name = "const"
+    insn_ret_ty = "value"
     insn_arg_tys = ()
-    insn_vararg_ty = "value"
-    __match_args__ = ("args",)
+    insn_vararg_ty = None
+    __match_args__ = ("args", "code")
+
+    code: Func
+
+    def __init__(self, code: Func):
+        self.code = code
+        super().__init__()
+
+    def __repr__(self):
+        return f"{self.name} <- lambda {self.code.name}"
+
+
+class InsnOops(Term):
+    insn_name = "oops"
+    insn_ret_ty = "never"
+    insn_arg_tys = ()
+    insn_vararg_ty = None
+    __match_args__ = ("args", "msg")
+
+    msg: str
+
+    def __init__(self, msg: str):
+        self.msg = msg
+        super().__init__([], [])
+
+    def __repr__(self):
+        return f"{self.name} <- oops {self.msg!r}"
+
+    def effects(self) -> Iterable[Effect]:
+        yield Effect("control", "rw")
+
+    @property
+    def exit(self) -> bool:
+        return True
 
 
 class InsnPhi(Insn):
@@ -771,7 +814,7 @@ class InsnPhi(Insn):
 
 
 class InsnPtrRead(Insn):
-    insn_name = "ptr-read"
+    insn_name = "ptr/read"
     insn_ret_ty = "value"
     insn_arg_tys = ("value-ptr",)
     insn_vararg_ty = None
@@ -782,7 +825,7 @@ class InsnPtrRead(Insn):
 
 
 class InsnPtrWrite(Insn):
-    insn_name = "ptr-write"
+    insn_name = "ptr/write"
     insn_ret_ty = "unit"
     insn_arg_tys = ("value-ptr", "value")
     insn_vararg_ty = None
@@ -888,9 +931,56 @@ class InsnUpsilon(Insn):
         return ((self.phi.type,), None)
 
 
+class InsnValueListGet(InsnPure):
+    """
+    This can be InsnPure (instead of reading memory) because it's UB to mutate
+    a cons list used in a value-list.
+    """
+
+    insn_name = "value-list/get"
+    insn_ret_ty = "value"
+    insn_arg_tys = ("value-list",)
+    insn_vararg_ty = None
+    __match_args__ = ("args", "i")
+
+    i: int
+
+    def __init__(self, value: Insn, i: int):
+        self.i = i
+        super().__init__(value)
+
+    def __repr__(self):
+        return f"{self.name} <- value-list/get {self.args[0].name}, {self.i}"
+
+
 class InsnValueListLength(InsnPure):
-    insn_name = "value-list-length"
+    insn_name = "value-list/length"
     insn_ret_ty = "value"
     insn_arg_tys = ("value-list",)
     insn_vararg_ty = None
     __match_args__ = ("args",)
+
+
+class InsnValueListMake(InsnPure):
+    insn_name = "value-list/make"
+    insn_ret_ty = "value-list"
+    insn_arg_tys = ()
+    insn_vararg_ty = "value"
+    __match_args__ = ("args",)
+
+
+class InsnValueListNthcdrAsConsList(InsnPure):
+    insn_name = "value-list/nthcdr-as-cons-list"
+    insn_ret_ty = "value"
+    insn_arg_tys = ("value-list",)
+    insn_vararg_ty = None
+    __match_args__ = ("args", "i")
+
+    i: int
+
+    def __init__(self, value: Insn, i: int):
+        self.i = i
+        super().__init__(value)
+
+    def __repr__(self):
+        return f"{self.name} <- value-list/nthcdr-as-cons-list {self.args[0].name}, {self.i}"

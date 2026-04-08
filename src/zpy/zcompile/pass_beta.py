@@ -16,7 +16,7 @@ def pass_beta(func: ssa.Func):
     for block in func:
         for insn in block:
             match insn:
-                case ssa.InsnGetValue((ssa.InsnMakeValueList(values),), i):
+                case ssa.InsnValueListGet((ssa.InsnValueListMake(values),), i):
                     replacements[insn] = values[i]
     for block in func:
         for insn in block:

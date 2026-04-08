@@ -77,20 +77,9 @@ def call(func: ssa.Func, *args: ZVal) -> tuple[ZVal, ...]:
             case ssa.InsnGetArgs():
                 ssa_storage[insn] = args
 
-            case ssa.InsnGetValue((value_list,), i):
-                value_list = ssa_storage[value_list]
-                assert isinstance(value_list, tuple)
-                assert i < len(value_list)
-                ssa_storage[insn] = value_list[i]
-
             case ssa.InsnGoto((), (dst,)):
                 insn = dst[0]
                 continue
-
-            case ssa.InsnMakeValueList(values):
-                ssa_storage[insn] = tuple(
-                    _ensure_one(ssa_storage[value]) for value in values
-                )
 
             case ssa.InsnPhi():
                 pass
@@ -133,10 +122,21 @@ def call(func: ssa.Func, *args: ZVal) -> tuple[ZVal, ...]:
             case ssa.InsnUpsilon((value,), phi):
                 ssa_storage[phi] = ssa_storage[value]
 
+            case ssa.InsnValueListGet((value_list,), i):
+                value_list = ssa_storage[value_list]
+                assert isinstance(value_list, tuple)
+                assert i < len(value_list)
+                ssa_storage[insn] = value_list[i]
+
             case ssa.InsnValueListLength((value_list,)):
                 value_list = ssa_storage[value_list]
                 assert isinstance(value_list, tuple)
                 ssa_storage[insn] = len(value_list)
+
+            case ssa.InsnValueListMake(values):
+                ssa_storage[insn] = tuple(
+                    _ensure_one(ssa_storage[value]) for value in values
+                )
 
             case _:
                 print(func, file=__import__("sys").stderr)
