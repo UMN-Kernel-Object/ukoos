@@ -106,17 +106,17 @@ static inline __UINT8_TYPE__ __stdc_has_single_bit_u8(__UINT8_TYPE__ value) {
 }
 
 [[gnu::const]]
-static inline __UINT16_TYPE__ __stdc_has_single_bit_u16(__UINT8_TYPE__ value) {
+static inline __UINT16_TYPE__ __stdc_has_single_bit_u16(__UINT16_TYPE__ value) {
   return (bool)(__builtin_popcountg(value) == 1);
 }
 
 [[gnu::const]]
-static inline __UINT32_TYPE__ __stdc_has_single_bit_u32(__UINT8_TYPE__ value) {
+static inline __UINT32_TYPE__ __stdc_has_single_bit_u32(__UINT32_TYPE__ value) {
   return (bool)(__builtin_popcountg(value) == 1);
 }
 
 [[gnu::const]]
-static inline __UINT64_TYPE__ __stdc_has_single_bit_u64(__UINT8_TYPE__ value) {
+static inline __UINT64_TYPE__ __stdc_has_single_bit_u64(__UINT64_TYPE__ value) {
   return (bool)(__builtin_popcountg(value) == 1);
 }
 
@@ -133,18 +133,6 @@ static inline __UINT64_TYPE__ __stdc_has_single_bit_u64(__UINT8_TYPE__ value) {
 #else
 // https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html#index-_005f_005fbuiltin_005fstdc_005fbit_005ffloor
 [[gnu::const]]
-static inline __UINT8_TYPE__ __stdc_bit_floor_u8(__UINT8_TYPE__ value) {
-  return value == 0 ? (__UINT8_TYPE__)0
-                    : (__UINT8_TYPE__)1 << (8 - 1 - __builtin_clzg(value));
-}
-
-[[gnu::const]]
-static inline __UINT16_TYPE__ __stdc_bit_floor_u16(__UINT16_TYPE__ value) {
-  return value == 0 ? (__UINT16_TYPE__)0
-                    : (__UINT16_TYPE__)1 << (16 - 1 - __builtin_clzg(value));
-}
-
-[[gnu::const]]
 static inline __UINT32_TYPE__ __stdc_bit_floor_u32(__UINT32_TYPE__ value) {
   return value == 0 ? (__UINT32_TYPE__)0
                     : (__UINT32_TYPE__)1 << (32 - 1 - __builtin_clzg(value));
@@ -154,6 +142,16 @@ static inline __UINT32_TYPE__ __stdc_bit_floor_u32(__UINT32_TYPE__ value) {
 static inline __UINT64_TYPE__ __stdc_bit_floor_u64(__UINT64_TYPE__ value) {
   return value == 0 ? (__UINT64_TYPE__)0
                     : (__UINT64_TYPE__)1 << (64 - 1 - __builtin_clzg(value));
+}
+
+[[gnu::const]]
+static inline __UINT8_TYPE__ __stdc_bit_floor_u8(__UINT8_TYPE__ value) {
+  return (__UINT8_TYPE__)__stdc_bit_floor_u32(value);
+}
+
+[[gnu::const]]
+static inline __UINT16_TYPE__ __stdc_bit_floor_u16(__UINT16_TYPE__ value) {
+  return (__UINT16_TYPE__)__stdc_bit_floor_u32(value);
 }
 
 #define stdc_bit_floor(VALUE)                                                  \
@@ -201,27 +199,28 @@ static inline __UINT64_TYPE__ __stdc_bit_width_u64(__UINT64_TYPE__ value) {
 #else
 [[gnu::const]]
 static inline __UINT8_TYPE__ __stdc_trailing_zeros_u8(__UINT8_TYPE__ value) {
-  return (__UINT8_TYPE__)(__builtin_ctzg((__UINT8_TYPE__)~value, -1) + 1);
+  return (__UINT8_TYPE__)__builtin_ctzg(value, 8);
 }
 
 [[gnu::const]]
 static inline __UINT16_TYPE__ __stdc_trailing_zeros_u16(__UINT16_TYPE__ value) {
-  return (__UINT16_TYPE__)(__builtin_ctzg((__UINT16_TYPE__)~value, -1) + 1);
+  return (__UINT16_TYPE__)__builtin_ctzg(value, 16);
 }
 
 [[gnu::const]]
 static inline __UINT32_TYPE__ __stdc_trailing_zeros_u32(__UINT32_TYPE__ value) {
-  return (__UINT32_TYPE__)(__builtin_ctzg((__UINT32_TYPE__)~value, -1) + 1);
+  return (__UINT32_TYPE__)__builtin_ctzg(value, 32);
 }
 
 [[gnu::const]]
 static inline __UINT64_TYPE__ __stdc_trailing_zeros_u64(__UINT64_TYPE__ value) {
-  return (__UINT64_TYPE__)(__builtin_ctzg((__UINT64_TYPE__)~value, -1) + 1);
+  return (__UINT64_TYPE__)__builtin_ctzg(value, 64);
 }
 
 [[gnu::const]]
 static inline __SIZE_TYPE__ __stdc_trailing_zeros_usize(__SIZE_TYPE__ value) {
-  return (__SIZE_TYPE__)(__builtin_ctzg((__SIZE_TYPE__)~value, -1) + 1);
+  constexpr int SIZE_BITS = sizeof(__SIZE_TYPE__) * 8;
+  return (__SIZE_TYPE__)__builtin_ctzg(value, SIZE_BITS);
 }
 
 #define stdc_trailing_zeros(VALUE)                                             \
@@ -237,44 +236,43 @@ static inline __SIZE_TYPE__ __stdc_trailing_zeros_usize(__SIZE_TYPE__ value) {
 #define stdc_bit_ceil __builtin_stdc_bit_ceil
 #else
 // https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html#index-_005f_005fbuiltin_005fstdc_005fbit_005fceil
-[[gnu::const]]
-static inline __UINT8_TYPE__ __stdc_bit_ceil_u8(__UINT8_TYPE__ value) {
-  return value <= 1
-             ? (__UINT8_TYPE__)1
-             : (__UINT8_TYPE__)2
-                   << (8 - 1 - __builtin_clzg((__UINT8_TYPE__)(value - 1)));
-}
-
-[[gnu::const]]
-static inline __UINT16_TYPE__ __stdc_bit_ceil_u16(__UINT16_TYPE__ value) {
-  return value <= 1
-             ? (__UINT16_TYPE__)1
-             : (__UINT16_TYPE__)2
-                   << (16 - 1 - __builtin_clzg((__UINT16_TYPE__)(value - 1)));
-}
 
 [[gnu::const]]
 static inline __UINT32_TYPE__ __stdc_bit_ceil_u32(__UINT32_TYPE__ value) {
-  return value <= 1
-             ? (__UINT32_TYPE__)1
-             : (__UINT32_TYPE__)2
-                   << (32 - 1 - __builtin_clzg((__UINT32_TYPE__)(value - 1)));
+  if (value <= 1)
+    return 1;
+
+  int shift = 32 - 1 - __builtin_clzg(value - 1);
+  return (__UINT32_TYPE__)2 << shift;
 }
 
 [[gnu::const]]
 static inline __UINT64_TYPE__ __stdc_bit_ceil_u64(__UINT64_TYPE__ value) {
-  return value <= 1
-             ? (__UINT64_TYPE__)1
-             : (__UINT64_TYPE__)2
-                   << (64 - 1 - __builtin_clzg((__UINT64_TYPE__)(value - 1)));
+  if (value <= 1)
+    return 1;
+
+  int shift = 64 - 1 - __builtin_clzg(value - 1);
+  return (__UINT64_TYPE__)2 << shift;
 }
 
 [[gnu::const]]
 static inline __SIZE_TYPE__ __stdc_bit_ceil_usize(__SIZE_TYPE__ value) {
-  return value <= 1
-             ? (__SIZE_TYPE__)1
-             : (__SIZE_TYPE__)2 << (sizeof(__SIZE_TYPE__) * 8 - 1 -
-                                    __builtin_clzg((__SIZE_TYPE__)(value - 1)));
+  if (value <= 1)
+    return 1;
+
+  constexpr int SIZE_BITS = sizeof(__SIZE_TYPE__) * 8;
+  int shift = SIZE_BITS - 1 - __builtin_clzl(value - 1);
+  return (__SIZE_TYPE__)2 << shift;
+}
+
+[[gnu::const]]
+static inline __UINT8_TYPE__ __stdc_bit_ceil_u8(__UINT8_TYPE__ value) {
+  return (__UINT8_TYPE__)__stdc_bit_ceil_u32(value);
+}
+
+[[gnu::const]]
+static inline __UINT16_TYPE__ __stdc_bit_ceil_u16(__UINT16_TYPE__ value) {
+  return (__UINT16_TYPE__)__stdc_bit_ceil_u32(value);
 }
 
 #define stdc_bit_ceil(VALUE)                                                   \
