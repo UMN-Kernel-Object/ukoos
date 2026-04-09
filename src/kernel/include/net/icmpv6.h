@@ -99,4 +99,6 @@ struct icmpv6_header icmpv6_create_header(struct ip_address src,
                                           struct ip_address dst, u8 *data,
                                           usize len, u8 type, u8 code);
 
+int icmpv6_solicit_routers();
+
 #endif // UKO_OS__NET_ICMPV6_H
