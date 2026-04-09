@@ -33,7 +33,7 @@ void init_boothart_hart_locals_early(u64 hart_id) {
   boothart_hart_id = hart_id;
   csrw(RISCV64_CSR_SSCRATCH, (u64)&boothart_hart_locals);
   boothart_hart_locals = (struct hart_locals){
-      .hart_id = hart_id,
+      .hart = nullptr,
       .heap = nullptr,
       .rng = {},
   };
@@ -59,6 +59,9 @@ void init_boothart_hart_locals_late(void) {
     print_devices();
     panic("Could not find a hart with the ID {u64}", boothart_hart_id);
   }
+
+  // Fix up the heap to refer to this hart.
+  heap_change_boothart_hart(hart_locals->heap, hart_locals->hart);
 }
 
 void init_hart_locals(u64 hart_id);

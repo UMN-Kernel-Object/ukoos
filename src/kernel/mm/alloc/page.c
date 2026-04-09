@@ -28,7 +28,7 @@ static struct mm_alloc_page *page_alloc_small(struct mm_alloc_heap *heap,
   struct mm_alloc_page *page =
       container_of(list_shift(&heap->unused_pages), struct mm_alloc_page, list);
   struct mm_alloc_segment *segment = page_segment(page);
-  assert(segment->hart_id == heap->hart_id);
+  assert(segment->hart == heap->hart);
   assert(segment->page_shift == PAGE_SMALL_SHIFT);
   segment->used_pages++;
   return page;
@@ -184,7 +184,7 @@ struct mm_alloc_page *page_new_large(struct mm_alloc_heap *heap,
   struct mm_alloc_page *page = &segment->pages[0];
   page_init_small_or_large(page, heap, size_class);
 
-  assert(segment->hart_id == heap->hart_id);
+  assert(segment->hart == heap->hart);
   assert(segment->page_shift == PAGE_LARGE_SHIFT);
   segment->used_pages++;
   return page;
@@ -202,7 +202,7 @@ struct mm_alloc_page *page_new_huge(struct mm_alloc_heap *heap, usize size) {
   struct mm_alloc_page *page = &segment->pages[0];
   page_init_huge(page, heap, size);
 
-  assert(segment->hart_id == heap->hart_id);
+  assert(segment->hart == heap->hart);
   assert(segment->page_shift == PAGE_HUGE_SHIFT);
   segment->used_pages++;
   return page;

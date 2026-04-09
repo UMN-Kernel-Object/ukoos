@@ -15,11 +15,6 @@
  */
 struct hart_locals {
   /**
-   * The ID of the hart. Not guaranteed to be small or densely packed.
-   */
-  u64 hart_id;
-
-  /**
    * A pointer to the current hart.
    */
   struct hart *hart;

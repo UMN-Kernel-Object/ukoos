@@ -63,5 +63,7 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   print("Running self-tests...");
   run_selftests();
 
+  struct hart_locals *hart_locals = get_hart_locals();
+  print("{uptr}", hart_locals->hart);
   TODO();
 }
