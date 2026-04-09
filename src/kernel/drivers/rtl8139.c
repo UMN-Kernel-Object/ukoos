@@ -96,7 +96,7 @@ struct mac get_mac(struct netdev *this) {
 }
 
 bool send_packet(struct netdev *this, u8 packet[], usize length) {
-  struct rtl8139 *rtl_this = (struct rtl8139 *) this->device;
+  struct rtl8139 *rtl_this = container_of(this, struct rtl8139, netdev);
   volatile struct rtl8139_regs *rtl_regs = rtl_this->regs;
   u32 phys_buffer = walkaddr((uaddr) (&rtl8139_tbuff[0]));
   u64 i;
@@ -123,7 +123,7 @@ void rtl8139_test(struct rtl8139 *rtl_device) {
   memcpy(mac.addr, (const u8*) "\xff\xff\xff\xff\xff\xff", 6);
 
   eth_send_packet(&rtl_device->netdev, mac,
-	(u8*) "yellow submarine", 16);
+    (u8*) "yellow submarine", 16);
 
   assert(rtl_regs->tsad[0] != 0);
   assert((rtl_regs->tsd[0] & TSD_TOK) != 0);
@@ -167,11 +167,19 @@ fail:
 
 }
 
-void rtl8139_init(struct pci_regs *pci_device) {
+void rtl8139_init(struct pci* pci, struct pci_regs *pci_device) {
   print("initializing rtl8139");
 
   volatile struct rtl8139_regs *rtl_regs;
-  u32 reg_addr = 0x40000000;
+  u32 reg_addr = 0;
+  struct vma *mmio_addr = pci->ops->mmio_alloc(pci, 256, 1);
+  uaddr low, high;
+
+  vma_bounds(mmio_addr, &low, &high);
+
+  /* Should always be true, see mmio_alloc */
+  assert(low < U32_MAX);
+  reg_addr = (u32) low;
 
   struct device *device = add_device(paddr_of_bits(reg_addr), sizeof(struct rtl8139_regs));
   struct rtl8139 *rtl_device = (struct rtl8139 *) device;

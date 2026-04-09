@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026 ukoOS Contributors
+ * SPDX-FileCopyrightText: ukoOS Contributors
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -9,7 +9,7 @@
 struct list_head pcis = LIST_INIT(pcis);
 
 struct registered_device {
-  void (*callback)(struct pci_regs *regs);
+  void (*callback)(struct pci* this, struct pci_regs *regs);
   u16 vid;
   u16 did;
 };
@@ -17,7 +17,7 @@ struct registered_device {
 struct registered_device *handlers = nullptr;
 usize handlers_len = 0, handlers_cap = 0;
 
-void pci_register(u16 vid, u16 did, void (*callback)(struct pci_regs *regs)) {
+void pci_register(u16 vid, u16 did, void (*callback)(struct pci *this, struct pci_regs *regs)) {
   if (!handlers) {
     assert(!handlers_len);
     handlers_cap = 16;
@@ -40,7 +40,7 @@ void pci_register(u16 vid, u16 did, void (*callback)(struct pci_regs *regs)) {
   };
 }
 
-void (*pci_get_handler(u16 vid, u16 did))(struct pci_regs *regs) {
+void (*pci_get_handler(u16 vid, u16 did))(struct pci *this, struct pci_regs *regs) {
   for (usize i = 0; i<handlers_len; ++i) {
     if (handlers[i].vid == vid && handlers[i].did == did)
       return handlers[i].callback;
