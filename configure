@@ -22,6 +22,8 @@ usage() {
 	printf >&2 '\nDefaults:\n'
 	printf >&2 '  --no-default-cflags     disables default CFLAGS\n'
 	printf >&2 '  --no-default-ldflags    disables default LDFLAGS\n'
+	printf >&2 '\nBuild:\n'
+	printf >&2 '  --debug                 enable debug assertions\n'
 	exit 100
 }
 
