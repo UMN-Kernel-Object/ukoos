@@ -25,10 +25,10 @@ struct icmpv6_header icmpv6_create_header(struct ip_address src,
 
 int icmpv6_solicit_routers() {
   // address presumably not yet assigned
-  struct ip_address src = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  struct ip_address src = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
 
   // all routers multicast
-  struct ip_address dst = {0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x2};
+  struct ip_address dst = {{0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x2}};
 
   struct ndp_option opt = {
       .type = 1, // Source Link-Layer Address
