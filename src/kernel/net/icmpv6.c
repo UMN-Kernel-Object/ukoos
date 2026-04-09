@@ -32,7 +32,7 @@ int icmpv6_solicit_routers() {
 
   struct ndp_option opt = {
       .type = NDP_SOURCE_ADDRESS,
-      .length = 8,
+      .length = sizeof(struct ndp_option),
   };
 
   struct icmpv6_header icmpv6_header = icmpv6_create_header(
