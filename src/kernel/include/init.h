@@ -46,8 +46,8 @@ struct initializer {
 };
 
 #define _DEFINE_INIT(PRIORITY, N)                                              \
-  static_assert(__builtin_classify_type(typeof((PRIORITY))) ==                 \
-                    __builtin_classify_type(enum initializer_priority),        \
+  static_assert(__builtin_classify_type((PRIORITY)) ==                         \
+                    __builtin_classify_type((enum initializer_priority)0),     \
                 "PRIORITY must be an enum initializer_priority");              \
   static_assert(                                                               \
       _Generic((PRIORITY), enum initializer_priority: true, default: false),   \
