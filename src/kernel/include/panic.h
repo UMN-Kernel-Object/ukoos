@@ -40,4 +40,12 @@ static inline void _assert(const char *file, usize line, const char *func,
 #define TODO(...)                                                              \
   _panic(__FILE__, __LINE__, __func__, "TODO" __VA_OPT__(": ") __VA_ARGS__)
 
+#ifdef DEBUG
+#define debug_assert(cond, ...)                                                \
+  _assert(__FILE__, __LINE__, __func__, cond, #cond,                           \
+          "debug assertion failed" __VA_OPT__(": ") __VA_ARGS__)
+#else
+#define debug_assert(cond, ...)
+#endif // DEBUG
+
 #endif // UKO_OS_KERNEL__PANIC_H
