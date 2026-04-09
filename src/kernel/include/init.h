@@ -54,7 +54,7 @@ struct initializer {
       "PRIORITY must be an enum initializer_priority");                        \
                                                                                \
   static void __PASTE(__init_func_, N)(void);                                  \
-  [[gnu::section(".initializers,\"wa\",@progbits#"), gnu::used]]               \
+  [[gnu::section(".initializers"), gnu::used]]                                 \
   static struct initializer __PASTE(__initializer_, N)[1] = {{                 \
       __PASTE(__init_func_, N),                                                \
       __FILE__,                                                                \
