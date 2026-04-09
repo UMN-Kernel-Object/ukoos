@@ -1,8 +1,8 @@
 #ifndef UKO_OS__NET_ICMPV6_H
 #define UKO_OS__NET_ICMPV6_H
 
-#include <types.h>
 #include <net/ipv6.h>
+#include <types.h>
 
 enum icmpv6_type {
   ICMPV6_DST_UNREACHABLE = 1,
@@ -85,6 +85,13 @@ struct ndp_redirect {
 
 static_assert(sizeof(struct ndp_redirect) == 40);
 
-struct icmpv6_header icmpv6_create_header(struct ip_address src, struct ip_address dst, u8 *data, usize len, u8 type, u8 code);
+struct ndp_option {
+  u8 type;
+  u8 length;
+};
+
+struct icmpv6_header icmpv6_create_header(struct ip_address src,
+                                          struct ip_address dst, u8 *data,
+                                          usize len, u8 type, u8 code);
 
 #endif // UKO_OS__NET_ICMPV6_H
