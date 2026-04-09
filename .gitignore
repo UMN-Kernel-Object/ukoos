@@ -20,3 +20,7 @@ result-*
 /src/kernel/arch/riscv64/kernel.elf
 /src/kernel/kernel.elf
 /src/kernel/kernel.sym
+
+cscope.*
+*.swp
+*~
