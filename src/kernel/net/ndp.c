@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <devices/netdev.h>
 #include <mm/alloc.h>
 #include <net/icmpv6.h>
 #include <net/ipv6.h>
@@ -34,13 +35,11 @@ int ndp_discover_routers() {
   return 0;
 };
 
-struct mac_address
-ndp_resolve_neighbor_address(struct ip_address src_address,
-                             struct ip_address target_address,
-                             struct mac_address src_mac_address) {
+struct mac ndp_resolve_neighbor_address(struct ip_address src_address,
+                                        struct ip_address target_address,
+                                        struct mac src_mac_address) {
   // NDP options must be 8 byte aligned
-  usize opt_len =
-      CEIL(sizeof(struct option_info) + sizeof(struct mac_address), 8);
+  usize opt_len = CEIL(sizeof(struct option_info) + sizeof(struct mac), 8);
   usize len = sizeof(struct ndp_neighbor_solicit) + opt_len;
   struct ndp_option option_info = {
       .type = NDP_SRC_ADDR,
@@ -52,12 +51,12 @@ ndp_resolve_neighbor_address(struct ip_address src_address,
          sizeof(struct ndp_option));
   memcpy(message + sizeof(struct ndp_neighbor_solicit) +
              sizeof(struct ndp_option),
-         &src_mac_address, sizeof(struct mac_address));
+         &src_mac_address, sizeof(struct mac));
   memcpy(message + sizeof(struct icmpv6_header), &target_address,
-         sizeof(struct ipv6_address)) struct icmpv6_header icmpv6_header =
-      icmpv6_create_header(
-          src_address, target_address, header + sizeof(struct icmpv6_header),
-          len - sizeof(struct icmpv6_header), NDP_NEIGHBOR_SOLICIT, 0);
+         sizeof(struct ipv6_address));
+  struct icmpv6_header icmpv6_header = icmpv6_create_header(
+      src_address, target_address, header + sizeof(struct icmpv6_header),
+      len - sizeof(struct icmpv6_header), NDP_NEIGHBOR_SOLICIT, 0);
   struct ipv6_header ipv6_header =
       ipv6_create_header(src_address, target_address, ICMP);
   ipv6_send_packet(ipv6_header, (u8 *)&message, sizeof(message));
