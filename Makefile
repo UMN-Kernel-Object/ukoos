@@ -104,7 +104,7 @@ watch:
 format:
 	@find $(srcdir) -type f \( -name '*.c' -o -name '*.h' \) \
 		-exec clang-format -i {} \; \
-		-printf "FORMAT  %P\n"
+		-exec echo 'FORMAT {}' \;
 
 .PHONY: all clean install watch format help
 .SUFFIXES:
