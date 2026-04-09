@@ -28,33 +28,33 @@ static paddr free_list_head_above_4g = {0};
 static paddr free_list_head_below_4g = {0};
 
 static void physical_free_list_push(usize length, paddr start,
-                                    paddr free_list_head) {
+                                    paddr *free_list_head) {
   struct physical_free_list link = {
-      .next = free_list_head,
+      .next = *free_list_head,
       .length = length,
   };
   copy_to_physical(start, &link, sizeof(struct physical_free_list));
-  free_list_head = start;
+  *free_list_head = start;
 }
 
-static bool physical_free_list_pop(paddr *out, paddr free_list_head) {
-  *out = free_list_head;
+static bool physical_free_list_pop(paddr *out, paddr *free_list_head) {
+  *out = *free_list_head;
   if (!bits_of_paddr(*out))
     return false;
 
   struct physical_free_list link;
-  copy_from_physical(&link, free_list_head, sizeof(struct physical_free_list));
+  copy_from_physical(&link, *free_list_head, sizeof(struct physical_free_list));
   assert(link.length > 0);
   if (link.length == 1) {
     // This is the only page in the link, so update the head pointer to point
     // at the next link.
-    free_list_head = link.next;
+    *free_list_head = link.next;
   } else {
     // There were multiple pages in the link. We'll use the first one, so we
     // write back the link to the next one.
-    free_list_head = paddr_offset(free_list_head, PAGE_SIZE);
+    *free_list_head = paddr_offset(*free_list_head, PAGE_SIZE);
     link.length--;
-    copy_to_physical(free_list_head, &link, sizeof(struct physical_free_list));
+    copy_to_physical(*free_list_head, &link, sizeof(struct physical_free_list));
   }
   return true;
 }
@@ -74,20 +74,20 @@ static void add_physical_chunk(paddr start, paddr end) {
   print("Found usable physical memory: {paddr}-{paddr}", start, end);
   if (bits_of_paddr(start) >= (1ul << 32)) {
     physical_free_list_push(paddr_diff(end, start) >> 12, start,
-                            free_list_head_above_4g);
+                            &free_list_head_above_4g);
   } else if (bits_of_paddr(start) < (1ul << 32) &&
              bits_of_paddr(end) >= (1ul << 32)) {
     paddr old_end = end;
     end = paddr_of_bits(1ul << 32);
     physical_free_list_push(paddr_diff(end, start) >> 12, start,
-                            free_list_head_below_4g);
+                            &free_list_head_below_4g);
     start = end;
     end = old_end;
     physical_free_list_push(paddr_diff(end, start) >> 12, start,
-                            free_list_head_above_4g);
+                            &free_list_head_above_4g);
   } else {
     physical_free_list_push(paddr_diff(end, start) >> 12, start,
-                            free_list_head_below_4g);
+                            &free_list_head_below_4g);
   }
 }
 
@@ -243,10 +243,10 @@ bool mm_alloc_physical(paddr *out, enum physical_alloc_flags flags) {
   // TODO: There should be a lock around essentially this whole function.
 
   if (!(flags & PHYSICAL_ALLOC_BELOW_4G) &&
-      physical_free_list_pop(out, free_list_head_above_4g))
+      physical_free_list_pop(out, &free_list_head_above_4g))
     return true;
 
-  return physical_free_list_pop(out, free_list_head_below_4g);
+  return physical_free_list_pop(out, &free_list_head_below_4g);
 }
 
 void mm_free_physical(paddr frame) {
@@ -254,8 +254,8 @@ void mm_free_physical(paddr frame) {
   assert(bits_of_paddr(frame));
 
   if (bits_of_paddr(frame) >= (1ul << 32)) {
-    physical_free_list_push(1, frame, free_list_head_above_4g);
+    physical_free_list_push(1, frame, &free_list_head_above_4g);
   } else {
-    physical_free_list_push(1, frame, free_list_head_below_4g);
+    physical_free_list_push(1, frame, &free_list_head_below_4g);
   }
 }
