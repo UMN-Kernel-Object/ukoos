@@ -20,6 +20,11 @@ enum icmpv6_type {
   NDP_REDIRECT,
 };
 
+enum ndp_option_type {
+  NDP_SOURCE_ADDRESS = 1,
+  NDP_TARGET_ADDRESS,
+};
+
 struct icmpv6_header {
   u8 type;
   u8 code;

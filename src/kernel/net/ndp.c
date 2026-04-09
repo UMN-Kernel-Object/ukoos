@@ -42,7 +42,7 @@ struct mac ndp_resolve_neighbor_address(struct ip_address src_address,
   usize opt_len = CEIL(sizeof(struct option_info) + sizeof(struct mac), 8);
   usize len = sizeof(struct ndp_neighbor_solicit) + opt_len;
   struct ndp_option option_info = {
-      .type = NDP_SRC_ADDR,
+      .type = NDP_SOURCE_ADDRESS,
       .len = opt_len,
   };
   u8 *message = alloc(len);

@@ -31,7 +31,7 @@ int icmpv6_solicit_routers() {
   struct ip_address dst = {{0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x2}};
 
   struct ndp_option opt = {
-      .type = 1, // Source Link-Layer Address
+      .type = NDP_SOURCE_ADDRESS,
       .length = 8,
   };
 
