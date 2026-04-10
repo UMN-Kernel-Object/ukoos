@@ -7,9 +7,8 @@
 #ifndef UKO_OS_KERNEL__PCI_H
 #define UKO_OS_KERNEL__PCI_H 1
 
-#include <types.h>
 #include <device.h>
-
+#include <types.h>
 
 struct pci_regs {
   u16 vid;
@@ -26,13 +25,15 @@ struct pci {
 };
 
 struct pci_ops {
-  struct vma* (*mmio_alloc)(struct pci *this, usize len, bool want_low_addr);
+  struct vma *(*mmio_alloc)(struct pci *this, usize len, bool want_low_addr);
 };
 
 extern struct list_head pcis;
 
-void (*pci_get_handler(u16 vid, u16 did))(struct pci *this, struct pci_regs *regs);
-void pci_register(u16 vid, u16 did, void (*callback)(struct pci *this, struct pci_regs *regs));
+void (*pci_get_handler(u16 vid, u16 did))(struct pci *this,
+                                          struct pci_regs *regs);
+void pci_register(u16 vid, u16 did,
+                  void (*callback)(struct pci *this, struct pci_regs *regs));
 
 enum pci_bus_addr_space_code {
   SPACE_CODE_CONFIG = 0,
@@ -45,7 +46,7 @@ union pci_bus_addr {
   struct {
     u32 pad : 24;
     enum pci_bus_addr_space_code space_code : 2;
-    u32 pad2: 6;
+    u32 pad2 : 6;
   };
   u32 bits;
 };

@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <print.h>
+#include <container.h>
+#include <devicetree.h>
+#include <endian.h>
 #include <mm/paging.h>
 #include <mm/virtual_alloc.h>
 #include <physical.h>
-#include <devicetree.h>
+#include <print.h>
 #include <volatile.h>
-#include <container.h>
-#include <endian.h>
 
 #include <devices/pci.h>
 
@@ -35,15 +35,14 @@ union pci_device_addr {
   u32 bits;
 };
 
-void register_device(struct pci *this, u16 vid, u16 did, void (*callback)(struct pci* this, void *regs));
-struct vma* mmio_alloc(struct pci *this, usize len, bool want_low_addr);
+void register_device(struct pci *this, u16 vid, u16 did,
+                     void (*callback)(struct pci *this, void *regs));
+struct vma *mmio_alloc(struct pci *this, usize len, bool want_low_addr);
 
-static struct pci_ops pci_device_ops = {
-  .mmio_alloc = mmio_alloc
-};
-static_assert( offsetof(struct pci_regs, memar) == 0x14);
+static struct pci_ops pci_device_ops = {.mmio_alloc = mmio_alloc};
+static_assert(offsetof(struct pci_regs, memar) == 0x14);
 
-struct vma* mmio_alloc(struct pci *this, usize num_pages, bool want_low_addr) {
+struct vma *mmio_alloc(struct pci *this, usize num_pages, bool want_low_addr) {
   struct pci_device *dev = container_of(this, struct pci_device, pci);
   struct vma_allocator *allocator;
 
@@ -58,8 +57,8 @@ struct vma* mmio_alloc(struct pci *this, usize num_pages, bool want_low_addr) {
 
 void pci_enumerate(struct pci *this, void *reg_base) {
 
-  for (u32 bus=0; bus<256; ++bus) {
-    for (u32 dev=0; dev<32; ++dev) {
+  for (u32 bus = 0; bus < 256; ++bus) {
+    for (u32 dev = 0; dev < 32; ++dev) {
       union pci_device_addr addr;
       addr.offset = 0;
       addr.func = 0;
@@ -74,9 +73,10 @@ void pci_enumerate(struct pci *this, void *reg_base) {
       if (did == 0xffff && vid == 0xffff)
         continue;
 
-      void (*callback)(struct pci*, struct pci_regs *) = pci_get_handler(vid, did);
+      void (*callback)(struct pci *, struct pci_regs *) =
+          pci_get_handler(vid, did);
 
-      if (callback)  {
+      if (callback) {
         callback(this, device);
       } else {
         print("Unbekannt pci Gerät: {u16:x} Anbieter: {u16:x}", did, vid);
@@ -112,7 +112,6 @@ static struct device *pci_enumerate_dt(struct devicetree_node *node) {
                                      &parent_size_cells))
     goto fail;
 
-
   devicetree_print(node->parent);
 
   usize triplet_size = (address_cells + parent_address_cells + size_cells) * 4;
@@ -132,8 +131,10 @@ static struct device *pci_enumerate_dt(struct devicetree_node *node) {
     u64 addr, size;
 
     memcpy(&bus_addr.bits, &base->value[i], 4);
-    memcpy(&addr, &base->value[i+address_cells*4], parent_address_cells * 4);
-    memcpy(&size, &base->value[i+(address_cells + parent_address_cells)*4], size_cells * 4);
+    memcpy(&addr, &base->value[i + address_cells * 4],
+           parent_address_cells * 4);
+    memcpy(&size, &base->value[i + (address_cells + parent_address_cells) * 4],
+           size_cells * 4);
 
     addr = big_to_native(addr);
     size = big_to_native(size);
@@ -166,8 +167,8 @@ static struct device *pci_enumerate_dt(struct devicetree_node *node) {
           },
       .reg_base = iomem_map(reg_addr, reg_size),
       .mmio_low_allocator = vma_allocator_new(mmio_32bit_low, mmio_32bit_high),
-      .mmio_high_allocator = vma_allocator_new(mmio_64bit_low, mmio_64bit_high)
-  };
+      .mmio_high_allocator =
+          vma_allocator_new(mmio_64bit_low, mmio_64bit_high)};
 
   if (!device->device.name || !device->reg_base)
     goto fail;
