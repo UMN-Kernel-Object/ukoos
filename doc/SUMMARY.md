@@ -23,3 +23,4 @@
   - [First Day](./tutorials/first-day.md)
   - [Flashing Duo S](./tutorials/flashing-duo-s.md)
   - [Rebuilding the Dev Container](./tutorials/rebuild-devcontainer.md)
+  - [Time Travel Debugging](./tutorials/time-travel-debug.md)
