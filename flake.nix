@@ -45,6 +45,8 @@
               pkgs.perl
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
               pkgs.pkgsCross.riscv64-embedded.stdenv.cc.cc
+              pkgs.pkgsCross.riscv64-embedded.llvmPackages.stdenv.cc.bintools.bintools
+              pkgs.pkgsCross.riscv64-embedded.llvmPackages.stdenv.cc.cc
               pkgs.python3
               pkgs.watchexec
             ];

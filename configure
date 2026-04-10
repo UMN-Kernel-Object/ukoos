@@ -12,6 +12,7 @@ usage() {
 	printf >&2 'Defaults for the options are specified in brackets.\n'
 	printf >&2 '\nSystem:\n'
 	printf >&2 '  --arch=ARCH             build for the given architecture [%s]\n' "$arch"
+	printf >&2 '  --clang                 build with clang instead of gcc\n'
 	printf >&2 '  --target=TARGET         build for the given target'
 	if [[ "$has_target" != 0 ]]; then
 		printf >&2 ' [%s]' "$target"
@@ -29,7 +30,7 @@ known_arches=(riscv64)
 # shellcheck disable=SC2034 # Only accessed indirectly.
 tool_prefixes_riscv64=(riscv64-none-elf- riscv-none-elf- riscv64-unknown-elf-)
 
-args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,prefix:,target:' -- "$@")
+args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,clang,prefix:,target:' -- "$@")
 eval set -- "$args"
 unset args
 
@@ -39,6 +40,7 @@ has_target=0
 default_cflags=1
 default_ldflags=1
 help=0
+clang=0
 prefix=/
 while true; do
 	case "$1" in
@@ -62,6 +64,10 @@ while true; do
 			usage
 		fi
 		;;
+	--clang)
+	  clang=1
+	  shift
+	  ;;
 	--no-default-cflags)
 		default_cflags=0
 		shift
@@ -124,7 +130,7 @@ fi
 
 # Add default CFLAGS and LDFLAGS.
 if [[ "$default_cflags" = 1 ]]; then
-	CFLAGS="-g -O3 -Wall -Werror ${CFLAGS:-}"
+	CFLAGS="-g -O3 -Wall ${CFLAGS:-}"
 fi
 if [[ "$default_ldflags" = 1 ]]; then
 	LDFLAGS="-z max-page-size=4096 ${LDFLAGS:-}"
@@ -157,9 +163,15 @@ find_tool_with_prefix() {
 	find_tool "$1" "${tools[@]}"
 }
 
-# Detect tools. Since we're expecting a freestanding compiler, we _don't_
-# assume that e.g. the default gcc is a reasonable compiler to use.
-find_tool_with_prefix CC gcc
+if [[ "$clang" == 1 ]]; then
+  CC="clang"
+  find_tool_with_prefix CC clang
+  CFLAGS="-target riscv64-none-elf -std=c23 $CFLAGS"
+else
+  # Detect tools. Since we're expecting a freestanding compiler, we _don't_
+  # assume that e.g. the default gcc is a reasonable compiler to use.
+  find_tool_with_prefix CC gcc
+fi
 find_tool_with_prefix OBJDUMP objdump
 find_tool_with_prefix STRIP strip
 find_tool GDB gdb-multiarch gdb

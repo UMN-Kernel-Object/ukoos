@@ -16,7 +16,9 @@ jobs:
         target:
           - milkv-duos
           - milkv-jupiter
+          - milkv-jupiter-clang
           - qemu-riscv64
+          - qemu-riscv64-clang
     steps:
       - name: Install dependencies
         run: |
@@ -33,7 +35,8 @@ jobs:
             python3 \
             qemu-system-riscv64 \
             tar \
-            zstd
+            zstd \
+            clang
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
@@ -43,7 +46,8 @@ jobs:
           shortrev=$(git rev-parse --short HEAD)
           mkdir build
           cd build
-          ../configure --target ${{ matrix.target }}
+          export target=${{ matrix.target }}
+          [[ ${{ matrix.target }} == *"clang" ]] && ../configure --target ${target::-6} --clang || ../configure --target ${{ matrix.target }}
           make -j$(nproc) -l$(nproc)
           name=ukoos-${{ matrix.target }}-git-$shortrev
           mkdir $name
