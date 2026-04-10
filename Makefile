@@ -16,6 +16,9 @@ Make Targets:
 - qemu-debug: Run inside of QEMU for debugging. Run make gdb in another
   terminal to attach.
 - gdb: Attach gdb to a running debug session.
+- qemu-record: Record a debug execution.
+- qemu-replay: Replay a recorded debug execution. Equivalent to qemu-debug
+  for time travel debugging. Run make gdb in another terminal to attach.
 - clean: Clean build artefacts.
 - watch: Build and rebuild on new changes in doc/ and src/.
 - doc-serve: Serve the UkoOS docs on port 3000, and rebuild on changes.
