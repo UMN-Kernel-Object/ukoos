@@ -68,7 +68,7 @@ qemu-debug: src/kernel/kernel.elf
 		$(QEMUFLAGS)
 qemu-record: src/kernel/kernel.elf
 	touch disk.qcow2
-	export RR=record && \
+	RR=record && \
 	qemu-system-riscv64 \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
@@ -77,7 +77,7 @@ qemu-record: src/kernel/kernel.elf
 
 qemu-replay: src/kernel/kernel.elf
 	touch disk.qcow2
-	export RR=replay && \
+	RR=replay && \
 	qemu-system-riscv64 \
 		-nographic \
 		-kernel src/kernel/kernel.elf \
