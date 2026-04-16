@@ -1,6 +1,6 @@
 # Time Travel Debugging
 
-UkoOS supports time travel debugging with qemu.
+ukoOS supports time travel debugging with QEMU.
 Time travel debugging allows moving both backwards and forwards when debugging.
 It is only supported on the `qemu-riscv64` target.
 Make sure that target is selected before using time travel debugging.
@@ -14,9 +14,9 @@ Making a recording is required for time travel debugging.
 
 ## Replay
 
-Once a recording has been created, `make qemu-replay` is roughly equivalent to
-`make qemu-debug`. Run `make qemu-replay`, then `make gdb` in another
-terminal. The replay should be the same as the execution recorded earlier.
+Once a recording has been created, `make qemu-replay` is roughly equivalent to `make qemu-debug`.
+Run `make qemu-replay`, then `make gdb` in another terminal.
+The replay should be the same as the execution recorded earlier.
 
 `rc` or `reverse-continue` will find the most recent breakpoint in the past.
 
