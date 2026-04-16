@@ -66,7 +66,26 @@ qemu-debug: src/kernel/kernel.elf
 		-s -S \
 		$(target-qemuflags) \
 		$(QEMUFLAGS)
-.PHONY: gdb gdb_bootstub qemu qemu-debug
+qemu-record: src/kernel/kernel.elf
+	touch disk.qcow2
+	RR=record && \
+	qemu-system-riscv64 \
+		-nographic \
+		-kernel src/kernel/kernel.elf \
+		$(target-timetravel-qemuflags) \
+		$(QEMUFLAGS)
+
+qemu-replay: src/kernel/kernel.elf
+	touch disk.qcow2
+	RR=replay && \
+	qemu-system-riscv64 \
+		-nographic \
+		-kernel src/kernel/kernel.elf \
+		-s -S \
+		$(target-timetravel-qemuflags) \
+		$(QEMUFLAGS)
+
+.PHONY: gdb gdb_bootstub qemu qemu-debug qemu-record qemu-replay
 
 # A target for dumping the kernel.
 objdump: src/kernel/arch/riscv64/kernel-unstripped.elf
