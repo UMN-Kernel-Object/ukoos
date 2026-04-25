@@ -9,13 +9,7 @@
 
 uptr _backtrace_begin(void) {
   uptr *fp;
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuninitialized"
-  register uptr reg_fp __asm__("s0");
-  fp = (uptr *)reg_fp;
-#pragma GCC diagnostic pop
-
+  __asm__("mv %0, s0" : "=r"(fp)::);
   return (uptr)fp[-2];
 }
 
