@@ -25,7 +25,7 @@ jobs:
           toolchain_pkgs=""
           target=${{ matrix.target }}
           if [[ ${target} == *"clang" ]]; then
-            toolchain_pkgs="clang lld"
+            toolchain_pkgs="clang lld llvm"
           else
             toolchain_pkgs="binutils-riscv-none-elf gcc-riscv-none-elf"
           fi
