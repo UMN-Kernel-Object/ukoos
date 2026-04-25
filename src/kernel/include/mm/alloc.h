@@ -40,7 +40,8 @@ ATTR_FREE_WITH(free, 1)
  * - if `size` is greater than 64, the returned pointer will be aligned to at
  *   least 64.
  */
-[[gnu::alloc_size(1), gnu::malloc, nodiscard]] static inline void *
+[[gnu::alloc_size(1), gnu::malloc,
+  gnu::warn_unused_result]] static inline void *
 alloc(usize size) {
   struct mm_alloc_heap *heap = get_hart_locals()->heap;
   // Bump up the size if it's zero, since zero isn't a valid input to
@@ -64,7 +65,8 @@ alloc(usize size) {
  * function.
  */
 
-[[gnu::alloc_size(1), gnu::malloc, nodiscard]] static inline void *
+[[gnu::alloc_size(1), gnu::malloc,
+  gnu::warn_unused_result]] static inline void *
 zalloc(usize size) {
   void *out = alloc(size);
   if (out)
@@ -75,7 +77,8 @@ zalloc(usize size) {
 /**
  * Allocates a copy of an object.
  */
-[[gnu::alloc_size(2), gnu::malloc, nodiscard]] static inline void *
+[[gnu::alloc_size(2), gnu::malloc,
+  gnu::warn_unused_result]] static inline void *
 memdup(const void *ptr, usize len) {
   char *out = alloc(len);
   if (!out)
@@ -87,7 +90,7 @@ memdup(const void *ptr, usize len) {
  * Allocates a string, which is the same length as `str` and initialized to have
  * the same contents.
  */
-[[gnu::malloc, nodiscard]]
+[[gnu::malloc, gnu::warn_unused_result]]
 static inline char *strdup(const char *str) {
   return memdup(str, strlen(str) + 1);
 }

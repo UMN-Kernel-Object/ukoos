@@ -73,9 +73,10 @@ typedef __builtin_va_list va_list;
 // directly, so instead we just say "not on Clang"...
 #if !__clang__
 #define ATTR_FREE_WITH(FREE_FUNC, ARG_INDEX)                                   \
-  [[gnu::malloc(FREE_FUNC, ARG_INDEX), nodiscard]]
+  [[gnu::malloc(FREE_FUNC, ARG_INDEX), gnu::warn_unused_result]]
 #else // !__clang__
-#define ATTR_FREE_WITH(FREE_FUNC, ARG_INDEX) [[gnu::malloc, nodiscard]]
+#define ATTR_FREE_WITH(FREE_FUNC, ARG_INDEX)                                   \
+  [[gnu::malloc, gnu::warn_unused_result]]
 #endif // !__clang__
 
 #if __has_builtin(__builtin_stdc_first_trailing_one)
