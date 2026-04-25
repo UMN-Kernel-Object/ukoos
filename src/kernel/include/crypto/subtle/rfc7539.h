@@ -44,7 +44,7 @@ void chacha20_block(union chacha20_state *state);
  * This is a "subtle" cryptographic function. Do not home-brew a cryptographic
  * construction using it.
  */
-[[gnu::access(write_only, 4, 5)]]
+ATTR_ACCESS(write_only, 4, 5)
 void chacha20_keystream(const u8 key[static 32], u32 block_count,
                         const u32 nonce[static 3], void *ptr, usize len);
 
@@ -55,7 +55,7 @@ void chacha20_keystream(const u8 key[static 32], u32 block_count,
  * This is a "subtle" cryptographic function. Do not home-brew a cryptographic
  * construction using it.
  */
-[[gnu::access(read_write, 4, 5)]]
+ATTR_ACCESS(read_write, 4, 5)
 void chacha20_encrypt(const u8 key[static 32], u32 block_count,
                       const u32 nonce[static 3], void *ptr, usize len);
 

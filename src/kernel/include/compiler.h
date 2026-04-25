@@ -368,17 +368,20 @@ static inline __UINT64_TYPE__ __stdc_rotate_right_u64(__UINT64_TYPE__ value,
  * ourselves!), but the compiler's optimizer treats them as builtins, and can do
  * certain optimizations that it wouldn't otherwise be able to do.
  */
-
-[[gnu::access(write_only, 1), gnu::nonnull(1)]]
+ATTR_ACCESS(write_only, 1)
+[[gnu::nonnull(1)]]
 void bzero(void *dst, __SIZE_TYPE__ len);
 
-[[gnu::access(write_only, 1), gnu::nonnull(1)]]
+ATTR_ACCESS(write_only, 1)
+[[gnu::nonnull(1)]]
 void explicit_bzero(void *dst, __SIZE_TYPE__ len);
 
-[[gnu::access(write_only, 1), gnu::nonnull(1, 2)]]
+ATTR_ACCESS(write_only, 1)
+[[gnu::nonnull(1, 2)]]
 void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ len);
 
-[[gnu::access(write_only, 1), gnu::nonnull(1)]]
+ATTR_ACCESS(write_only, 1)
+[[gnu::nonnull(1)]]
 void *memset(void *restrict dst, int byte, __SIZE_TYPE__ len);
 
 [[gnu::nonnull(1, 2), gnu::pure]]

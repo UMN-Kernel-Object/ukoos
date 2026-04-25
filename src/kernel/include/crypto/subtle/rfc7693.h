@@ -16,8 +16,9 @@
  * e.g. file integrity, but subtleties arise when using it to check message
  * integrity. Do not home-brew a cryptographic construction using it.
  */
-[[gnu::access(write_only, 1, 2), gnu::access(read_only, 3, 4),
-  gnu::access(read_only, 5, 6)]]
+ATTR_ACCESS(write_only, 1, 2)
+ATTR_ACCESS(read_only, 3, 4)
+ATTR_ACCESS(read_only, 5, 6)
 void blake2s_hash(u8 *out_hash, usize hash_len, const u8 *key, usize key_len,
                   const u8 *data, usize data_len);
 
@@ -28,10 +29,11 @@ void blake2s_hash(u8 *out_hash, usize hash_len, const u8 *key, usize key_len,
  * e.g. file integrity, but subtleties arise when using it to check message
  * integrity. Do not home-brew a cryptographic construction using it.
  */
-[[gnu::access(write_only, 1, 2), gnu::access(read_only, 3, 4),
-  gnu::access(read_only, 5, 6)]] void
-blake2b_hash(u8 *out_hash, usize hash_len, const u8 *key, usize key_len,
-             const u8 *data, usize data_len);
+ATTR_ACCESS(write_only, 1, 2)
+ATTR_ACCESS(read_only, 3, 4)
+ATTR_ACCESS(read_only, 5, 6)
+void blake2b_hash(u8 *out_hash, usize hash_len, const u8 *key, usize key_len,
+                  const u8 *data, usize data_len);
 
 /**
  * A struct that bytes can be added to, in order to hash them.
@@ -47,20 +49,24 @@ struct blake2s_hasher {
 /**
  * Initializes the `blake2s_hasher` for the given `hash_len`.
  */
-[[gnu::access(write_only, 1), gnu::access(read_only, 3, 4)]] void
-blake2s_init(struct blake2s_hasher *hasher, usize hash_len, const u8 *key,
-             usize key_len);
+ATTR_ACCESS(write_only, 1)
+ATTR_ACCESS(read_only, 3, 4)
+void blake2s_init(struct blake2s_hasher *hasher, usize hash_len, const u8 *key,
+                  usize key_len);
 
 /**
  * Adds bytes to the `blake2s_hasher`.
  */
-[[gnu::access(read_write, 1), gnu::access(read_only, 2, 3)]] void
-blake2s_update(struct blake2s_hasher *hasher, const u8 *data, usize data_len);
+ATTR_ACCESS(read_write, 1)
+ATTR_ACCESS(read_only, 2, 3)
+void blake2s_update(struct blake2s_hasher *hasher, const u8 *data,
+                    usize data_len);
 
 /**
  * Finalizes the hash, writing it out to `out`.
  */
-[[gnu::access(read_only, 1), gnu::access(write_only, 2)]] void
-blake2s_finish(const struct blake2s_hasher *hasher, u8 *out);
+ATTR_ACCESS(read_only, 1)
+ATTR_ACCESS(write_only, 2)
+void blake2s_finish(const struct blake2s_hasher *hasher, u8 *out);
 
 #endif // UKO_OS_KERNEL__CRYPTO_SUBTLE_RFC7693_H

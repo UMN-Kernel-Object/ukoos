@@ -23,8 +23,8 @@ void entropy_pool_credit(usize bits);
 /**
  * Adds entropy to the entropy pool without crediting it.
  */
-[[gnu::access(read_only, 1, 2)]] void entropy_pool_mix(const u8 *buf,
-                                                       usize len);
+ATTR_ACCESS(read_only, 1, 2)
+void entropy_pool_mix(const u8 *buf, usize len);
 
 /**
  * Seeds the global entropy pool with entropy that can be added very early in
@@ -36,7 +36,8 @@ void arch_entropy_pool_seed_early(void);
 /**
  * Fills `buf` with `len` random bytes.
  */
-[[gnu::access(write_only, 1, 2)]] void getrandom(u8 *buf, usize len);
+ATTR_ACCESS(write_only, 1, 2)
+void getrandom(u8 *buf, usize len);
 
 /**
  * Returns a single random word.
