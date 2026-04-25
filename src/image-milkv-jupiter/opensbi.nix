@@ -18,6 +18,7 @@ stdenvNoCC.mkDerivation {
 
   src = fetchgit {
     url = "https://gitee.com/bianbu-linux/opensbi.git";
+    rev = "05479f5228f3fab2a4221fe0745f3703171ace58";
     hash = "sha256-Vd/a1gIP3bBqLpmz5HAU6HyrK5SuFDnI2m1T2DrtkwE=";
   };
   patches = [
