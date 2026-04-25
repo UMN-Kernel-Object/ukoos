@@ -9,6 +9,7 @@
 
 #include <crypto/subtle/random_internals.h>
 #include <devices/hart.h>
+#include <mm/virtual_alloc.h>
 
 /**
  * The data that is local to a hart.
@@ -35,6 +36,10 @@ struct hart_locals {
   struct random_rng rng;
 };
 
+// Check that the layout that's assumed by assembly code.
+static_assert(offsetof(struct hart_locals, hart) == 0);
+static_assert(offsetof(struct hart_locals, task) == 8);
+
 /**
  * Returns a pointer to the current hart's locals.
  *
@@ -53,7 +58,7 @@ void init_boothart_hart_locals_early(u64 hart_id);
  * Called during early boot to finish initializing the boothart's hart-local
  * storage.
  */
-void init_boothart_hart_locals_late(void);
+void init_boothart_hart_locals_late(struct vma *initial_stack_vma);
 
 /**
  * Called during hart bring-up to allocate hart-local storage for a hart.

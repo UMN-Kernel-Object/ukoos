@@ -17,6 +17,9 @@
 #include <selftest.h>
 #include <symbolicate.h>
 
+// DEBUG
+#include <task.h>
+
 [[noreturn]]
 void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
           paddr kernel_end, const struct Elf64_Sym *symtab, usize symtab_len,
@@ -42,8 +45,9 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
     panic("Failed to initialize kernel VMA allocator");
   assert(vma_alloc_by_addr(&kernel_virtual_allocator, 0xffffffe000000000,
                            0xffffffe000400000));
-  assert(vma_alloc_by_addr(&kernel_virtual_allocator, 0xffffffe000400000,
-                           0xffffffe000600000));
+  struct vma *initial_stack_vma = vma_alloc_by_addr(
+      &kernel_virtual_allocator, 0xffffffe000400000, 0xffffffe000600000);
+  assert(initial_stack_vma);
   vma_allocator_print(&kernel_virtual_allocator);
 
   // Run initializers, which include e.g. registering drivers.
@@ -58,12 +62,11 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
 
   // Finish initializing hart-locals, now that the root hart should have been
   // detected.
-  init_boothart_hart_locals_late();
+  init_boothart_hart_locals_late(initial_stack_vma);
 
   print("Running self-tests...");
   run_selftests();
 
-  struct hart_locals *hart_locals = get_hart_locals();
-  print("{uptr}", hart_locals->hart);
+  print("{uptr}", get_hart_locals()->task);
   TODO();
 }

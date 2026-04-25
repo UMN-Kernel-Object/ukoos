@@ -8,6 +8,7 @@ kernel-cflags += \
 	-mabi=lp64 \
 	-mcmodel=medany
 kernel-objs-asm += arch/riscv64/start
+kernel-objs-asm += arch/riscv64/task
 kernel-objs-c += arch/riscv64/backtrace
 kernel-objs-c += arch/riscv64/hart_group
 kernel-objs-c += arch/riscv64/hart_locals
