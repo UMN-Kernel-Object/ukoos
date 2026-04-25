@@ -20,14 +20,16 @@ void free(void *ptr);
 /**
  * Like `alloc`, but only for allocations with `0 < size && size <= 1024`.
  */
-[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
-alloc_small(usize size, struct mm_alloc_heap *heap);
+ATTR_FREE_WITH(free, 1)
+[[gnu::alloc_size(1)]] void *alloc_small(usize size,
+                                         struct mm_alloc_heap *heap);
 
 /**
  * The slow path of `alloc`.
  */
-[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1), nodiscard]] void *
-alloc_generic(usize size, struct mm_alloc_heap *heap);
+ATTR_FREE_WITH(free, 1)
+[[gnu::alloc_size(1)]] void *alloc_generic(usize size,
+                                           struct mm_alloc_heap *heap);
 
 /**
  * Allocates `size` bytes of memory and returns a pointer to it. On OOM, returns
@@ -85,7 +87,8 @@ memdup(const void *ptr, usize len) {
  * Allocates a string, which is the same length as `str` and initialized to have
  * the same contents.
  */
-[[gnu::malloc, nodiscard]] static inline char *strdup(const char *str) {
+[[gnu::malloc, nodiscard]]
+static inline char *strdup(const char *str) {
   return memdup(str, strlen(str) + 1);
 }
 
@@ -98,7 +101,8 @@ memdup(const void *ptr, usize len) {
  * - if `new_size` is greater than 64, the returned pointer will be aligned to
  *   at least 64.
  */
-[[gnu::alloc_size(2), nodiscard]] void *realloc(void *ptr, usize new_size);
+ATTR_FREE_WITH(free, 1)
+[[gnu::alloc_size(2)]] void *realloc(void *ptr, usize new_size);
 
 /**
  * Sets up the initial heap.

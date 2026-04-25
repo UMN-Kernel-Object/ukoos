@@ -69,6 +69,15 @@ typedef __builtin_va_list va_list;
 #define ATTR_ACCESS(MODE, ...)
 #endif // __has_c_attribute(gnu::access)
 
+// We don't have a good way of detecting support this form of the attribute
+// directly, so instead we just say "not on Clang"...
+#if !__clang__
+#define ATTR_FREE_WITH(FREE_FUNC, ARG_INDEX)                                   \
+  [[gnu::malloc(FREE_FUNC, ARG_INDEX), nodiscard]]
+#else // !__clang__
+#define ATTR_FREE_WITH(FREE_FUNC, ARG_INDEX) [[gnu::malloc, nodiscard]]
+#endif // !__clang__
+
 #if __has_builtin(__builtin_stdc_first_trailing_one)
 #define stdc_first_trailing_one __builtin_stdc_first_trailing_one
 #else
