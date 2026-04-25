@@ -103,11 +103,11 @@ if [[ "$help" != 0 ]]; then
 fi
 
 # Check that the target option is present and valid.
-if [[ "$has_target" == 0 ]]; then
+if [[ "$has_target" = 0 ]]; then
 	printf >&2 './configure: the --target option is required\n'
 	printf >&2 "./configure: use \`--target list' to get a list of available targets\n"
 	exit 1
-elif [[ "$target" == list ]]; then
+elif [[ "$target" = list ]]; then
 	for file in "$repo/src/targets/$arch/"*.mak; do
 		basename "$file" .mak
 	done
@@ -130,7 +130,7 @@ fi
 
 # Add default CFLAGS and LDFLAGS.
 if [[ "$default_cflags" = 1 ]]; then
-	CFLAGS="-g -O3 -Wall ${CFLAGS:-}"
+	CFLAGS="-g -O3 -Wall -Werror ${CFLAGS:-}"
 fi
 if [[ "$default_ldflags" = 1 ]]; then
 	LDFLAGS="-z max-page-size=4096 ${LDFLAGS:-}"
@@ -169,15 +169,21 @@ find_tool_with_prefix() {
 	find_tool "$tool_name" "${tools[@]}"
 }
 
-if [[ "$clang" == 1 ]]; then
+if [[ "$clang" = 1 ]]; then
 	find_tool_with_prefix CC clang
-	CFLAGS="-target riscv64-none-elf $CFLAGS"
-	LDFLAGS="-fuse-ld=lld $LDFLAGS"
+  if [[ "$default_cflags" = 1 ]]; then
+	  CFLAGS="-target riscv64-none-elf $CFLAGS"
+  fi
+  if [[ "$default_ldflags" = 1 ]]; then
+	  LDFLAGS="-fuse-ld=lld $LDFLAGS"
+  fi
 else
 	# Detect tools. Since we're expecting a freestanding compiler, we _don't_
 	# assume that e.g. the default gcc is a reasonable compiler to use.
 	find_tool_with_prefix CC gcc
-	LDFLAGS="-Wl,--no-warn-rwx-segments $LDFLAGS"
+  if [[ "$default_ldflags" = 1 ]]; then
+	  LDFLAGS="-Wl,--no-warn-rwx-segments $LDFLAGS"
+  fi
 fi
 find_tool_with_prefix OBJDUMP llvm-objdump objdump
 find_tool_with_prefix STRIP llvm-strip strip
