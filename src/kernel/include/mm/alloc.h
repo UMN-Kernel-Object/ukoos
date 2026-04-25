@@ -62,8 +62,7 @@ alloc(usize size) {
  * function.
  */
 
-[[gnu::alloc_size(1), gnu::malloc, gnu::malloc(free, 1),
-  nodiscard]] static inline void *
+[[gnu::alloc_size(1), gnu::malloc, nodiscard]] static inline void *
 zalloc(usize size) {
   void *out = alloc(size);
   if (out)
@@ -74,8 +73,7 @@ zalloc(usize size) {
 /**
  * Allocates a copy of an object.
  */
-[[gnu::alloc_size(2), gnu::malloc, gnu::malloc(free, 1),
-  nodiscard]] static inline void *
+[[gnu::alloc_size(2), gnu::malloc, nodiscard]] static inline void *
 memdup(const void *ptr, usize len) {
   char *out = alloc(len);
   if (!out)
@@ -87,8 +85,7 @@ memdup(const void *ptr, usize len) {
  * Allocates a string, which is the same length as `str` and initialized to have
  * the same contents.
  */
-[[gnu::malloc, gnu::malloc(free, 1), nodiscard]] static inline char *
-strdup(const char *str) {
+[[gnu::malloc, nodiscard]] static inline char *strdup(const char *str) {
   return memdup(str, strlen(str) + 1);
 }
 
