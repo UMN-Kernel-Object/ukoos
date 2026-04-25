@@ -172,7 +172,7 @@ find_tool_with_prefix() {
 if [[ "$clang" = 1 ]]; then
 	find_tool_with_prefix CC clang
   if [[ "$default_cflags" = 1 ]]; then
-	  CFLAGS="-target riscv64-none-elf $CFLAGS"
+	  CFLAGS="-target riscv64-none-elf -Wno-error=\#warnings $CFLAGS"
   fi
   if [[ "$default_ldflags" = 1 ]]; then
 	  LDFLAGS="-fuse-ld=lld $LDFLAGS"
@@ -181,6 +181,9 @@ else
 	# Detect tools. Since we're expecting a freestanding compiler, we _don't_
 	# assume that e.g. the default gcc is a reasonable compiler to use.
 	find_tool_with_prefix CC gcc
+  if [[ "$default_cflags" = 1 ]]; then
+	  CFLAGS="-Wno-error=cpp $CFLAGS"
+  fi
   if [[ "$default_ldflags" = 1 ]]; then
 	  LDFLAGS="-Wl,--no-warn-rwx-segments $LDFLAGS"
   fi

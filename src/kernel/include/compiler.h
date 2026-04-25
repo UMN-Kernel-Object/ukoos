@@ -60,6 +60,15 @@ typedef __builtin_va_list va_list;
 #define stdc_count_zeros __builtin_stdc_count_zeros
 #define stdc_count_ones __builtin_stdc_count_ones
 
+#if __has_c_attribute(gnu::access)
+#define ATTR_ACCESS(MODE, ...) [[gnu::access(MODE __VA_OPT__(, ) __VA_ARGS__)]]
+#if __clang__
+#warning Please file an issue saying that Clang supports [[gnu::access]] now, then delete this line
+#endif // __clang__
+#else  // __has_c_attribute(gnu::access)
+#define ATTR_ACCESS(MODE, ...)
+#endif // __has_c_attribute(gnu::access)
+
 #if __has_builtin(__builtin_stdc_first_trailing_one)
 #define stdc_first_trailing_one __builtin_stdc_first_trailing_one
 #else
