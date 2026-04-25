@@ -17,7 +17,8 @@
  * The returned string is a null-terminated string, which should be freed with
  * `free`. Returns `nullptr` if there was not enough memory.
  */
-[[gnu::malloc(free, 1), gnu::warn_unused_result]]
+ATTR_FREE_WITH(free, 1)
+[[gnu::warn_unused_result]]
 char *format(const char *fmt, ...);
 
 /**

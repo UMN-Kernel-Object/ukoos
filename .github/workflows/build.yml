@@ -16,15 +16,22 @@ jobs:
         target:
           - milkv-duos
           - milkv-jupiter
+          - milkv-jupiter-clang
           - qemu-riscv64
+          - qemu-riscv64-clang
     steps:
       - name: Install dependencies
         run: |
+          toolchain_pkgs=""
+          target=${{ matrix.target }}
+          if [[ ${target} == *"clang" ]]; then
+            toolchain_pkgs="clang lld llvm"
+          else
+            toolchain_pkgs="binutils-riscv-none-elf gcc-riscv-none-elf"
+          fi
           apk add --no-interactive \
             bash \
-            binutils-riscv-none-elf \
             coreutils \
-            gcc-riscv-none-elf \
             gdb-multiarch \
             git \
             make \
@@ -33,7 +40,8 @@ jobs:
             python3 \
             qemu-system-riscv64 \
             tar \
-            zstd
+            zstd \
+            $toolchain_pkgs
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
@@ -43,8 +51,13 @@ jobs:
           shortrev=$(git rev-parse --short HEAD)
           mkdir build
           cd build
-          ../configure --target ${{ matrix.target }}
-          make -j$(nproc) -l$(nproc)
+          target=${{ matrix.target }}
+          if [[ ${target} == *"clang" ]]; then
+            ../configure --target ${target::-6} --clang
+          else
+            ../configure --target ${target}
+          fi
+          make -j$(nproc) -l$(nproc) V=1
           name=ukoos-${{ matrix.target }}-git-$shortrev
           mkdir $name
           make DESTDIR=$(realpath $name) install

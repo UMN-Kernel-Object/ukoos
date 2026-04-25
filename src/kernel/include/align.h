@@ -52,7 +52,7 @@ static inline bool _is_aligned_ptr(const void *ptr, usize bits) {
     constexpr auto __is_aligned_ADDR_type =                                    \
         __builtin_classify_type(__is_aligned_ADDR);                            \
     const auto __is_aligned_ADDR_or_null = __builtin_choose_expr(              \
-        __is_aligned_ADDR_type == __builtin_classify_type(void *),             \
+        __is_aligned_ADDR_type == __builtin_classify_type((void *)nullptr),    \
         __is_aligned_ADDR, (void **)nullptr);                                  \
     const auto __is_aligned_func = _Generic(__is_aligned_ADDR,                 \
         typeof(*__is_aligned_ADDR_or_null) *: _is_aligned_ptr,                 \

@@ -4,8 +4,10 @@
 
 components += kernel
 kernel-cflags = $(CFLAGS) \
+  -fdata-sections \
 	-ffile-prefix-map=$(srcdir)= \
 	-ffreestanding \
+  -ffunction-sections \
 	-fno-builtin-main \
 	-fstack-check \
 	-fwrapv \
@@ -18,8 +20,8 @@ kernel-cflags = $(CFLAGS) \
 	-Wsystem-headers \
 	-Wvla \
 	-Wwrite-strings
-kernel-cflags += -fdata-sections -ffunction-sections
-kernel-ldflags += -Wl,--gc-sections
+kernel-ldflags = $(LDFLAGS) \
+  -Wl,--gc-sections
 kernel-dir = src/kernel
 kernel-objs-c += builtins/bzero
 kernel-objs-c += builtins/explicit_bzero

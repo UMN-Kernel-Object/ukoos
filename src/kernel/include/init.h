@@ -46,15 +46,15 @@ struct initializer {
 };
 
 #define _DEFINE_INIT(PRIORITY, N)                                              \
-  static_assert(__builtin_classify_type(typeof((PRIORITY))) ==                 \
-                    __builtin_classify_type(enum initializer_priority),        \
+  static_assert(__builtin_classify_type((PRIORITY)) ==                         \
+                    __builtin_classify_type((enum initializer_priority)0),     \
                 "PRIORITY must be an enum initializer_priority");              \
   static_assert(                                                               \
       _Generic((PRIORITY), enum initializer_priority: true, default: false),   \
       "PRIORITY must be an enum initializer_priority");                        \
                                                                                \
   static void __PASTE(__init_func_, N)(void);                                  \
-  [[gnu::section(".initializers,\"wa\",@progbits#"), gnu::used]]               \
+  [[gnu::section(".initializers"), gnu::used]]                                 \
   static struct initializer __PASTE(__initializer_, N)[1] = {{                 \
       __PASTE(__init_func_, N),                                                \
       __FILE__,                                                                \
