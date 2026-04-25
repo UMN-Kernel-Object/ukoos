@@ -22,12 +22,17 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          toolchain_pkgs=""
+          target=${{ matrix.target }}
+          if [[ ${target} == *"clang" ]]; then
+            toolchain_pkgs="clang"
+          else
+            toolchain_pkgs="gcc-riscv-none-elf"
+          fi
           apk add --no-interactive \
             bash \
             binutils-riscv-none-elf \
-            clang \
             coreutils \
-            gcc-riscv-none-elf \
             gdb-multiarch \
             git \
             make \
@@ -36,7 +41,8 @@ jobs:
             python3 \
             qemu-system-riscv64 \
             tar \
-            zstd
+            zstd \
+            $toolchain_pkgs
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
@@ -52,7 +58,7 @@ jobs:
           else
             ../configure --target ${target}
           fi
-          make -j$(nproc) -l$(nproc)
+          make -j$(nproc) -l$(nproc) V=1
           name=ukoos-${{ matrix.target }}-git-$shortrev
           mkdir $name
           make DESTDIR=$(realpath $name) install
