@@ -246,7 +246,6 @@ def main():
     arg_parser.add_argument("bootstub", type=Path)
     arg_parser.add_argument("bootstub_startaddr", type=lambda x: int(x,0))
     args = arg_parser.parse_args()
-    print(args.bootstub_startaddr)    
     
     # Configure the logger.
     logging.basicConfig(
