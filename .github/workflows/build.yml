@@ -25,13 +25,12 @@ jobs:
           toolchain_pkgs=""
           target=${{ matrix.target }}
           if [[ ${target} == *"clang" ]]; then
-            toolchain_pkgs="clang"
+            toolchain_pkgs="clang lld"
           else
-            toolchain_pkgs="gcc-riscv-none-elf"
+            toolchain_pkgs="binutils-riscv-none-elf gcc-riscv-none-elf"
           fi
           apk add --no-interactive \
             bash \
-            binutils-riscv-none-elf \
             coreutils \
             gdb-multiarch \
             git \
