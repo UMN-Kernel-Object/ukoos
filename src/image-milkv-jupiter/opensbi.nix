@@ -27,8 +27,8 @@ stdenvNoCC.mkDerivation {
 
   nativeBuildInputs = [
     dtc
-    pkgsCross.riscv64-embedded.stdenv.cc.bintools.bintools
-    pkgsCross.riscv64-embedded.stdenv.cc.cc
+    pkgsCross.riscv64-musl.stdenv.cc.bintools.bintools
+    pkgsCross.riscv64-musl.stdenv.cc.cc
     python3
     u-boot
   ];
@@ -47,7 +47,7 @@ stdenvNoCC.mkDerivation {
     make \
       ''${enableParallelBuilding:+-j''${NIX_BUILD_CORES}} \
       ARCH=riscv \
-      CROSS_COMPILE=riscv64-none-elf- \
+      CROSS_COMPILE=riscv64-unknown-linux-musl- \
       PLATFORM=generic \
       PLATFORM_DEFCONFIG=k1_defconfig
 
