@@ -12,7 +12,7 @@ usage() {
 	printf >&2 'Defaults for the options are specified in brackets.\n'
 	printf >&2 '\nSystem:\n'
 	printf >&2 '  --arch=ARCH             build for the given architecture [%s]\n' "$arch"
-	printf >&2 '  --clang                 build with clang instead of gcc\n'
+	printf >&2 '  --clang                 build with Clang instead of GCC\n'
 	printf >&2 '  --target=TARGET         build for the given target'
 	if [[ "$has_target" != 0 ]]; then
 		printf >&2 ' [%s]' "$target"
@@ -164,13 +164,13 @@ find_tool_with_prefix() {
 }
 
 if [[ "$clang" == 1 ]]; then
-  CC="clang"
-  find_tool_with_prefix CC clang
-  CFLAGS="-target riscv64-none-elf -std=c23 $CFLAGS"
+	CC="clang"
+	find_tool_with_prefix CC clang
+	CFLAGS="-target riscv64-none-elf $CFLAGS"
 else
-  # Detect tools. Since we're expecting a freestanding compiler, we _don't_
-  # assume that e.g. the default gcc is a reasonable compiler to use.
-  find_tool_with_prefix CC gcc
+	# Detect tools. Since we're expecting a freestanding compiler, we _don't_
+	# assume that e.g. the default gcc is a reasonable compiler to use.
+	find_tool_with_prefix CC gcc
 fi
 find_tool_with_prefix OBJDUMP objdump
 find_tool_with_prefix STRIP strip

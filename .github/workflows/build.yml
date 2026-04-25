@@ -25,6 +25,7 @@ jobs:
           apk add --no-interactive \
             bash \
             binutils-riscv-none-elf \
+            clang \
             coreutils \
             gcc-riscv-none-elf \
             gdb-multiarch \
@@ -35,8 +36,7 @@ jobs:
             python3 \
             qemu-system-riscv64 \
             tar \
-            zstd \
-            clang
+            zstd
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
@@ -46,8 +46,12 @@ jobs:
           shortrev=$(git rev-parse --short HEAD)
           mkdir build
           cd build
-          export target=${{ matrix.target }}
-          [[ ${{ matrix.target }} == *"clang" ]] && ../configure --target ${target::-6} --clang || ../configure --target ${{ matrix.target }}
+          target=${{ matrix.target }}
+          if [[ ${target} == *"clang" ]]; then
+            ../configure --target ${target::-6} --clang
+          else
+            ../configure --target ${target}
+          fi
           make -j$(nproc) -l$(nproc)
           name=ukoos-${{ matrix.target }}-git-$shortrev
           mkdir $name
