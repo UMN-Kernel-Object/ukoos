@@ -50,6 +50,7 @@ kernel-objs-c += mm/virtual_alloc
 kernel-objs-c += panic
 kernel-objs-c += print
 kernel-objs-c += random
+kernel-objs-c += scheduler
 kernel-objs-c += selftest
 kernel-objs-c += swar_test
 kernel-objs-c += symbolicate

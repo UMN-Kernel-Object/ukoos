@@ -5,3 +5,5 @@
  */
 
 #include <task.h>
+
+struct task *task_new(void);

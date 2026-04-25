@@ -12,6 +12,12 @@
 #include <task.h>
 
 /**
+ * The scheduler's list of running tasks. We need access to this so we can mark
+ * the initial task as running.
+ */
+extern struct list_head scheduler_running;
+
+/**
  * Storage for the boothart's hart-locals.
  */
 static struct hart_locals boothart_hart_locals;
@@ -99,8 +105,8 @@ void init_boothart_hart_locals_late(struct vma *initial_stack_vma) {
   };
   atomic_init(&hart_locals->task->priorities, priorities);
 
-  // Put the task into the scheduler.
-  TODO();
+  // Put the task into the scheduler's list of running tasks.
+  list_push(&scheduler_running, &hart_locals->task->list);
 }
 
 void init_hart_locals(u64 hart_id);

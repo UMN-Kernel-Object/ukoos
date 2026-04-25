@@ -10,8 +10,8 @@
  * Switches tasks.
  */
 .p2align 2
-.global switch_to_task
-.type switch_to_task, @function
-switch_to_task:
+.global task_switch
+.type task_switch, @function
+task_switch:
 	ebreak
 	ret

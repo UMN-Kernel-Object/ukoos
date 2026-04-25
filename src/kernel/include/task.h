@@ -95,8 +95,10 @@ struct task {
 struct task *task_new(void);
 
 /**
+ * Switches to the given task.
+ *
  * TODO: This should require that a hartlock be held.
  */
-void switch_to_task(struct task *task);
+void task_switch(struct task *task);
 
 #endif // UKO_OS_KERNEL__TASK_H
