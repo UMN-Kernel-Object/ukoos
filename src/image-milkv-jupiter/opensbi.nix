@@ -27,6 +27,7 @@ stdenvNoCC.mkDerivation {
 
   nativeBuildInputs = [
     dtc
+    # Must be musl as embedded breaks u-boot
     pkgsCross.riscv64-musl.stdenv.cc.bintools.bintools
     pkgsCross.riscv64-musl.stdenv.cc.cc
     python3
