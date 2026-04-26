@@ -13,6 +13,11 @@
  * Kernel tasks and task switching.
  */
 
+// Avoids a circular include:
+//   task.h -> devices/hart.h  for struct hart
+//   devices/hart.h -> task.h  for struct task
+struct hart;
+
 enum task_flags : u32 {
   /**
    * The task is not yet fully constructed. A task in a list should never be in
@@ -89,10 +94,16 @@ struct task {
   u8 register_save[];
 };
 
+// Check that the layout that's assumed by assembly code.
+static_assert(offsetof(struct task, flags) == 16);
+static_assert(offsetof(struct task, hart_group) == 24);
+static_assert(offsetof(struct task, register_save) == 40);
+
 /**
- * Allocates a new task struct and initializes it.
+ * Allocates a new task struct that can run on the given hart and initializes
+ * it to start execution at the given function.
  */
-struct task *task_new(void);
+struct task *task_new(struct hart *hart, void (*main)(void *), void *main_arg);
 
 /**
  * Switches to the given task.

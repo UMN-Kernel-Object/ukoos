@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <align.h>
 #include <arch/riscv64/drivers/riscv_cpu.h>
 #include <arch/riscv64/insns.h>
 #include <devices/hart.h>
@@ -12,6 +13,7 @@
 #include <mm/paging.h>
 #include <physical.h>
 #include <stdatomic.h>
+#include <task.h>
 
 struct riscv_cpu {
   struct device device;
@@ -73,8 +75,50 @@ static void riscv_cpu_detect_hart_group(struct hart *hart) {
   hart->hart_group = &hart_group->hart_group;
 }
 
+/**
+ * A magic number used to handshake between set_task_regs and the task main
+ * function.
+ */
+constexpr u64 TASK_MAGIC = 0x636967614d6f6b75;
+
+[[noreturn]]
+static void task_main(void *main_arg, void (*main)(void *), u64 magic) {
+  assert(TASK_MAGIC == magic);
+  main(main_arg);
+  TODO("task exit");
+}
+
+static void riscv_cpu_set_task_regs(struct hart *hart, struct task *task,
+                                    void (*main)(void *), void *main_arg) {
+  assert(hart->hart_group);
+  assert(task->stack_vma);
+  assert(hart->hart_group == task->hart_group);
+
+  struct riscv_hart_group *hart_group =
+      container_of(hart->hart_group, struct riscv_hart_group, hart_group);
+  assert(hart_group->x_len == 264);
+  u64 *gprs = (void *)task->register_save + hart_group->x_off;
+  assert(is_aligned(gprs, 3));
+
+  uaddr stack_hi;
+  vma_bounds(task->stack_vma, nullptr, &stack_hi);
+  assert(is_aligned(stack_hi, 4));
+
+  struct sstatus sstatus;
+  sstatus.bits = csrr(RISCV64_CSR_SSTATUS);
+  sstatus.spp = 1;
+
+  gprs[0] = (u64)task_main; // SEPC
+  gprs[2] = stack_hi;       // SP
+  gprs[10] = (u64)main_arg; // A0
+  gprs[11] = (u64)main;     // A1
+  gprs[12] = TASK_MAGIC;    // A2
+  gprs[32] = sstatus.bits;  // SSTATUS
+}
+
 const struct hart_ops riscv_cpu_hart_ops = {
     .detect_hart_group = riscv_cpu_detect_hart_group,
+    .set_task_regs = riscv_cpu_set_task_regs,
 };
 
 static bool extensions_list_has_extension(const u8 *value, usize value_len,

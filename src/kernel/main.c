@@ -18,7 +18,10 @@
 #include <symbolicate.h>
 
 // DEBUG
+#include <scheduler.h>
 #include <task.h>
+
+static void gm(void *ptr);
 
 [[noreturn]]
 void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
@@ -67,6 +70,17 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   print("Running self-tests...");
   run_selftests();
 
-  print("{uptr}", get_hart_locals()->task);
+  // Create another task and switch to it.
+  struct task *task = task_new(get_hart_locals()->hart, gm, (void *)0x12345);
+  scheduler_put_new(task);
+  get_hart_locals()->task->flags = TASK_STATE_RUNNABLE;
+  task->flags = TASK_STATE_RUNNING;
+  task_switch(task);
+
   TODO();
+}
+
+static void gm(void *ptr) {
+  print("GM {uptr}", ptr);
+  print("GN {uptr}", ptr);
 }

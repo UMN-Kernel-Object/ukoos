@@ -99,6 +99,13 @@ struct riscv_hart_group {
   usize x_len, f_len, v_len;
 };
 
+// Check that the layout that's assumed by assembly code.
+static_assert(offsetof(struct riscv_hart_group, hart_group) == 0);
+static_assert(offsetof(struct riscv_hart_group, x_off) == 8);
+static_assert(offsetof(struct riscv_hart_group, f_off) == 16);
+static_assert(offsetof(struct riscv_hart_group, x_len) == 32);
+static_assert(offsetof(struct riscv_hart_group, f_len) == 40);
+
 /**
  * Finds or creates a hart group for the given key.
  *

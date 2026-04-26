@@ -7,7 +7,7 @@
 #ifndef UKO_OS_KERNEL__DEVICES_HART_H
 #define UKO_OS_KERNEL__DEVICES_HART_H 1
 
-#include <list.h>
+#include <task.h>
 
 // Avoids a circular include:
 //   devices/hart.h -> device.h       for struct device
@@ -17,6 +17,7 @@
 //   hart_locals.h -> devices/hart.h  for struct hart
 struct device;
 
+// Forward declaration.
 struct hart_ops;
 
 /**
@@ -56,6 +57,9 @@ struct hart {
   struct hart_group *hart_group;
 };
 
+// Check that the layout that's assumed by assembly code.
+static_assert(offsetof(struct hart, hart_group) == 40);
+
 /**
  * The operations for a hart.
  */
@@ -74,6 +78,20 @@ struct hart_ops {
    * - `this->hart_group != nullptr`
    */
   void (*detect_hart_group)(struct hart *this);
+
+  /**
+   * Sets up the initial registers to call the function with the argument.
+   *
+   * TODO: Should this become a "hart_group op"?
+   *
+   * Requires:
+   *
+   * - `this->hart_group != nullptr`
+   * - `task->stack_vma != nullptr`
+   * - `this->hart_group == task->hart_group`
+   */
+  void (*set_task_regs)(struct hart *this, struct task *task,
+                        void (*main)(void *), void *main_arg);
 };
 
 /**
