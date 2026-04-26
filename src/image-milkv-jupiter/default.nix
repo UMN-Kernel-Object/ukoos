@@ -40,10 +40,9 @@ stdenvNoCC.mkDerivation (self: {
         install -Dt input ${u-boot-spacemit-k1}/u-boot.itb
         install -Dt input ${u-boot-spacemit-k1}/bootinfo_sd.bin
         install -Dt input ${self.passthru.opensbi-milkv-jupiter}/fw_dynamic.itb
-        mkenvimage -s 0x20000 -o input/uboot.env ${./u-boot.txt}
-        cp -r input/uboot.env root/boot/uboot.env
+        cp ${./u-boot.txt} input/u-boot.txt
+        cp ${./u-boot.txt} root/boot/u-boot.txt
         genimage --config ${./genimage.cfg}
-
         runHook postBuild
   '';
   installPhase = ''
