@@ -25,10 +25,9 @@ install:: src/kernel/kernel.elf src/kernel/kernel.sym
 	install -DT src/kernel/kernel.sym $(DESTDIR)$(prefix)/sys/kernel.sym
 
 $(call defcleanable, \
-	src/kernel/arch/riscv64/bootstub.d \
-	src/kernel/arch/riscv64/bootstub.o \
+	src/kernel/arch/riscv64/bootstub.S.o \
 	src/kernel/arch/riscv64/bootstub_generated.ld \
-	src/kernel/arch/riscv64/bootstub_generated.o \
+	src/kernel/arch/riscv64/bootstub_generated.S.o \
 	src/kernel/arch/riscv64/bootstub_generated.S \
 	src/kernel/arch/riscv64/kernel-unstripped.elf \
 	src/kernel/arch/riscv64/kernel.elf \
@@ -105,19 +104,20 @@ src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub_g
 		src/kernel/arch/riscv64/bootstub_generated.ld \
 		src/kernel/arch/riscv64/bootstub_generated.S
 
-# Compile the bootstub.
-src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_generated.S
+# Compile the bootstub. (This doesn't use the rule in the top-level Makefile,
+# because the source comes from the build directory, not $(srcdir).)
+src/kernel/arch/riscv64/bootstub_generated.S.o: src/kernel/arch/riscv64/bootstub_generated.S
 	@mkdir -p $(dir $@)
 	@echo "AS      $@"
 	$(Q)$(CC) -c -o $@ $(kernel-cflags) $<
 
 # Link the bootstub to produce the bootable ELF. The bootstub includes the
 # kernel, so we don't need to somehow include it.
-src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub.o src/kernel/arch/riscv64/bootstub_generated.o
+src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub.S.o src/kernel/arch/riscv64/bootstub_generated.S.o
 	@mkdir -p $(dir $@)
 	@echo "LD      $@"
 	$(Q)$(CC) $(kernel-cflags) $(kernel-ldflags) \
 		-T $(srcdir)/src/kernel/arch/riscv64/bootstub.ld -o $@ \
 		-s -Wl,--no-gc-sections \
-		src/kernel/arch/riscv64/bootstub.o \
-		src/kernel/arch/riscv64/bootstub_generated.o
+		src/kernel/arch/riscv64/bootstub.S.o \
+		src/kernel/arch/riscv64/bootstub_generated.S.o

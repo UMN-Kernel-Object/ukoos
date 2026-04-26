@@ -29,8 +29,12 @@ define defcleanable
 $(foreach arg,$(1),$(eval $(call defcleanable_one,$(arg))))
 endef
 define compute_component_variables
-$(1)-deps = $(addprefix $($(1)-dir)/,$(addsuffix .d,$($(1)-objs-asm) $($(1)-objs-c)))
-$(1)-objs = $(addprefix $($(1)-dir)/,$(addsuffix .o,$($(1)-objs-asm) $($(1)-objs-c)))
+$(1)-deps = \
+  $(addprefix $($(1)-dir)/,$(addsuffix .S.d,$($(1)-objs-asm))) \
+  $(addprefix $($(1)-dir)/,$(addsuffix .c.d,$($(1)-objs-c)))
+$(1)-objs = \
+  $(addprefix $($(1)-dir)/,$(addsuffix .S.o,$($(1)-objs-asm))) \
+  $(addprefix $($(1)-dir)/,$(addsuffix .c.o,$($(1)-objs-c)))
 $(1)-srcs-asm = $(addprefix $(srcdir)/$($(1)-dir)/,$(addsuffix .S,$($(1)-objs-asm)))
 $(1)-srcs-c = $(addprefix $(srcdir)/$($(1)-dir)/,$(addsuffix .c,$($(1)-objs-c)))
 $(1)-objdirs = $$(sort $$(foreach obj,$$($(1)-objs),$$(dir $$(obj))))
@@ -72,29 +76,29 @@ format:
 .SUFFIXES:
 
 define common_rules_for_dir
-$(2)%.o: $(srcdir)/$(2)%.c config.mak
+$(2)%.c.o: $(srcdir)/$(2)%.c config.mak
 	@mkdir -p $$(dir $$@)
 	@echo "CC      $$@"
 	$(Q)$(CC) -c -o $$@ $$($(1)-cflags) $$<
 
-$(2)%.o: $(srcdir)/$(2)%.S config.mak
+$(2)%.S.o: $(srcdir)/$(2)%.S config.mak
 	@mkdir -p $$(dir $$@)
 	@echo "AS      $$@"
 	$(Q)$(CC) -c -o $$@ $$($(1)-cflags) $$<
 
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
-$(2)%.d: $(srcdir)/$(2)%.c config.mak
+$(2)%.c.d: $(srcdir)/$(2)%.c config.mak
 	@mkdir -p $$(dir $$@)
 	@set -e; rm -f $$@; \
 	trap 'rm -f $$@.$$$$$$$$' EXIT; \
 	$(CC) -M $$($(1)-cflags) $$< > $$@.$$$$$$$$; \
-	sed 's,$$(notdir $$(@:%.d=%.o))[ :]*,$$(@:%.d=%.o) $$@ : ,g' < $$@.$$$$$$$$ > $$@
-$(2)%.d: $(srcdir)/$(2)%.S config.mak
+	sed 's,$$(notdir $$(@:%.c.d=%.o))[ :]*,$$(@:%.d=%.o) $$@ : ,g' < $$@.$$$$$$$$ > $$@
+$(2)%.S.d: $(srcdir)/$(2)%.S config.mak
 	@mkdir -p $$(dir $$@)
 	@set -e; rm -f $$@; \
 	trap 'rm -f $$@.$$$$$$$$' EXIT; \
 	$(CC) -M $$($(1)-cflags) $$< > $$@.$$$$$$$$; \
-	sed 's,$$(notdir $$(@:%.d=%.o))[ :]*,$$(@:%.d=%.o) $$@ : ,g' < $$@.$$$$$$$$ > $$@
+	sed 's,$$(notdir $$(@:%.S.d=%.o))[ :]*,$$(@:%.d=%.o) $$@ : ,g' < $$@.$$$$$$$$ > $$@
 endef
 define common_rules_for_component
 $(call defcleanable,$($(1)-deps))
