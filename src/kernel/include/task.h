@@ -106,10 +106,17 @@ static_assert(offsetof(struct task, register_save) == 40);
 struct task *task_new(struct hart *hart, void (*main)(void *), void *main_arg);
 
 /**
- * Switches to the given task.
+ * Considers whether to switch to another task.
  *
- * TODO: This should require that a hartlock be held.
+ * There is no guarantee that a switch will occur; in particular, this does
+ * _not_ necessarily give up the current task's quantum.
  */
-void task_switch(struct task *task);
+void task_yield();
+
+/**
+ * Exits from the current task.
+ */
+[[noreturn]]
+void task_exit();
 
 #endif // UKO_OS_KERNEL__TASK_H

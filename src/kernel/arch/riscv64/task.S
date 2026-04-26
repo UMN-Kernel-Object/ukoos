@@ -48,6 +48,9 @@ task_switch:
   li t0, 1
   bne a2, t0, 1f
 
+  // Save the new task to the hart locals.
+  sd a0, 8(a1)
+
   // Get the f_off and f_len. Jump to the appropriate place based on the f_len,
   // to swap the callee-save floating-point registers.
   ld a5, 16(a4) // a5 = f_off
@@ -134,8 +137,10 @@ task_switch:
   la t0, task_resume
   sd t0, 40(a5)
 
-  // Save SSTATUS to the old task.
+  // Save SSTATUS to the old task, setting its SPP bit so that we return to
+  // supervisor mode.
   csrr t0, sstatus
+  ori t0, t0, 1<<8
   sd t0, 296(a5)
 
   // Load SEPC and SSTATUS from the new task.
@@ -207,4 +212,4 @@ task_switch:
 .p2align 2
 .type task_resume, @function
 task_resume:
-	ebreak
+	ret

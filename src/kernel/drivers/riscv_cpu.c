@@ -85,7 +85,7 @@ constexpr u64 TASK_MAGIC = 0x636967614d6f6b75;
 static void task_main(void *main_arg, void (*main)(void *), u64 magic) {
   assert(TASK_MAGIC == magic);
   main(main_arg);
-  TODO("task exit");
+  task_exit();
 }
 
 static void riscv_cpu_set_task_regs(struct hart *hart, struct task *task,

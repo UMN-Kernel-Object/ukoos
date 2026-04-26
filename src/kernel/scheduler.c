@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <print.h>
 #include <scheduler.h>
 
 /**
@@ -23,6 +24,24 @@ static struct list_head scheduler_runnable = LIST_INIT(scheduler_runnable);
  * The list of blocked tasks.
  */
 static struct list_head scheduler_blocked = LIST_INIT(scheduler_blocked);
+
+struct task *scheduler_get() {
+  struct task *task =
+      container_of(list_shift(&scheduler_runnable), struct task, list);
+  assert(task->flags == TASK_STATE_RUNNABLE);
+  task->flags = TASK_STATE_RUNNING;
+  list_push(&scheduler_running, &task->list);
+  return task;
+}
+
+void scheduler_put(struct task *task) {
+  assert(!list_is_empty(&task->list));
+  assert(task->flags == TASK_STATE_RUNNING);
+
+  list_remove(&task->list);
+  task->flags = TASK_STATE_RUNNABLE;
+  list_push(&scheduler_runnable, &task->list);
+}
 
 void scheduler_put_new(struct task *task) {
   assert(list_is_empty(&task->list));

@@ -14,13 +14,12 @@
  *
  * Ensures:
  *
- * - The task is in the list of running tasks.
+ * - If the task is non-`nullptr`, the task is in the list of running tasks.
  */
-struct task *scheduler_get(void);
+struct task *scheduler_get();
 
 /**
- * Puts a task back in the scheduler, allowing other harts to run it later. The
- * task must not be accessed again after calling this function.
+ * Puts a task back in the scheduler, allowing other harts to run it later.
  *
  * Requires:
  *
@@ -29,8 +28,7 @@ struct task *scheduler_get(void);
 void scheduler_put(struct task *task);
 
 /**
- * Puts a new task into the scheduler's list of runnable tasks. The task must
- * not be accessed again afer calling this function.
+ * Puts a new task into the scheduler's list of runnable tasks.
  *
  * Requires:
  *

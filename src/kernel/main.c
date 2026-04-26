@@ -71,16 +71,19 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
   run_selftests();
 
   // Create another task and switch to it.
-  struct task *task = task_new(get_hart_locals()->hart, gm, (void *)0x12345);
-  scheduler_put_new(task);
-  get_hart_locals()->task->flags = TASK_STATE_RUNNABLE;
-  task->flags = TASK_STATE_RUNNING;
-  task_switch(task);
+  scheduler_put_new(task_new(get_hart_locals()->hart, gm, (void *)0x12345));
+  task_yield();
+  print("back in main");
+  task_yield();
+  print("back in main again");
+  task_yield();
+  print("back in main a last time -- nothing should've switched this time");
 
   TODO();
 }
 
 static void gm(void *ptr) {
   print("GM {uptr}", ptr);
+  task_yield();
   print("GN {uptr}", ptr);
 }
