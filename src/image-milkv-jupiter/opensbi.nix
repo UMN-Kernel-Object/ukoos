@@ -34,12 +34,8 @@ stdenvNoCC.mkDerivation {
     u-boot
   ];
 
-  patchPhase = ''
-    runHook prePatch
-
+  postPatch = ''
     patchShebangs .
-
-    runHook postPatch
   '';
 
   buildPhase = ''
