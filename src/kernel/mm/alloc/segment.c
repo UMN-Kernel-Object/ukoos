@@ -24,31 +24,22 @@ struct mm_alloc_segment *segment_alloc(usize size) {
   if (!vma)
     return nullptr;
 
-  uaddr segment_start, segment_end;
-  vma_bounds(vma, &segment_start, &segment_end);
-  assert(is_aligned(segment_start, SEGMENT_SHIFT),
-         "segment was not aligned ({uaddr})", segment_start);
-  assert(segment_end - segment_start == size);
+  uaddr segment_lo, segment_hi;
+  vma_bounds(vma, &segment_lo, &segment_hi);
+  assert(is_aligned(segment_lo, SEGMENT_SHIFT),
+         "segment was not aligned ({uaddr})", segment_lo);
+  assert(segment_hi - segment_lo == size);
 
-  // Allocate frames and map them to the segment.
-  usize va = segment_start;
-  paddr pa;
-  while (va < segment_end) {
-    if (!mm_alloc_physical(&pa, PHYSICAL_ALLOC_DEFAULT))
-      goto physical_oom;
-    if (!mm_paging_map(va, pa, PGPERM_KRW)) {
-      mm_free_physical(pa);
-      goto physical_oom;
-    }
-    va += (1 << 12);
+  // Allocate and map memory for the segment.
+  if (!mm_alloc_and_map_many(segment_lo, segment_hi, PHYSICAL_ALLOC_DEFAULT,
+                             PGPERM_KRW)) {
+    vma_free(vma);
+    return nullptr;
   }
   mm_paging_fence();
 
   // Return the segment.
-  return (struct mm_alloc_segment *)segment_start;
-
-physical_oom:
-  TODO("clean up properly from OOM");
+  return (struct mm_alloc_segment *)segment_lo;
 }
 
 void segment_init_small(struct mm_alloc_segment *segment,

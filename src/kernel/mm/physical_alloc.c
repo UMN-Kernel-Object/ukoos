@@ -259,3 +259,35 @@ void mm_free_physical(paddr frame) {
     physical_free_list_push(1, frame, &free_list_head_below_4g);
   }
 }
+
+bool mm_alloc_and_map_many(uaddr lo, uaddr hi, enum physical_alloc_flags flags,
+                           enum page_permissions perms) {
+  assert(is_aligned(lo, PAGE_BITS));
+  assert(is_aligned(hi, PAGE_BITS));
+
+  uaddr va = lo;
+  paddr pa;
+  while (va < hi) {
+    // Invariant: va is not mapped.
+    if (!mm_alloc_physical(&pa, flags))
+      goto fail;
+    if (!mm_paging_map(va, pa, perms)) {
+      mm_free_physical(pa);
+      goto fail;
+    }
+    // Invariant: va is mapped.
+    va += PAGE_SIZE;
+  }
+  return true;
+
+fail:
+  while (va > lo) {
+    // Invariant: va is not mapped.
+    va -= PAGE_SIZE;
+    assert(mm_paging_unmap(va, &pa));
+    mm_free_physical(pa);
+  }
+  assert(va == lo);
+  // Invariant: lo is not mapped.
+  return false;
+}
