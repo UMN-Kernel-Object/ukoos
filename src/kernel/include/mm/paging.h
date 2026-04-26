@@ -62,6 +62,7 @@ enum page_permissions : u8 {
  * This function may not take effect immediately -- call `mm_paging_fence` to
  * wait until it has taken effect.
  */
+[[gnu::warn_unused_result]]
 bool mm_paging_map(uaddr va, paddr pa, enum page_permissions perms);
 
 /**
@@ -72,6 +73,7 @@ bool mm_paging_map(uaddr va, paddr pa, enum page_permissions perms);
  * This function may not take effect immediately -- call `mm_paging_fence` to
  * wait until it has taken effect.
  */
+[[gnu::warn_unused_result]]
 bool mm_paging_unmap(uaddr va, paddr *pa);
 
 /**

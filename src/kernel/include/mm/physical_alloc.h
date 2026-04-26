@@ -29,6 +29,7 @@ void mm_init_physical(struct devicetree_node *devicetree);
  *
  * Returns whether it succeeded.
  */
+[[gnu::warn_unused_result]]
 bool mm_alloc_physical(paddr *out, enum physical_alloc_flags flags);
 
 /**

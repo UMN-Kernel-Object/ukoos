@@ -99,6 +99,7 @@ struct devicetree_prop *devicetree_prop(struct devicetree_node *parent,
  * Retrieves the `#address-cells` and `#size-cells` properties of a node.
  * Returns whether this succeeded.
  */
+[[gnu::warn_unused_result]]
 bool devicetree_address_size_cells(struct devicetree_node *node,
                                    u32 *out_address_cells, u32 *out_size_cells);
 
@@ -106,6 +107,7 @@ bool devicetree_address_size_cells(struct devicetree_node *node,
  * Retrieves the `i`th address and size pair from the `reg` property of a node.
  * Returns whether this succeeded.
  */
+[[gnu::warn_unused_result]]
 bool devicetree_reg(struct devicetree_node *node, usize i, paddr *out_addr,
                     usize *out_size);
 
@@ -113,6 +115,7 @@ bool devicetree_reg(struct devicetree_node *node, usize i, paddr *out_addr,
  * Retrieves the `i`th address and size pair from a property. This is useful
  * for properties like `reg`. Returns whether this succeeded.
  */
+[[gnu::warn_unused_result]]
 bool devicetree_prop_reg(struct devicetree_prop *prop, usize i, paddr *out_addr,
                          usize *out_size);
 

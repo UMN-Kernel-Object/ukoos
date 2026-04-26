@@ -29,6 +29,7 @@ extern struct vma_allocator kernel_virtual_allocator;
  * Attempts to initialize a VMA allocator to cover the given address range.
  * Returns whether it succeded.
  */
+[[gnu::warn_unused_result]]
 bool vma_allocator_init(struct vma_allocator *allocator, uaddr lo, uaddr hi);
 
 /**
