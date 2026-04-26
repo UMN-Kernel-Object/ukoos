@@ -38,6 +38,41 @@ enum csr {
 };
 
 /**
+ * The bits of sstatus.
+ */
+struct sstatus {
+  union {
+    u64 bits;
+    struct {
+      u64 pad0 : 1;
+      u64 sie : 1;
+      u64 pad1 : 3;
+      u64 spie : 1;
+      u64 ube : 1;
+      u64 pad2 : 1;
+      u64 spp : 1;
+      u64 vs : 2;
+      u64 pad3 : 2;
+      u64 fs : 2;
+      u64 xs : 2;
+      u64 pad4 : 1;
+      u64 sum : 1;
+      u64 mxr : 1;
+      u64 pad5 : 3;
+      u64 spelp : 1;
+      u64 sdt : 1;
+      u64 pad6 : 7;
+      u64 uxl : 2;
+      u64 pad7 : 29;
+      u64 sd : 1;
+    };
+  };
+};
+
+static_assert(sizeof(struct sstatus) == sizeof(u64));
+static_assert(alignof(struct sstatus) == alignof(u64));
+
+/**
  * Reads a CSR.
  */
 static inline u64 csrr(enum csr csr) {
