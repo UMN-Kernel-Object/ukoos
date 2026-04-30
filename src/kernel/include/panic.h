@@ -9,6 +9,12 @@
 
 #include <types.h>
 
+#ifdef DEBUG
+constexpr bool debug_asserts_enabled = true;
+#else
+constexpr bool debug_asserts_enabled = false;
+#endif // DEBUG
+
 [[noreturn]]
 void __panic(const char *file, usize line, const char *func, const char *msg,
              va_list ap);
@@ -39,5 +45,9 @@ static inline void _assert(const char *file, usize line, const char *func,
 #define panic(...) _panic(__FILE__, __LINE__, __func__, "" __VA_ARGS__)
 #define TODO(...)                                                              \
   _panic(__FILE__, __LINE__, __func__, "TODO" __VA_OPT__(": ") __VA_ARGS__)
+
+#define debug_assert(cond, ...)                                                \
+  _assert(__FILE__, __LINE__, __func__, debug_asserts_enabled && (cond),       \
+          #cond, "debug assertion failed" __VA_OPT__(": ") __VA_ARGS__)
 
 #endif // UKO_OS_KERNEL__PANIC_H

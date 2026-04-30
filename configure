@@ -22,6 +22,8 @@ usage() {
 	printf >&2 '\nDefaults:\n'
 	printf >&2 '  --no-default-cflags     disables default CFLAGS\n'
 	printf >&2 '  --no-default-ldflags    disables default LDFLAGS\n'
+	printf >&2 '\nBuild:\n'
+	printf >&2 '  --debug                 enable debug assertions\n'
 	exit 100
 }
 
@@ -29,13 +31,14 @@ known_arches=(riscv64)
 # shellcheck disable=SC2034 # Only accessed indirectly.
 tool_prefixes_riscv64=(riscv64-none-elf- riscv-none-elf- riscv64-unknown-elf-)
 
-args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,prefix:,target:' -- "$@")
+args=$(getopt -n ./configure -o 'h' -l 'arch:,debug,help,no-default-cflags,prefix:,target:' -- "$@")
 eval set -- "$args"
 unset args
 
 arch=riscv64
 target=
 has_target=0
+debug=0
 default_cflags=1
 default_ldflags=1
 help=0
@@ -61,6 +64,10 @@ while true; do
 			printf >&2 './configure: unrecognized --arch: %q\n' "$arch"
 			usage
 		fi
+		;;
+	--debug)
+		debug=1
+		shift
 		;;
 	--no-default-cflags)
 		default_cflags=0
@@ -121,6 +128,11 @@ if [[ -e Makefile ]]; then
 else
 	ln -s "$repo/Makefile" Makefile
 fi
+
+if [[ "$debug" = 1 ]]; then
+	CFLAGS="-DDEBUG ${CFLAGS:-}"
+fi
+
 
 # Add default CFLAGS and LDFLAGS.
 if [[ "$default_cflags" = 1 ]]; then
