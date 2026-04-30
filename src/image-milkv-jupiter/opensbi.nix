@@ -27,7 +27,7 @@ stdenvNoCC.mkDerivation {
 
   nativeBuildInputs = [
     dtc
-    # Must be musl as embedded breaks u-boot
+    # Upstream says to build with a musl Linux toolchain, using anything else causes u-boot to not validate on boot
     # https://docs.u-boot.org/en/latest/build/gcc.html#building
     pkgsCross.riscv64-musl.stdenv.cc.bintools.bintools
     pkgsCross.riscv64-musl.stdenv.cc.cc
