@@ -30,7 +30,7 @@ known_arches=(riscv64)
 # shellcheck disable=SC2034 # Only accessed indirectly.
 tool_prefixes_riscv64=(riscv64-none-elf- riscv-none-elf- riscv64-unknown-elf-)
 
-args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,clang,prefix:,target:' -- "$@")
+args=$(getopt -n ./configure -o 'h' -l 'arch:,help,no-default-cflags,clang,zig,prefix:,target:' -- "$@")
 eval set -- "$args"
 unset args
 
@@ -41,6 +41,7 @@ default_cflags=1
 default_ldflags=1
 help=0
 clang=0
+zig=0
 prefix=/
 while true; do
 	case "$1" in
@@ -66,6 +67,10 @@ while true; do
 		;;
 	--clang)
 		clang=1
+		shift
+		;;
+	--zig)
+		zig=1
 		shift
 		;;
 	--no-default-cflags)
@@ -169,7 +174,15 @@ find_tool_with_prefix() {
 	find_tool "$tool_name" "${tools[@]}"
 }
 
-if [[ "$clang" = 1 ]]; then
+if [[ "$zig" = 1 ]]; then
+	find_tool_with_prefix CC zig
+  if [[ "$default_cflags" = 1 ]]; then
+	  CFLAGS="--no-warnings $CFLAGS"
+  fi
+  if [[ "$default_ldflags" = 1 ]]; then
+	  LDFLAGS="-fuse-ld=lld $LDFLAGS"
+  fi
+elif [[ "$clang" = 1 ]]; then
 	find_tool_with_prefix CC clang
   if [[ "$default_cflags" = 1 ]]; then
 	  CFLAGS="-target riscv64-none-elf -Wno-error=\#warnings $CFLAGS"
