@@ -175,7 +175,7 @@ find_tool_with_prefix() {
 }
 
 if [[ "$zig" = 1 ]]; then
-	find_tool_with_prefix CC zig
+	CC="zig cc"
   if [[ "$default_cflags" = 1 ]]; then
 	  CFLAGS="--no-warnings $CFLAGS"
   fi
@@ -213,7 +213,7 @@ prefix = $(printf %q "$prefix")
 srcdir = $(printf %q "$repo")
 target = $(printf %q "$target")
 
-CC = $(printf %q "$CC")
+CC = $(printf "$CC")
 GDB = $(printf %q "$GDB")
 OBJDUMP = $(printf %q "$OBJDUMP")
 PYTHON3 = $(printf %q "$PYTHON3")
