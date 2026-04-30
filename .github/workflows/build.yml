@@ -57,7 +57,7 @@ jobs:
           cd build
           target=${{ matrix.target }}
           if [[ ${target} == *"zig" ]]; then
-            ../configure --target ${target::-6} --zig
+            ../configure --target ${target::-4} --zig
           elif [[ ${target} == *"clang" ]]; then
             ../configure --target ${target::-6} --clang
           else
