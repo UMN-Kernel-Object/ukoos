@@ -17,14 +17,18 @@ jobs:
           - milkv-duos
           - milkv-jupiter
           - milkv-jupiter-clang
+          - milkv-jupiter-zig
           - qemu-riscv64
           - qemu-riscv64-clang
+          - qemu-riscv64-zig
     steps:
       - name: Install dependencies
         run: |
           toolchain_pkgs=""
           target=${{ matrix.target }}
-          if [[ ${target} == *"clang" ]]; then
+          if [[ ${target} == *"zig" ]]; then
+            toolchain_pkgs="zig clang lld llvm"
+          elif [[ ${target} == *"clang" ]]; then
             toolchain_pkgs="clang lld llvm"
           else
             toolchain_pkgs="binutils-riscv-none-elf gcc-riscv-none-elf"
@@ -52,7 +56,9 @@ jobs:
           mkdir build
           cd build
           target=${{ matrix.target }}
-          if [[ ${target} == *"clang" ]]; then
+          if [[ ${target} == *"zig" ]]; then
+            ../configure --target ${target::-6} --zig
+          elif [[ ${target} == *"clang" ]]; then
             ../configure --target ${target::-6} --clang
           else
             ../configure --target ${target}
