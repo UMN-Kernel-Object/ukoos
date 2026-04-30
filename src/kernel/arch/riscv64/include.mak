@@ -102,7 +102,8 @@ src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub_g
 	$(Q)$(PYTHON3) $(srcdir)/src/kernel/arch/riscv64/generate_bootstub.py \
 		src/kernel/arch/riscv64/kernel-unstripped.elf \
 		src/kernel/arch/riscv64/bootstub_generated.ld \
-		src/kernel/arch/riscv64/bootstub_generated.S
+		src/kernel/arch/riscv64/bootstub_generated.S \
+		$(bootstub-startaddr)
 
 # Compile the bootstub.
 src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_generated.S
@@ -110,13 +111,19 @@ src/kernel/arch/riscv64/bootstub_generated.o: src/kernel/arch/riscv64/bootstub_g
 	@echo "AS      $@"
 	$(Q)$(CC) -c -o $@ $(kernel-cflags) $<
 
+# Build bootstub.ld
+src/kernel/arch/riscv64/bootstub.ld: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld.in config.mak
+	@mkdir -p $(dir $@)
+	@echo "GEN     $@"
+	$(Q)sed 's/@BOOTSTUB_STARTADDR@/$(bootstub-startaddr)/' $< > $@
+
 # Link the bootstub to produce the bootable ELF. The bootstub includes the
 # kernel, so we don't need to somehow include it.
-src/kernel/kernel.elf: $(srcdir)/src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub.o src/kernel/arch/riscv64/bootstub_generated.o
+src/kernel/kernel.elf: src/kernel/arch/riscv64/bootstub.ld src/kernel/arch/riscv64/bootstub_generated.ld src/kernel/arch/riscv64/bootstub.o src/kernel/arch/riscv64/bootstub_generated.o
 	@mkdir -p $(dir $@)
 	@echo "LD      $@"
 	$(Q)$(CC) $(kernel-cflags) $(kernel-ldflags) \
-		-T $(srcdir)/src/kernel/arch/riscv64/bootstub.ld -o $@ \
+		-T src/kernel/arch/riscv64/bootstub.ld -o $@ \
 		-s -Wl,--no-gc-sections -Wl,--no-warn-rwx-segments \
 		src/kernel/arch/riscv64/bootstub.o \
 		src/kernel/arch/riscv64/bootstub_generated.o
