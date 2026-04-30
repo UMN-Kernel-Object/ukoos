@@ -49,6 +49,7 @@
               pkgs.pkgsCross.riscv64-embedded.buildPackages.llvmPackages.lld
               pkgs.python3
               pkgs.watchexec
+              pkgs.zig
             ];
 
             dontUnpack = true;
