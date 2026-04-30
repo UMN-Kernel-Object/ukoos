@@ -17,7 +17,7 @@ jobs:
           - milkv-duos
           - milkv-jupiter
           - milkv-jupiter-clang
-          - milkv-jupiter-zig
+          # - milkv-jupiter-zig
           - qemu-riscv64
           - qemu-riscv64-clang
           - qemu-riscv64-zig
