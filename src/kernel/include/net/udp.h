@@ -1,0 +1,53 @@
+/* SPDX-FileCopyrightText: 2025 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#ifndef UKO_OS_NET_UDP_H
+#define UKO_OS_NET_UDP_H 1
+
+#include <net/ipv6.h>
+#include <types.h>
+
+// Implementation of https://www.rfc-editor.org/rfc/rfc768
+
+struct udp_header {
+  u16 src_port;
+  u16 dst_port;
+  u16 len;
+  u16 checksum;
+};
+
+/*
+ *
+ * Checksum is the 16-bit one's complement of the one's complement sum of a
+ * pseudo header of information from the IP header, the UDP header, and the
+ * data,  padded  with zero octets  at the end (if  necessary)  to  make  a
+ * multiple of two octets.
+ *
+ * The pseudo  header  conceptually prefixed to the UDP header contains the
+ * source  address,  the destination  address,  the protocol,  and the  UDP
+ * length.   This information gives protection against misrouted datagrams.
+ * This checksum procedure is the same as is used in TCP.
+ *
+ *            0      7 8     15 16    23 24    31
+ *            +--------+--------+--------+--------+
+ *            |          source address           |
+ *            +--------+--------+--------+--------+
+ *            |        destination address        |
+ *            +--------+--------+--------+--------+
+ *            |  zero  |protocol|   UDP length    |
+ *            +--------+--------+--------+--------+
+ *
+ * If the computed  checksum  is zero,  it is transmitted  as all ones (the
+ * equivalent  in one's complement  arithmetic).   An all zero  transmitted
+ * checksum  value means that the transmitter  generated  no checksum  (for
+ * debugging or for higher level protocols that don't care).
+ *
+ *
+ */
+u16 calculate_checksum(u8 *buf, usize size);
+
+u64 udp_send_datagram(u16 src_port, u16 dst_port, struct ip_address src_addr,
+                      struct ip_address dst_addr, u8 *data, usize len);
+#endif // UKO_OS_NET_UDP_H
