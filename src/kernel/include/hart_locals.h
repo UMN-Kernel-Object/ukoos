@@ -17,6 +17,16 @@ struct hart_locals {
    * The ID of the hart. Not guaranteed to be small or densely packed.
    */
   u64 hart_id;
+  
+  /**
+   * Number of times interrupts have been disabled.
+   */
+  u32 interrupt_disabled_depth;
+
+  /**
+   * If interrupts request were previously enabled.
+   */
+  bool prev_interrupt_enabled;
 
   /**
    * The current heap.

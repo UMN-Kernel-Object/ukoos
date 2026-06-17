@@ -57,6 +57,20 @@ static inline void csrw(enum csr csr, u64 value) {
 }
 
 /**
+ * Sets (OR) specified bits in a CSR.
+ */
+static inline void csrs(enum csr csr, u64 bits) {
+  __asm__ volatile("csrs %0, %1" :: "i"(csr), "r"(bits) : "memory");
+}
+
+/**
+ * Clear (AND NOT) specified bits in a CSR.
+ */
+static inline void csrc(enum csr csr, u64 bits) {
+  __asm__ volatile("csrc %0, %1" :: "i"(csr), "r"(bits) : "memory");
+}
+
+/**
  * Fences modifications to page tables.
  */
 static inline void sfence_vma(void) {
