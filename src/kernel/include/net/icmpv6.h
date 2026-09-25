@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #pragma once
 
 #include <net/ipv6.h>
