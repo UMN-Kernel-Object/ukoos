@@ -191,7 +191,7 @@ void rtl8139_init(struct pci_regs *pci_device) {
   rtl_regs->tsad[0] = 0x12;
   assert(rtl_regs->tsad[0] == 0x12);
 
-  rtl8139_test(rtl_device);
+  // rtl8139_test(rtl_device);
 }
 
 DEFINE_INIT(INIT_REGISTER_PCI_DRIVERS) {

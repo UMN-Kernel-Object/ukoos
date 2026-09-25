@@ -11,6 +11,7 @@
 #include <mm/alloc.h>
 #include <mm/physical_alloc.h>
 #include <mm/virtual_alloc.h>
+#include <net/icmpv6.h>
 #include <panic.h>
 #include <print.h>
 #include <random.h>
@@ -57,6 +58,14 @@ void main(u64 hart_id, paddr devicetree_start, paddr kernel_start,
 
   print("Running self-tests...");
   run_selftests();
+
+  struct ip_address broadcast = {
+      {0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01}};
+  struct ip_address zeros = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+
+  while (true) {
+    icmp_send_echo_request(zeros, broadcast, 0x1234, 0x5678, nullptr, 0);
+  }
 
   TODO();
 }
