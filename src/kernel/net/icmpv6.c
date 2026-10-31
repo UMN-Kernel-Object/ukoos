@@ -13,9 +13,9 @@ struct icmpv6_header icmpv6_create_header(struct ip_address src,
                                           usize len, u8 type, u8 code) {
   struct ipv6_header pseudo_header = ipv6_create_header(src, dst, ICMP);
   pseudo_header.hop_limit = 255;
-  u16 packet[32];
+  char packet[256];
   memcpy(packet, &pseudo_header, sizeof(struct ipv6_header));
-  memcpy(packet, &data, len);
+  memcpy(packet + sizeof(struct ipv6_header), &data, len);
   u16 cksum = calc_chksum(packet, sizeof(struct ipv6_header) + len);
 
   struct icmpv6_header header = {.type = type, .code = code, .cksum = cksum};
