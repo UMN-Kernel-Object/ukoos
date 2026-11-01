@@ -8,6 +8,7 @@ kernel-cflags += \
 	-mabi=lp64 \
 	-mcmodel=medany
 kernel-objs-asm += arch/riscv64/start
+kernel-objs-asm += arch/riscv64/trap
 kernel-objs-c += arch/riscv64/backtrace
 kernel-objs-c += arch/riscv64/hart_locals
 kernel-objs-c += arch/riscv64/paging
@@ -15,6 +16,7 @@ kernel-objs-c += arch/riscv64/panic
 kernel-objs-c += arch/riscv64/physical
 kernel-objs-c += arch/riscv64/random
 kernel-objs-c += arch/riscv64/sbi
+kernel-objs-c += arch/riscv64/trap_handler
 
 $(eval $(call compute_component_variables,kernel))
 

@@ -47,6 +47,11 @@ struct riscv_regs {
  * The data that is local to a hart.
  */
 struct hart_locals {
+  /*
+   * Saved registers
+   */
+  struct riscv_regs regs;
+
   /**
    * The ID of the hart. Not guaranteed to be small or densely packed.
    */
@@ -62,10 +67,11 @@ struct hart_locals {
    */
   struct random_rng rng;
 
-  /*
-   * Saved registers
+  /**
+   * The saved kernel space stack pointer when dealing with interrupts from
+   * userspace.
    */
-  struct riscv_regs regs;
+  uaddr stack;
 };
 
 /**
