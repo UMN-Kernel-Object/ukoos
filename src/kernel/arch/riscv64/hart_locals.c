@@ -21,6 +21,7 @@ void init_boothart_hart_locals(u64 hart_id) {
   boothart_hart_locals = (struct hart_locals){
       .hart_id = hart_id,
       .heap = nullptr,
+      .regs = { 0 },
       .rng = {},
   };
 }
