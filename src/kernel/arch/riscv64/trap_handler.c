@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include <arch/riscv64/insns.h>
 #include <arch/riscv64/trap_handler.h>
 #include <panic.h>

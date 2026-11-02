@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: ukoOS Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
   csrrw ra, sscratch, ra
   sd sp, 4(ra)
   sd gp, 8(ra)
