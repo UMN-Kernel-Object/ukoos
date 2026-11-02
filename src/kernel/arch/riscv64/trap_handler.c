@@ -1,4 +1,5 @@
 #include <arch/riscv64/insns.h>
+#include <arch/riscv64/trap_handler.h>
 #include <panic.h>
 
 enum trap_cause {
@@ -22,7 +23,7 @@ void trap_handler() {
   case SUPERVISOR_TIMER_INTERRUPT:
     TODO();
   case SUPERVISOR_EXTERNAL_INTERRUPT:
-    TODO();
+    external_trap();
   case COUNTERFLOW_INTERRUPT:
     TODO();
   }
