@@ -40,7 +40,41 @@
 
 usermode:
   # TODO
+  j restore
 
 supervisor:
   call trap_handler
-  # TODO: put back registers and anything else we need to do for going back to usermode
+
+restore:
+  csrrw sscratch, ra
+  sd 4(ra), sp
+  sd 8(ra), gp
+  sd 12(ra), tp
+  sd 16(ra), t0
+  sd 20(ra), t1
+  sd 24(ra), t2
+  sd 28(ra), s0
+  sd 32(ra), s1
+  sd 36(ra), a0
+  sd 40(ra), a1
+  sd 44(ra), a2
+  sd 48(ra), a3
+  sd 52(ra), a4
+  sd 56(ra), a5
+  sd 60(ra), a6
+  sd 64(ra), a7
+  sd 68(ra), s2
+  sd 72(ra), s3
+  sd 76(ra), s4
+  sd 80(ra), s5
+  sd 84(ra), s6
+  sd 88(ra), s7
+  sd 92(ra), s8
+  sd 96(ra), s9
+  sd 100(ra), s10
+  sd 104(ra), s11
+  sd 108(ra), t3
+  sd 112(ra), t4
+  sd 116(ra), t5
+  sd 120(ra), t6
+  csrrw sscratch, ra
