@@ -1,4 +1,4 @@
-  csrrw sscratch, ra
+  csrrw ra, sscratch, ra
   sd sp, 4(ra)
   sd gp, 8(ra)
   sd tp, 12(ra)
@@ -29,11 +29,11 @@
   sd t4, 112(ra)
   sd t5, 116(ra)
   sd t6, 120(ra)
-  sd a0, ra
-  csrrw sscratch, ra
+  mv a0, ra
+  csrrw ra, sscratch, ra
   sd ra, (a0)
 
-  ld sstatus, a0
+  csrr a0, sstatus
   # SPP bit in sstatus reg to check if trap originated from usermode
   andi a0, a0, 1<<8 
   bne a0, zero, supervisor
@@ -46,35 +46,36 @@ supervisor:
   call trap_handler
 
 restore:
-  csrrw sscratch, ra
-  sd 4(ra), sp
-  sd 8(ra), gp
-  sd 12(ra), tp
-  sd 16(ra), t0
-  sd 20(ra), t1
-  sd 24(ra), t2
-  sd 28(ra), s0
-  sd 32(ra), s1
-  sd 36(ra), a0
-  sd 40(ra), a1
-  sd 44(ra), a2
-  sd 48(ra), a3
-  sd 52(ra), a4
-  sd 56(ra), a5
-  sd 60(ra), a6
-  sd 64(ra), a7
-  sd 68(ra), s2
-  sd 72(ra), s3
-  sd 76(ra), s4
-  sd 80(ra), s5
-  sd 84(ra), s6
-  sd 88(ra), s7
-  sd 92(ra), s8
-  sd 96(ra), s9
-  sd 100(ra), s10
-  sd 104(ra), s11
-  sd 108(ra), t3
-  sd 112(ra), t4
-  sd 116(ra), t5
-  sd 120(ra), t6
-  csrrw sscratch, ra
+  csrrw ra, sscratch, ra
+  ld sp, 4(ra)
+  ld gp, 8(ra)
+  ld tp, 12(ra)
+  ld t0, 16(ra)
+  ld t1, 20(ra)
+  ld t2, 24(ra)
+  ld s0, 28(ra)
+  ld s1, 32(ra)
+  ld a0, 36(ra)
+  ld a1, 40(ra)
+  ld a2, 44(ra)
+  ld a3, 48(ra)
+  ld a4, 52(ra)
+  ld a5, 56(ra)
+  ld a6, 60(ra)
+  ld a7, 64(ra)
+  ld s2, 68(ra)
+  ld s3, 72(ra)
+  ld s4, 76(ra)
+  ld s5, 80(ra)
+  ld s6, 84(ra)
+  ld s7, 88(ra)
+  ld s8, 92(ra)
+  ld s9, 96(ra)
+  ld s10, 100(ra)
+  ld s11, 104(ra)
+  ld t3, 108(ra)
+  ld t4, 112(ra)
+  ld t5, 116(ra)
+  ld t6, 120(ra)
+  mv a0, ra
+  csrrw ra, sscratch, ra
